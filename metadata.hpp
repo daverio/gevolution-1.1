@@ -1,10 +1,13 @@
 //////////////////////////
 // metadata.hpp
 //////////////////////////
-// 
+//
 // Constants and metadata structures
 //
 // Author: Julian Adamek (Université de Genève & Observatoire de Paris)
+//         f(R):
+//				 David Daverio (Cambridge University)
+//				 Lorenzo Reverberi (University of Cape Town)
 //
 // Last modified: December 2016
 //
@@ -18,6 +21,8 @@
 #ifndef MAX_OUTPUTS
 #define MAX_OUTPUTS 32
 #endif
+
+
 
 #ifndef PARAM_MAX_LENGTH
 #define PARAM_MAX_LENGTH 256
@@ -107,6 +112,11 @@
 #endif
 #endif
 
+//Modified gravity types
+#define GENREL 0 // General Relativity
+#define FOFR 1   // f(R)
+
+
 // color escape sequences for terminal highlighting (enable with -DCOLORTERMINAL)
 #ifdef COLORTERMINAL
 #define COLORTEXT_WHITE     "\033[37;1m"
@@ -156,6 +166,7 @@ struct metadata
 	int tracer_factor[MAX_PCL_SPECIES];
 	int baryon_flag;
 	int gr_flag;
+	int mg_flag;
 	int vector_flag;
 	int radiation_flag;
 	int out_pk;
@@ -183,6 +194,7 @@ struct metadata
 	char output_path[PARAM_MAX_LENGTH];
 	char restart_path[PARAM_MAX_LENGTH];
 	char basename_restart[PARAM_MAX_LENGTH];
+	char backgroud_filename[PARAM_MAX_LENGTH];
 };
 
 struct icsettings
@@ -215,10 +227,10 @@ struct cosmology
 	double Omega_Lambda;
 	double Omega_g;
 	double Omega_ur;
-	double Omega_rad;
+	double Omega_rad; //sum og g and ur
 	double Omega_ncdm[MAX_PCL_SPECIES-2];
 	double h;
-	double m_ncdm[MAX_PCL_SPECIES-2];
+	double m_ncdm[MAX_PCL_SPECIES-2];//mass in eV
 	double T_ncdm[MAX_PCL_SPECIES-2];
 	double deg_ncdm[MAX_PCL_SPECIES-2];
 	int num_ncdm;

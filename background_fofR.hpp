@@ -16,10 +16,10 @@
 #ifndef BACKGROUND_FOFR_HEADER
 #define BACKGROUND_FOFR_HEADER
 
+#include <cstdio>
 #include <sstream>
 #include <string>
-#include <stdlib.h>
-#include <stdio.h>
+#include <iostream>
 #include <math.h>
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_spline.h>
@@ -36,23 +36,27 @@ void loadBackground(gsl_spline *& a_spline,
 		long lineCount;
 		istringstream iss;
 
-		file.open(filename);
-		if(!file)
+
+		if(parallel.grid_rank()[0]==0)
 		{
-			COUT<<"Background file error: cannot open file"<<endl;
-			if(parallel.rank()==0)parallel.abortForce();
-			return;
+			file.open(filename);
+			if(!file)
+			{
+					COUT<<"Background file error: cannot open file"<<endl;
+					if(parallel.rank()==0)parallel.abortForce();
+					return;
+			}
+
+			COUT<<"loading background file: "<< filename <<endl;
+
+			getline(file, line);
+			getline(file, line);
+			iss.str(line);
+			iss>>lineCount;
+
+
 		}
-
-		COUT<<"loading background file: "<< filename <<endl;
-
-		getline(file, line);
-		COUT<<"line"<<endl;
-		getline(file, line);
-		iss.str(line);
-		iss>>lineCount;
-
-
+		parallel.broadcast_dim0(lineCount,0);
 
 		double * tau = new double[lineCount];
 		double * a = new double[lineCount];
@@ -61,12 +65,29 @@ void loadBackground(gsl_spline *& a_spline,
 		double * sigma = new double[lineCount];
 		double * sigmaDot = new double[lineCount];
 
-		for(int i=0;i<lineCount;i++)
+
+		if(parallel.grid_rank()[0]==0)
 		{
-			getline(file, line);
-			iss.str(line);
-			iss >> tau[i] >> a[i] >> H[i] >> phi[i] >> sigma[i] >> sigmaDot[i];
+			for(int i=0;i<lineCount;i++)
+			{
+				getline(file, line);
+				iss.str(line);
+				//COUT<<line<<endl;
+				//COUT<< iss.str() <<endl;
+				iss.seekg (0, iss.beg);
+				iss >> tau[i] >> a[i] >> H[i] >> phi[i] >> sigma[i] >> sigmaDot[i];
+				//COUT << tau[i] <<" "<< a[i] <<" "<< H[i] <<" "<< phi[i] <<" "<< sigma[i] <<" "<< sigmaDot[i]<<endl;
+			}
 		}
+
+
+		parallel.broadcast_dim0(tau,lineCount,0);
+		parallel.broadcast_dim0(a,lineCount,0);
+		parallel.broadcast_dim0(H,lineCount,0);
+		parallel.broadcast_dim0(phi,lineCount,0);
+		parallel.broadcast_dim0(sigma,lineCount,0);
+		parallel.broadcast_dim0(sigmaDot,lineCount,0);
+
 
 
 		a_spline  = gsl_spline_alloc (t, lineCount);
@@ -82,7 +103,7 @@ void loadBackground(gsl_spline *& a_spline,
 		gsl_spline_init (sigma_spline, tau, sigma, lineCount);
 		gsl_spline_init (sigmaDot_spline, tau, sigmaDot, lineCount);
 
-		file.close();
+		if(parallel.grid_rank()[0]==0)file.close();
 
 		delete[] tau;
 		delete[] a;

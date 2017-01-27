@@ -32,6 +32,7 @@
 //
 //////////////////////////
 
+#include <iomanip> 
 #include <stdlib.h>
 #ifdef HAVE_CLASS
 #include "class.h"
@@ -253,7 +254,7 @@ int main(int argc, char **argv)
 	gsl_spline * sigma_spline;
 	gsl_spline * sigmaDot_spline;
 	gsl_interp_accel *gsl_inpl_acc = gsl_interp_accel_alloc ();
-  const gsl_interp_type *gsl_inpl_type = gsl_interp_cspline_periodic;
+  const gsl_interp_type *gsl_inpl_type = gsl_interp_linear;
 
 	if(sim.mg_flag == FOFR)
 	loadBackground(a_spline,H_spline,phi_spline,sigma_spline,sigmaDot_spline,gsl_inpl_type, sim.backgroud_filename);
@@ -840,11 +841,13 @@ int main(int argc, char **argv)
 		}
 
 		//// write a the f(R) backgroud file
-		ofstream fileBG;
-		fileBG.open("background.txt");
-		fileBG << tau <<" "<< a<< " " << Hconf(a, fourpiG, cosmo)<< " 1.0 1.0 1.0"<<endl;
-		fileBG.close();
-
+		if(parallel.rank()==0)
+		{
+			ofstream fileBG;
+			fileBG.open("background.txt",std::ifstream::app);
+			fileBG <<setprecision(16)<< tau <<" "<< a<< " " << Hconf(a, fourpiG, cosmo)<< " 1.0 1.0 1.0"<<endl;
+			fileBG.close();
+		}
 
 
 		///////

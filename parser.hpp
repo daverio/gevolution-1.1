@@ -1023,6 +1023,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	for (i = 0; i < MAX_PCL_SPECIES; i++) sim.numpcl[i] = 0;
 	sim.vector_flag = VECTOR_PARABOLIC;
 	sim.gr_flag = 0;
+	sim.mg_flag = GENREL;
 	sim.out_pk = 0;
 	sim.out_snapshot = 0;
 	sim.num_pk = MAX_OUTPUTS;

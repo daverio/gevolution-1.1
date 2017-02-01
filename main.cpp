@@ -32,7 +32,7 @@
 //
 //////////////////////////
 
-#include <iomanip> 
+#include <iomanip>
 #include <stdlib.h>
 #ifdef HAVE_CLASS
 #include "class.h"
@@ -55,6 +55,7 @@
 #endif
 #include "radiation.hpp"
 #include "parser.hpp"
+#include "fofR_tools.hpp"
 #include "tools.hpp"
 #include "output.hpp"
 #include "hibernation.hpp"
@@ -798,6 +799,19 @@ int main(int argc, char **argv)
 				}
 				else rungekutta4bg(a, fourpiG, cosmo, 0.5 * dtau / numsteps);  // evolve background by half a time step
 			}
+
+#ifdef OUTPUT_BACKGROUND
+					//// write a the f(R) backgroud file
+			if(parallel.rank()==0)
+			{
+				ofstream fileBG;
+				fileBG.open("background.txt",std::ifstream::app);
+				fileBG <<setprecision(16)<< tau_temp <<" "<< a<< " " << Hconf(a, fourpiG, cosmo)<< " 1.0 1.0 1.0"<<endl;
+				fileBG.close();
+			}
+#endif
+
+
 			f_params[0] = a;
 			f_params[1] = a * a * sim.numpts;
 			for (i = 0; i < cosmo.num_ncdm; i++)
@@ -822,6 +836,18 @@ int main(int argc, char **argv)
 				a = gsl_spline_eval(a_spline, tau_temp, gsl_inpl_acc);
 			}
 			else rungekutta4bg(a, fourpiG, cosmo, 0.5 * dtau / numsteps);  // evolve background by half a time step
+
+			#ifdef OUTPUT_BACKGROUND
+					//// write a the f(R) backgroud file
+					if(parallel.rank()==0)
+					{
+						ofstream fileBG;
+						fileBG.open("background.txt",std::ifstream::app);
+						fileBG <<setprecision(16)<< tau_temp <<" "<< a<< " " << Hconf(a, fourpiG, cosmo)<< " 1.0 1.0 1.0"<<endl;
+						fileBG.close();
+					}
+			#endif
+
 		}   // particle update done
 
 		parallel.max<double>(maxvel, numspecies);
@@ -840,14 +866,6 @@ int main(int argc, char **argv)
 			COUT << "matter-dark energy equality at z=" << ((1./a) - 1.) << endl;
 		}
 
-		//// write a the f(R) backgroud file
-		if(parallel.rank()==0)
-		{
-			ofstream fileBG;
-			fileBG.open("background.txt",std::ifstream::app);
-			fileBG <<setprecision(16)<< tau <<" "<< a<< " " << Hconf(a, fourpiG, cosmo)<< " 1.0 1.0 1.0"<<endl;
-			fileBG.close();
-		}
 
 
 		///////

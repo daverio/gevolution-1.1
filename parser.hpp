@@ -1036,6 +1036,9 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	sim.boxsize = -1.;
 	sim.wallclocklimit = -1.;
 	sim.z_in = 0.;
+	sim.fofR_type = 0;
+	for (i = 0; i < MAX_FOFR_PARAMS; i++)sim.fofR_params[i] = 0;
+	sim.num_fofR_params = MAX_FOFR_PARAMS;
 
 	if (parseParameter(params, numparam, "vector method", par_string))
 	{
@@ -1200,6 +1203,19 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			{
 				COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": Gravity set to f(r), but no background file have been specified!" << endl;
 				parallel.abortForce();
+			}
+			//TODO: read fofR params and type
+			parseParameter(params, numparam, "f(R) parameters", sim.fofR_params, sim.num_fofR_params);
+			if (parseParameter(params, numparam, "gravity theory", par_string))
+			{
+				if(par_string[0] == 'R' || par_string[0] == 'r')
+				{
+					sim.fofR_type = FOFR_TYPE_RN;
+				}
+			}
+			else
+			{
+				//TODO: error if the number of param does not fit the type
 			}
 
 

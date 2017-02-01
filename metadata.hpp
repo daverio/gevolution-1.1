@@ -22,7 +22,9 @@
 #define MAX_OUTPUTS 32
 #endif
 
-
+#ifndef MAX_FOFR_PARAMS
+#define MAX_FOFR_PARAMS 8
+#endif
 
 #ifndef PARAM_MAX_LENGTH
 #define PARAM_MAX_LENGTH 256
@@ -116,6 +118,8 @@
 #define GENREL 0 // General Relativity
 #define FOFR 1   // f(R)
 
+//f(R) model
+#define FOFR_TYPE_RN 0
 
 // color escape sequences for terminal highlighting (enable with -DCOLORTERMINAL)
 #ifdef COLORTERMINAL
@@ -167,6 +171,7 @@ struct metadata
 	int baryon_flag;
 	int gr_flag;
 	int mg_flag;
+	int fofR_type;
 	int vector_flag;
 	int radiation_flag;
 	int out_pk;
@@ -175,6 +180,7 @@ struct metadata
 	int numbins;
 	int num_snapshot;
 	int num_restart;
+	int num_fofR_params;
 	double Cf;
 	double movelimit;
 	double steplimit;
@@ -188,6 +194,7 @@ struct metadata
 	double z_switch_linearchi;
 	double z_switch_deltancdm[MAX_PCL_SPECIES-2];
 	double z_switch_Bncdm[MAX_PCL_SPECIES-2];
+	double fofR_params[MAX_FOFR_PARAMS];
 	char basename_snapshot[PARAM_MAX_LENGTH];
 	char basename_pk[PARAM_MAX_LENGTH];
 	char basename_generic[PARAM_MAX_LENGTH];

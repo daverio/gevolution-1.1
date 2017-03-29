@@ -32,6 +32,21 @@
 //
 //////////////////////////
 
+/*
+	TODO list for FOFR:
+
+	1) Add fields; done
+
+	2) look at the initial conditions
+		dont forget to set deltaR and Bi
+
+	3) Solver modification
+
+
+
+*/
+
+
 #include <iomanip>
 #include <stdlib.h>
 #ifdef HAVE_CLASS
@@ -44,6 +59,11 @@
 #include "class_tools.hpp"
 #include "background.hpp"
 #include "Particles_gevolution.hpp"
+
+// f(R) headers
+#include "background_fofR.hpp"
+#include "fofR_tools.hpp"
+
 #include "gevolution.hpp"
 #include "ic_basic.hpp"
 #include "ic_read.hpp"
@@ -60,8 +80,7 @@
 #include "output.hpp"
 #include "hibernation.hpp"
 
-// f(R) headers
-#include "background_fofR.hpp"
+
 
 
 using namespace std;
@@ -207,34 +226,93 @@ int main(int argc, char **argv)
 	Field<Real> * update_ncdm_fields[3];
 	double f_params[5];
 
+
+
+
+
+
+
+
 	Field<Real> phi;
-	Field<Real> source;
 	Field<Real> chi;
-	Field<Real> Sij;
 	Field<Real> Bi;
+	Field<Real> source;
+	Field<Real> Si;
+	Field<Real> Sij;
 	Field<Cplx> scalarFT;
 	Field<Cplx> SijFT;
 	Field<Cplx> BiFT;
+	//additional F(R) fields
+	Field<Real> xi;
+	Field<Real> zeta;
+	Field<Real> deltaR;
+	Field<Real> phidot;
+	Field<Cplx> SiFT;
+
+
+PlanFFT<Cplx> plan_source;
+PlanFFT<Cplx> plan_phi;
+PlanFFT<Cplx> plan_phidot;
+PlanFFT<Cplx> plan_chi;
+PlanFFT<Cplx> plan_Bi;
+PlanFFT<Cplx> plan_Si;
+PlanFFT<Cplx> plan_Sij;
+#ifdef CHECK_B
+PlanFFT<Cplx> plan_Bi_check;
+#endif
+
+if(sim.mg_flag == FOFR)
+{
+	phi.initialize(lat,1);
+	phi.alloc();
+	chi.initialize(lat,1);
+	source.initialize(lat,1);
+	scalarFT.initialize(latFT,1);
+	xi.initialize(lat,1);
+	xi.alloc();
+	zeta.initialize(lat,1);
+	zeta.alloc();
+	deltaR.initialize(lat,1);
+	deltaR.alloc();
+	phidot.initialize(lat,1);
+	plan_source.initialize(&source, &scalarFT);
+	plan_phidot.initialize(&phidot, &scalarFT);
+	plan_chi.initialize(&chi, &scalarFT);
+	Bi.initialize(lat,3);
+	Si.initialize(lat,3);
+	BiFT.initialize(latFT,3);
+	SiFT.initialize(latFT,3);
+	plan_Bi.initialize(&Bi, &BiFT);
+	plan_Si.initialize(&Si, &SiFT);
+	Sij.initialize(lat,3,3,symmetric);
+	SijFT.initialize(latFT,3,3,symmetric);
+	plan_Sij.initialize(&Sij, &SijFT);
+}
+else
+{
 	source.initialize(lat,1);
 	phi.initialize(lat,1);
 	chi.initialize(lat,1);
 	scalarFT.initialize(latFT,1);
-	PlanFFT<Cplx> plan_source(&source, &scalarFT);
-	PlanFFT<Cplx> plan_phi(&phi, &scalarFT);
-	PlanFFT<Cplx> plan_chi(&chi, &scalarFT);
+	plan_source.initialize(&source, &scalarFT);
+	plan_phi.initialize(&phi, &scalarFT);
+	plan_chi.initialize(&chi, &scalarFT);
 	Sij.initialize(lat,3,3,symmetric);
 	SijFT.initialize(latFT,3,3,symmetric);
-	PlanFFT<Cplx> plan_Sij(&Sij, &SijFT);
+	plan_Sij.initialize(&Sij, &SijFT);
 	Bi.initialize(lat,3);
 	BiFT.initialize(latFT,3);
-	PlanFFT<Cplx> plan_Bi(&Bi, &BiFT);
+	plan_Bi.initialize(&Bi, &BiFT);
+}
 #ifdef CHECK_B
 	Field<Real> Bi_check;
 	Field<Cplx> BiFT_check;
 	Bi_check.initialize(lat,3);
 	BiFT_check.initialize(latFT,3);
-	PlanFFT<Cplx> plan_Bi_check(&Bi_check, &BiFT_check);
+	plan_Bi_check.initialize(&Bi_check, &BiFT_check);
 #endif
+
+
 
 	update_cdm_fields[0] = &phi;
 	update_cdm_fields[1] = &chi;
@@ -249,16 +327,16 @@ int main(int argc, char **argv)
 	update_ncdm_fields[2] = &Bi;
 
 	//f(r) background description and gsl spline
+	double Rbar;
+	double Hubble;
 	gsl_spline * a_spline;
 	gsl_spline * H_spline;
-	gsl_spline * phi_spline;
-	gsl_spline * sigma_spline;
-	gsl_spline * sigmaDot_spline;
+	gsl_spline * Rbar_spline;
 	gsl_interp_accel *gsl_inpl_acc = gsl_interp_accel_alloc ();
   const gsl_interp_type *gsl_inpl_type = gsl_interp_linear;
 
 	if(sim.mg_flag == FOFR)
-	loadBackground(a_spline,H_spline,phi_spline,sigma_spline,sigmaDot_spline,gsl_inpl_type, sim.backgroud_filename);
+	loadBackground(a_spline,H_spline,Rbar_spline,gsl_inpl_type, sim.backgroud_filename);
 
 
 	////////////////////////////////////////////
@@ -278,6 +356,7 @@ int main(int argc, char **argv)
 
 	fourpiG = 1.5 * sim.boxsize * sim.boxsize / C_SPEED_OF_LIGHT / C_SPEED_OF_LIGHT;
 	a = 1. / (1. + sim.z_in);
+	//TODO check particleHorizon
 	tau = particleHorizon(a, fourpiG, cosmo);
 	tau_Lambda = -1.0;
 
@@ -392,26 +471,54 @@ int main(int argc, char **argv)
 		cycle_start_time = MPI_Wtime();
 #endif
 		// construct stress-energy tensor
-		projection_init(&source);
+		if(sim.mg_flag== FOFR)projection_init(&zeta);
+		else projection_init(&source);
+
 #ifdef HAVE_CLASS
 		if (sim.radiation_flag > 0)
 			projection_T00_project(class_background, class_perturbs, class_spectra, source, scalarFT, &plan_source, sim, ic, cosmo, fourpiG, a);
 #endif
+
 		if (sim.gr_flag > 0)
-		{ //in poisson gauge
-			projection_T00_project(&pcls_cdm, &source, a, &phi);
-			if (sim.baryon_flag)
-				projection_T00_project(&pcls_b, &source, a, &phi);
-			for (i = 0; i < cosmo.num_ncdm; i++)
+		{
+			if(sim.mg_flag== GENREL)
 			{
-				if (a >= 1. / (sim.z_switch_deltancdm[i] + 1.))
-					projection_T00_project(pcls_ncdm+i, &source, a, &phi);
-				else if (sim.radiation_flag == 0)
-				{
-					tmp = bg_ncdm(a, cosmo, i);
-					for(x.first(); x.test(); x.next())
-						source(x) += tmp;
-				}
+			//in poisson gauge
+				projection_T00_project(&pcls_cdm, &source, a, &phi);
+				if (sim.baryon_flag)
+					projection_T00_project(&pcls_b, &source, a, &phi);
+					for (i = 0; i < cosmo.num_ncdm; i++)
+					{
+						if (a >= 1. / (sim.z_switch_deltancdm[i] + 1.))
+						projection_T00_project(pcls_ncdm+i, &source, a, &phi);
+						else if (sim.radiation_flag == 0)
+						{
+							tmp = bg_ncdm(a, cosmo, i);
+							for(x.first(); x.test(); x.next())
+							source(x) += tmp;
+						}
+					}
+					projection_T00_comm(&source);
+			}
+			else if (sim.mg_flag== FOFR)
+			{
+				projection_T00_project(&pcls_cdm, &zeta, a, &phi);
+				if (sim.baryon_flag)
+					projection_T00_project(&pcls_b, &zeta, a, &phi);
+					for (i = 0; i < cosmo.num_ncdm; i++)
+					{
+						if (a >= 1. / (sim.z_switch_deltancdm[i] + 1.))
+						projection_T00_project(pcls_ncdm+i, &zeta, a, &phi);
+						else if (sim.radiation_flag == 0)
+						{
+							//TODO
+							COUT<<"be careful background energy density of relativistic particlues is not computed properly..."<<endl;
+							tmp = bg_ncdm(a, cosmo, i);
+							for(x.first(); x.test(); x.next())
+							zeta(x) += tmp;
+						}
+					}
+					projection_T00_comm(&zeta);
 			}
 		}
 		else
@@ -424,22 +531,42 @@ int main(int argc, char **argv)
 				if (a >= 1. / (sim.z_switch_deltancdm[i] + 1.))
 					scalarProjectionCIC_project(pcls_ncdm+i, &source);
 			}
+			projection_T00_comm(&source);
 		}
-		projection_T00_comm(&source);
 
-		if (sim.vector_flag == VECTOR_ELLIPTIC)
+
+		if(sim.mg_flag== GENREL)
 		{
-			projection_init(&Bi);
-			projection_T0i_project(&pcls_cdm, &Bi, &phi);
-			if (sim.baryon_flag)
+			if (sim.vector_flag == VECTOR_ELLIPTIC)
+			{
+				projection_init(&Bi);
+				projection_T0i_project(&pcls_cdm, &Bi, &phi);
+				if (sim.baryon_flag)
 				projection_T0i_project(&pcls_b, &Bi, &phi);
+				for (i = 0; i < cosmo.num_ncdm; i++)
+				{
+					if (a >= 1. / (sim.z_switch_Bncdm[i] + 1.))
+					projection_T0i_project(pcls_ncdm+i, &Bi, &phi);
+				}
+				projection_T0i_comm(&Bi);
+			}
+		}
+		else if (sim.mg_flag== FOFR)
+		{
+			projection_init(&Si);
+			projection_T0i_project(&pcls_cdm, &Si, &phi);
+			if (sim.baryon_flag)
+			projection_T0i_project(&pcls_b, &Si, &phi);
 			for (i = 0; i < cosmo.num_ncdm; i++)
 			{
 				if (a >= 1. / (sim.z_switch_Bncdm[i] + 1.))
-					projection_T0i_project(pcls_ncdm+i, &Bi, &phi);
+				projection_T0i_project(pcls_ncdm+i, &Si, &phi);
 			}
-			projection_T0i_comm(&Bi);
+			projection_T0i_comm(&Si);
 		}
+
+
+
 
 		projection_init(&Sij);
 		projection_Tij_project(&pcls_cdm, &Sij, a, &phi);
@@ -460,19 +587,47 @@ int main(int argc, char **argv)
 		if (sim.gr_flag > 0)
 		{
 			T00hom = 0.;
+
+			if(sim.mg_flag== FOFR)
+			{
+				for (x.first(); x.test(); x.next())
+					T00hom += deltaR(x);
+			}
+			else
+			{
 			for (x.first(); x.test(); x.next())
 				T00hom += source(x);
+			}
+
 			parallel.sum<Real>(T00hom);
 			T00hom /= (Real) numpts3d;
 
 			if (cycle % CYCLE_INFO_INTERVAL == 0)
 			{
+				//TODO check bg_ncdm() in background.hpp.
 				COUT << " cycle " << cycle << ", background information: z = " << (1./a) - 1. << ", average T00 = " << T00hom << ", background model = " << cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo) << endl;
 			}
 
 			if (dtau_old > 0.)
 			{
-				prepareFTsource<Real>(phi, chi, source, cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo), source, 3. * Hconf(a, fourpiG, cosmo) * dx * dx / dtau_old, fourpiG * dx * dx / a, 3. * Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) * dx * dx);  // prepare nonlinear source for phi update
+				if(sim.mg_flag== FOFR)
+				{
+					Rbar = gsl_spline_eval(Rbar_spline, tau, gsl_inpl_acc);
+					Hubble = gsl_spline_eval(H_spline, tau, gsl_inpl_acc);
+					prepareFTsource_S00(source,phi,chi,xi,deltaR,zeta,
+															cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo),
+															dx*dx,
+															dtau_old,
+															Hubble,
+															a*a,
+															2.0*fourpiG,
+															Rbar,
+															F(Rbar,sim.fofR_params,sim.fofR_type),
+															FR(Rbar,sim.fofR_params,sim.fofR_type),
+															sim.fofR_params,
+															sim.fofR_type);
+				}
+				else prepareFTsource<Real>(phi, chi, source, cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo), source, 3. * Hconf(a, fourpiG, cosmo) * dx * dx / dtau_old, fourpiG * dx * dx / a, 3. * Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) * dx * dx);  // prepare nonlinear source for phi update
 
 #ifdef BENCHMARK
 				ref2_time= MPI_Wtime();
@@ -482,13 +637,14 @@ int main(int argc, char **argv)
 				fft_time += MPI_Wtime() - ref2_time;
 				fft_count++;
 #endif
-
-				solveModifiedPoissonFT(scalarFT, scalarFT, 1. / (dx * dx), 3. * Hconf(a, fourpiG, cosmo) / dtau_old);  // phi update (k-space)
+				if(sim.mg_flag== FOFR) solveModifiedPoissonFT(scalarFT, scalarFT, 1. / (dx * dx), 3. * Hubble / dtau_old + 3.0*Hubble*Hubble);
+				else solveModifiedPoissonFT(scalarFT, scalarFT, 1. / (dx * dx), 3. * Hconf(a, fourpiG, cosmo) / dtau_old);  // phi update (k-space)
 
 #ifdef BENCHMARK
 				ref2_time= MPI_Wtime();
 #endif
-				plan_phi.execute(FFT_BACKWARD);	 // go back to position space
+				if(sim.mg_flag== FOFR)plan_phidot.execute(FFT_BACKWARD);
+				else plan_phi.execute(FFT_BACKWARD);	 // go back to position space
 #ifdef BENCHMARK
 				fft_time += MPI_Wtime() - ref2_time;
 				fft_count++;
@@ -518,7 +674,28 @@ int main(int argc, char **argv)
 #endif
 		}
 
+
+		if(sim.mg_flag== FOFR)
+		{
+			if (dtau_old > 0.)
+			{
+			/// step b) and c)
+				prepareFTsource_S0i(Si,phi,Bi,2.0 * fourpiG * a * a,a*a);
+				plan_Si.execute(FFT_FORWARD);
+				projectFTsource_S0i(SiFT,scalarFT);
+				plan_source.execute(FFT_BACKWARD);
+				stepXi(xi,source,phidot,phi,chi,Hubble,dtau_old);
+
+			//step d
+			computeTtrace(deltaR,zeta,Sij);
+
+			}
+		}
+
 		phi.updateHalo();  // communicate halo values
+
+
+
 
 		// record some background data
 		if (kFT.setCoord(0, 0, 0))
@@ -572,6 +749,9 @@ int main(int argc, char **argv)
 		fft_time += MPI_Wtime() - ref2_time;
 		fft_count++;
 #endif
+
+		if(sim.mg_flag== FOFR)addXi(chi,xi);
+
 		chi.updateHalo();  // communicate halo values
 
 		if (sim.vector_flag == VECTOR_ELLIPTIC)
@@ -604,6 +784,13 @@ int main(int argc, char **argv)
 #endif
 			Bi.updateHalo();  // communicate halo values
 		}
+
+		if(sim.mg_flag== FOFR)
+		{
+			computeDRzeta(deltaR,zeta,xi,Rbar,FR(Rbar,sim.fofR_params,sim.fofR_type),
+										2.0*fourpiG, Tbar(a,cosmo),sim.fofR_params,sim.fofR_type);
+		}
+
 
 #ifdef BENCHMARK
 		gravity_solver_time += MPI_Wtime() - ref_time;

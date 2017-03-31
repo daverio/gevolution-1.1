@@ -182,6 +182,7 @@ struct metadata
 	int num_restart;
 	int num_fofR_params;
 	double Cf;
+	double fofR_timestep_epsilon;
 	double movelimit;
 	double steplimit;
 	double boxsize;

@@ -1171,6 +1171,8 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	if (ic.Cf < 0.) ic.Cf = sim.Cf;
 
+	parseParameter(params, numparam, "f(R) epsilon", sim.fofR_timestep_epsilon);
+
 	parseParameter(params, numparam, "time step limit", sim.steplimit);
 
 	if (parseParameter(params, numparam, "gravity theory", par_string))

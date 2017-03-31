@@ -119,7 +119,7 @@ int main(int argc, char **argv)
 	int numsteps_ncdm[MAX_PCL_SPECIES-2];
 	long numpts3d;
 	int box[3];
-	double dtau, dtau_old, dx, tau, tau_temp, a, fourpiG, tau_Lambda, tmp, start_time;
+	double dtau, dtau_old, dtau_osci, dx, tau, tau_temp, a, fourpiG, tau_Lambda, tmp, start_time;
 	double maxvel[MAX_PCL_SPECIES];
 	FILE * outfile;
 	char filename[2*PARAM_MAX_LENGTH+24];
@@ -131,6 +131,7 @@ int main(int argc, char **argv)
 	icsettings ic;
 	gadget2_header hdr;
 	Real T00hom;
+	Real max_FRR;
 
 #ifndef H5_DEBUG
 	H5Eset_auto2 (H5E_DEFAULT, NULL, NULL);
@@ -366,6 +367,11 @@ else
 			dtau = sim.Cf * dx;
 	  else
 		dtau = sim.steplimit / gsl_spline_eval(H_spline, tau, gsl_inpl_acc);
+
+		dtau_osci = sim.fofR_timestep_epsilon * sqrt(3.0* FRR(gsl_spline_eval(Rbar_spline, tau, gsl_inpl_acc),sim.fofR_params,sim.fofR_type))/a;
+
+		if(dtau > dtau_osci) dtau = dtau_osci;
+
 	}
 	else
 	{
@@ -375,6 +381,8 @@ else
 	  else
 		dtau = sim.steplimit / Hconf(a, fourpiG, cosmo);
 	}
+
+
 
 
 
@@ -412,6 +420,12 @@ else
 		for (i = 0; i < numspecies; i++)
 			maxvel[i] /= sqrt(maxvel[i] * maxvel[i] + 1.0);
 	}
+
+	if(sim.mg_flag == FOFR)
+	{
+		for(x.first();x.test();x.next())xi(x)=0.0;
+	}
+
 
 #ifdef CHECK_B
 	if (sim.vector_flag == VECTOR_ELLIPTIC)
@@ -687,9 +701,8 @@ else
 				stepXi(xi,source,phidot,phi,chi,Hubble,dtau_old);
 
 			//step d
-			computeTtrace(deltaR,zeta,Sij);
-
 			}
+			computeTtrace(deltaR,zeta,Sij);
 		}
 
 		phi.updateHalo();  // communicate halo values
@@ -787,7 +800,7 @@ else
 
 		if(sim.mg_flag== FOFR)
 		{
-			computeDRzeta(deltaR,zeta,xi,Rbar,FR(Rbar,sim.fofR_params,sim.fofR_type),
+			max_FRR = computeDRzeta(deltaR,zeta,xi,Rbar,FR(Rbar,sim.fofR_params,sim.fofR_type),
 										2.0*fourpiG, Tbar(a,cosmo),sim.fofR_params,sim.fofR_type);
 		}
 
@@ -1101,10 +1114,15 @@ else
 
 		if(sim.mg_flag)
 		{
+			dtau_osci = sim.fofR_timestep_epsilon * sqrt(3.0*max_FRR)/a;
+
 			if (sim.Cf * dx < sim.steplimit / gsl_spline_eval(H_spline, tau, gsl_inpl_acc))
 				dtau = sim.Cf * dx;
 			else
 				dtau = sim.steplimit / gsl_spline_eval(H_spline, tau, gsl_inpl_acc);
+
+			if(dtau > dtau_osci) dtau = dtau_osci;
+
 		}
 		else
 		{

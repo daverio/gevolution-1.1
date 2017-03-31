@@ -294,8 +294,12 @@ void addXi(Field<FieldType> & chi,
 	}
 }
 
+//
+// return maximum value of FRR over the entire lattice.
+// the typical osciliation frenquency will be of order a/(sqrt(3*FRR_max))
+//
 template <class FieldType>
-void computeDRzeta(Field<FieldType> & deltaR,
+double computeDRzeta(Field<FieldType> & deltaR,
 									 Field<FieldType> & zeta,
 									 Field<FieldType> & xi,
 									 double Rbar,
@@ -307,10 +311,12 @@ void computeDRzeta(Field<FieldType> & deltaR,
 {
 	Site x(deltaR.lattice());
 	double temp,temp2;
+	double max_FRR = 0.0;
 	for(x.first();x.test();x.next())
 	{
 		temp = eightpiG * (deltaR(x)-Tbar);
 		temp2 = FRR(Rbar - temp, params,fofR_type);
+		if(max_FRR<temp2)max_FRR = temp2;
 		if(temp2!=0)
 		{
 			zeta(x) = (xi(x) + FRbar + FR(Rbar - temp, params,fofR_type))/temp2;
@@ -321,8 +327,9 @@ void computeDRzeta(Field<FieldType> & deltaR,
 			COUT<<"FRR is equal to 0, aborting"<<endl;
 			exit(2);
 		}
-
 	}
+	parallel.max(max_FRR);
+	return max_FRR;
 }
 
 //////////////////////////

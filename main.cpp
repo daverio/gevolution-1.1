@@ -995,7 +995,7 @@ if (pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation
 			{
 				if(sim.mg_flag == FOFR)
 				{
-					if(sim.read_bg_from_file == true){
+					if(sim.read_bg_from_file == 1){
 						tau_temp += 0.5 * dtau / numsteps;
 						a = gsl_spline_eval(a_spline, tau_temp, gsl_inpl_acc);
 					}
@@ -1036,7 +1036,7 @@ if (pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation
 
 			if(sim.mg_flag == FOFR)
 			{
-				if(sim.read_bg_from_file == true){
+				if(sim.read_bg_from_file == 1){
 					tau_temp += 0.5 * dtau / numsteps;
 					a = gsl_spline_eval(a_spline, tau_temp, gsl_inpl_acc);
 				}

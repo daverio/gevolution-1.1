@@ -121,6 +121,18 @@ inline double getBackground(gsl_spline * spline, double tau, gsl_interp_accel * 
 }
 
 
+inline double H_initial_fR(const double a, const double H, const double R, const double f, const double fr)
+{
+	return sqrt( (H*H + a*a*(fr*R - f)/6.) / (1. + fr) );
+}
+
+
+inline double R_initial_fR(const double a, const double eightpiG, const cosmology cosmo)
+{
+	return - eightpiG * Omega_m(a,cosmo) / a/a/a; // TODO: Not very accurate at this stage, but let's try this first
+}
+
+
 ///////////////////////////////////////////////////////////
 // Method when computing the background with RK4 solver
 //////////////////////////////////////////////////////////
@@ -151,9 +163,9 @@ double func_RK_Rdot(const double a,
 	double frr = FRR(R, params, fofR_type);
 	double fr = FR(R, params, fofR_type);
 	double rho = Hconf(a, fourpiG, cosmo);
-	rho *= 3. * rho; // Actually computes 8 pi G * rho
+	rho *= 3. * rho; // Actually computes 8 pi G * rho * a**2
 
-	if(frr) return ((rho*a*a - 3.*H*H*(1.+fr) + 0.5*(fr * R - F(R, params, fofR_type))*a*a) / (3. * frr * H));
+	if(frr) return ((rho - 3.*H*H*(1.+fr) + 0.5*(fr * R - F(R, params, fofR_type))*a*a) / (3. * frr * H));
 	else{
 		COUT << "FRR evaluates to zero. Closing..." << endl;
 		exit(3);

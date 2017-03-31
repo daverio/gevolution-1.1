@@ -226,13 +226,6 @@ int main(int argc, char **argv)
 	Field<Real> * update_ncdm_fields[3];
 	double f_params[5];
 
-
-
-
-
-
-
-
 	Field<Real> phi;
 	Field<Real> chi;
 	Field<Real> Bi;
@@ -329,15 +322,16 @@ else
 	//f(r) background description and gsl spline
 	double Rbar;
 	double Hubble;
+
 	gsl_spline * a_spline;
 	gsl_spline * H_spline;
 	gsl_spline * Rbar_spline;
 	gsl_interp_accel * gsl_inpl_acc = gsl_interp_accel_alloc ();
-  const gsl_interp_type *gsl_inpl_type = gsl_interp_linear;
+	const gsl_interp_type *gsl_inpl_type = gsl_interp_linear;
 
-	if(sim.mg_flag == FOFR)
-	loadBackground(a_spline,H_spline,Rbar_spline,gsl_inpl_type, sim.backgroud_filename);
-
+ 	if(sim.mg_flag == FOFR)
+		if(sim.read_bg_from_file == 1)
+			loadBackground(a_spline,H_spline,Rbar_spline,gsl_inpl_type, sim.backgroud_filename);
 
 	////////////////////////////////////////////
 
@@ -362,15 +356,21 @@ else
 
 	if(sim.mg_flag==FOFR)
 	{
-		if (sim.Cf * dx < sim.steplimit / gsl_spline_eval(H_spline, tau, gsl_inpl_acc))
+		if(sim.read_bg_from_file == 1)
+		{
+			Hubble = gsl_spline_eval(H_spline, tau, gsl_inpl_acc);
+			Rbar = gsl_spline_eval(Rbar_spline, tau, gsl_inpl_acc);
+		}
+		else{
+			Rbar = R_initial_fR(a, 2. * fourpiG, cosmo);
+			Hubble = H_initial_fR(a, Hconf(a, fourpiG, cosmo), Rbar, F(Rbar,sim.fofR_params,sim.fofR_type), FR(Rbar,sim.fofR_params,sim.fofR_type));
+		}
+		if (sim.Cf * dx < sim.steplimit / Hubble)
 			dtau = sim.Cf * dx;
 	  else
-		dtau = sim.steplimit / gsl_spline_eval(H_spline, tau, gsl_inpl_acc);
-
-		dtau_osci = sim.fofR_timestep_epsilon * sqrt(3.0* FRR(gsl_spline_eval(Rbar_spline, tau, gsl_inpl_acc),sim.fofR_params,sim.fofR_type))/a;
-
+		dtau = sim.steplimit / Hubble;
+		dtau_osci = sim.fofR_timestep_epsilon * sqrt(3.0* FRR(Rbar,sim.fofR_params,sim.fofR_type))/a;
 		if(dtau > dtau_osci) dtau = dtau_osci;
-
 	}
 	else
 	{
@@ -624,8 +624,15 @@ else
 			{
 				if(sim.mg_flag== FOFR)
 				{
-					Rbar = gsl_spline_eval(Rbar_spline, tau, gsl_inpl_acc);
-					Hubble = gsl_spline_eval(H_spline, tau, gsl_inpl_acc);
+					if(sim.read_bg_from_file == 1)
+					{
+						Hubble = gsl_spline_eval(H_spline, tau, gsl_inpl_acc);
+						Rbar = gsl_spline_eval(Rbar_spline, tau, gsl_inpl_acc);
+					}
+					else{
+						Rbar = R_initial_fR(a, 2. * fourpiG, cosmo);
+						Hubble = H_initial_fR(a, Hconf(a, fourpiG, cosmo), Rbar, F(Rbar,sim.fofR_params,sim.fofR_type), FR(Rbar,sim.fofR_params,sim.fofR_type));
+					}
 					prepareFTsource_S00(source,phi,chi,xi,deltaR,zeta,
 															cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo),
 															dx*dx,
@@ -722,7 +729,7 @@ else
 				if (cycle == 0)
 					fprintf(outfile, "# background statistics\n# cycle   tau/boxsize    a             conformal H/H0  phi(k=0)       T00(k=0)\n");
 					if(sim.mg_flag == FOFR)
-					fprintf(outfile, " %6d   %e   %e   %e   %e   %e\n", cycle, tau, a, gsl_spline_eval(H_spline, tau, gsl_inpl_acc) , scalarFT(kFT).real(), T00hom);
+					fprintf(outfile, " %6d   %e   %e   %e   %e   %e\n", cycle, tau, a, Hubble , scalarFT(kFT).real(), T00hom);
 					else
 					fprintf(outfile, " %6d   %e   %e   %e   %e   %e\n", cycle, tau, a, Hconf(a, fourpiG, cosmo) / Hconf(1., fourpiG, cosmo), scalarFT(kFT).real(), T00hom);
 
@@ -872,7 +879,7 @@ if (pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation
 			{
 				COUT << "), baryon max |v| = " << maxvel[1] << " (Courant factor = " << maxvel[1] * dtau / dx;
 			}
-			if(sim.mg_flag==FOFR) COUT << "), time step / Hubble time = " << gsl_spline_eval(H_spline, tau, gsl_inpl_acc)  * dtau;
+			if(sim.mg_flag==FOFR) COUT << "), time step / Hubble time = " <<  Hubble * dtau;
 			else COUT << "), time step / Hubble time = " << Hconf(a, fourpiG, cosmo) * dtau;
 
 			for (i = 0; i < cosmo.num_ncdm; i++)
@@ -1119,17 +1126,27 @@ if (pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation
 
 		dtau_old = dtau;
 
-		if(sim.mg_flag)
+		if(sim.mg_flag == FOFR)
 		{
 			dtau_osci = sim.fofR_timestep_epsilon * sqrt(3.0*max_FRR)/a;
 
-			if (sim.Cf * dx < sim.steplimit / gsl_spline_eval(H_spline, tau, gsl_inpl_acc))
+			if(sim.read_bg_from_file == 1)
+			{
+				Hubble = gsl_spline_eval(H_spline, tau, gsl_inpl_acc);
+				Rbar = gsl_spline_eval(Rbar_spline, tau, gsl_inpl_acc);
+			}
+			else
+			{
+				Rbar = R_initial_fR(a, 2. * fourpiG, cosmo);
+				Hubble = H_initial_fR(a, Hconf(a, fourpiG, cosmo), Rbar, F(Rbar,sim.fofR_params,sim.fofR_type), FR(Rbar,sim.fofR_params,sim.fofR_type));
+			}
+
+			if (sim.Cf * dx < sim.steplimit / Hubble)
 				dtau = sim.Cf * dx;
 			else
-				dtau = sim.steplimit / gsl_spline_eval(H_spline, tau, gsl_inpl_acc);
+				dtau = sim.steplimit / Hubble;
 
 			if(dtau > dtau_osci) dtau = dtau_osci;
-
 		}
 		else
 		{

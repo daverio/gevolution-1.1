@@ -1024,6 +1024,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	sim.vector_flag = VECTOR_PARABOLIC;
 	sim.gr_flag = 0;
 	sim.mg_flag = GENREL;
+	sim.read_bg_from_file = false; //TODO: Check if this is correct. FALSE -> compute bg with RK4
 	sim.out_pk = 0;
 	sim.out_snapshot = 0;
 	sim.num_pk = MAX_OUTPUTS;

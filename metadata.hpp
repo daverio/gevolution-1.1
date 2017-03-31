@@ -181,6 +181,7 @@ struct metadata
 	int num_snapshot;
 	int num_restart;
 	int num_fofR_params;
+	bool read_bg_from_file;
 	double Cf;
 	double fofR_timestep_epsilon;
 	double movelimit;

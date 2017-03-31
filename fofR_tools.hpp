@@ -44,7 +44,7 @@ Real FRR(double R, double * params, const double fofR_type)
 	double output;
 	if(fofR_type==FOFR_TYPE_RN)
 	{
-		if(params[1]==1) output;
+		if(params[1]==1) output; // TODO: shouldn't this output 0.?
 		else output = params[0]*params[1]*params[1]*pow(R,params[1]-2.0);
 	}
 	else exit(2);

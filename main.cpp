@@ -61,8 +61,8 @@
 #include "Particles_gevolution.hpp"
 
 // f(R) headers
-#include "background_fofR.hpp"
 #include "fofR_tools.hpp"
+#include "background_fofR.hpp"
 
 #include "gevolution.hpp"
 #include "ic_basic.hpp"
@@ -75,7 +75,6 @@
 #endif
 #include "radiation.hpp"
 #include "parser.hpp"
-#include "fofR_tools.hpp"
 #include "tools.hpp"
 #include "output.hpp"
 #include "hibernation.hpp"
@@ -333,7 +332,7 @@ else
 	gsl_spline * a_spline;
 	gsl_spline * H_spline;
 	gsl_spline * Rbar_spline;
-	gsl_interp_accel *gsl_inpl_acc = gsl_interp_accel_alloc ();
+	gsl_interp_accel * gsl_inpl_acc = gsl_interp_accel_alloc ();
   const gsl_interp_type *gsl_inpl_type = gsl_interp_linear;
 
 	if(sim.mg_flag == FOFR)
@@ -375,7 +374,6 @@ else
 	}
 	else
 	{
-
 		if (sim.Cf * dx < sim.steplimit / Hconf(a, fourpiG, cosmo))
 			dtau = sim.Cf * dx;
 	  else
@@ -846,8 +844,8 @@ else
 #ifdef BENCHMARK
 		spectra_output_time += MPI_Wtime() - ref_time;
 #endif
+if (pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation complete
 
-		if (pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation complete
 
 		// compute number of step subdivisions for particle updates
 		numsteps = 1;
@@ -960,8 +958,11 @@ else
 			{
 				if(sim.mg_flag == FOFR)
 				{
-					tau_temp += 0.5 * dtau / numsteps;
-					a = gsl_spline_eval(a_spline, tau_temp, gsl_inpl_acc);
+					if(sim.read_bg_from_file == true){
+						tau_temp += 0.5 * dtau / numsteps;
+						a = gsl_spline_eval(a_spline, tau_temp, gsl_inpl_acc);
+					}
+					else rungekutta_fR(a, Hubble, Rbar, fourpiG, cosmo, dtau, sim.fofR_params, sim.fofR_type);
 				}
 				else rungekutta4bg(a, fourpiG, cosmo, 0.5 * dtau / numsteps);  // evolve background by half a time step
 			}
@@ -994,8 +995,11 @@ else
 			{
 				if(sim.mg_flag == FOFR)
 				{
-					tau_temp += 0.5 * dtau / numsteps;
-					a = gsl_spline_eval(a_spline, tau_temp, gsl_inpl_acc);
+					if(sim.read_bg_from_file == true){
+						tau_temp += 0.5 * dtau / numsteps;
+						a = gsl_spline_eval(a_spline, tau_temp, gsl_inpl_acc);
+					}
+					else rungekutta_fR(a, Hubble, Rbar, fourpiG, cosmo, dtau, sim.fofR_params, sim.fofR_type);
 				}
 				else rungekutta4bg(a, fourpiG, cosmo, 0.5 * dtau / numsteps);  // evolve background by half a time step
 			}
@@ -1032,8 +1036,11 @@ else
 
 			if(sim.mg_flag == FOFR)
 			{
-				tau_temp += 0.5 * dtau / numsteps;
-				a = gsl_spline_eval(a_spline, tau_temp, gsl_inpl_acc);
+				if(sim.read_bg_from_file == true){
+					tau_temp += 0.5 * dtau / numsteps;
+					a = gsl_spline_eval(a_spline, tau_temp, gsl_inpl_acc);
+				}
+				else rungekutta_fR(a, Hubble, Rbar, fourpiG, cosmo, dtau, sim.fofR_params, sim.fofR_type);
 			}
 			else rungekutta4bg(a, fourpiG, cosmo, 0.5 * dtau / numsteps);  // evolve background by half a time step
 

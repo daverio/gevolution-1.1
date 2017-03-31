@@ -121,6 +121,86 @@ inline double getBackground(gsl_spline * spline, double tau, gsl_interp_accel * 
 }
 
 
+///////////////////////////////////////////////////////////
+// Method when computing the background with RK4 solver
+//////////////////////////////////////////////////////////
+
+// System for f(R) background:
+// a' = func_RK_adot(...)
+// H' = func_RK_Hdot(...)
+// R' = func_RK_Rdot(...)
+
+inline double func_RK_adot(const double a, const double H)
+{
+	return a * H;
+}
+
+inline double func_RK_Hdot(const double a, const double H, const double R)
+{
+	return a*a*R/6. - H*H;
+}
+
+double func_RK_Rdot(const double a,
+										const double H,
+										const double R,
+										const cosmology cosmo,
+										const double fourpiG,
+										double * params,
+										const int fofR_type)
+{
+	double frr = FRR(R, params, fofR_type);
+	double fr = FR(R, params, fofR_type);
+	double rho = Hconf(a, fourpiG, cosmo);
+	rho *= 3. * rho; // Actually computes 8 pi G * rho
+
+	if(frr) return ((rho*a*a - 3.*H*H*(1.+fr) + 0.5*(fr * R - F(R, params, fofR_type))*a*a) / (3. * frr * H));
+	else{
+		COUT << "FRR evaluates to zero. Closing..." << endl;
+		exit(3);
+	}
+
+}
+
+
+
+
+// rungekutta for f(R) background
+void rungekutta_fR(double &a,
+									 double &H,
+									 double &R,
+									 const double fourpiG,
+									 const cosmology cosmo,
+									 const double dtau,
+									 double * params,
+									 const int fofR_type)
+{
+	double a1, a2, a3, a4;
+	double H1, H2, H3, H4;
+	double R1, R2, R3, R4;
+
+	a1 = func_RK_adot(a, H);
+	H1 = func_RK_Hdot(a, H, R);
+	R1 = func_RK_Rdot(a, H, R, cosmo, fourpiG, params, fofR_type);
+
+	a2 = func_RK_adot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau);
+	H2 = func_RK_Hdot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau);
+	R2 = func_RK_Rdot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau, cosmo, fourpiG, params, fofR_type);
+
+	a3 = func_RK_adot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau);
+	H3 = func_RK_Hdot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau);
+	R3 = func_RK_Rdot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau, cosmo, fourpiG, params, fofR_type);
+
+	a4 = func_RK_adot(a + a3 * dtau, H + H3 * dtau);
+	H4 = func_RK_Hdot(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau);
+	R4 = func_RK_Rdot(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau, cosmo, fourpiG, params, fofR_type);
+
+	a += dtau * (a1 + 2.*a2 + 2.*a3 + a4) / 6.;
+	H += dtau * (H1 + 2.*H2 + 2.*H3 + H4) / 6.;
+	R += dtau * (R1 + 2.*R2 + 2.*R3 + R4) / 6.;
+
+}
+
+
 
 
 #endif

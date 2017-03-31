@@ -1024,7 +1024,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	sim.vector_flag = VECTOR_PARABOLIC;
 	sim.gr_flag = 0;
 	sim.mg_flag = GENREL;
-	sim.read_bg_from_file = false; //TODO: Check if this is correct. FALSE -> compute bg with RK4
+	sim.read_bg_from_file = 0; //TODO: Check if this is correct. FALSE -> compute bg with RK4
 	sim.out_pk = 0;
 	sim.out_snapshot = 0;
 	sim.num_pk = MAX_OUTPUTS;
@@ -1175,6 +1175,8 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	parseParameter(params, numparam, "f(R) epsilon", sim.fofR_timestep_epsilon);
 
 	parseParameter(params, numparam, "time step limit", sim.steplimit);
+	parseParameter(params, numparam, "read background from file", sim.read_bg_from_file);
+
 
 	if (parseParameter(params, numparam, "gravity theory", par_string))
 	{

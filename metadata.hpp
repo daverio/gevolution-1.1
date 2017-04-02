@@ -204,7 +204,7 @@ struct metadata
 	char output_path[PARAM_MAX_LENGTH];
 	char restart_path[PARAM_MAX_LENGTH];
 	char basename_restart[PARAM_MAX_LENGTH];
-	char backgroud_filename[PARAM_MAX_LENGTH];
+	char background_filename[PARAM_MAX_LENGTH];
 };
 
 struct icsettings

@@ -1038,7 +1038,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	sim.wallclocklimit = -1.;
 	sim.z_in = 0.;
 	sim.fofR_type = 0;
-	for (i = 0; i < MAX_FOFR_PARAMS; i++)sim.fofR_params[i] = 0;
+	for (i = 0; i < MAX_FOFR_PARAMS; i++) sim.fofR_params[i] = 0;
 	sim.num_fofR_params = MAX_FOFR_PARAMS;
 
 	if (parseParameter(params, numparam, "vector method", par_string))
@@ -1078,8 +1078,8 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	if (!parseParameter(params, numparam, "hibernation file base", sim.basename_restart))
 		strcpy(sim.basename_restart, "restart");
 
-	if (!parseParameter(params, numparam, "background file", sim.backgroud_filename))
-		sim.backgroud_filename[0] = '\0';
+	if (!parseParameter(params, numparam, "background file", sim.background_filename))
+		sim.background_filename[0] = '\0';
 
 	parseParameter(params, numparam, "boxsize", sim.boxsize);
 	if (sim.boxsize <= 0. || !isfinite(sim.boxsize))
@@ -1173,7 +1173,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	if (ic.Cf < 0.) ic.Cf = sim.Cf;
 
 	parseParameter(params, numparam, "f(R) epsilon", sim.fofR_timestep_epsilon);
-
 	parseParameter(params, numparam, "time step limit", sim.steplimit);
 	parseParameter(params, numparam, "read background from file", sim.read_bg_from_file);
 
@@ -1204,18 +1203,35 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			COUT << " gravity theory set to: " << COLORTEXT_CYAN << "f(R)" << COLORTEXT_RESET << endl;
 			sim.gr_flag = 1;
 			sim.mg_flag = FOFR;
-			if(sim.backgroud_filename[0] == '\0')
+			if(sim.read_bg_from_file == 1 && sim.background_filename[0] == '\0')
 			{
-				COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": Gravity set to f(r), but no background file have been specified!" << endl;
+				COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": Gravity set to f(R), but no background file have been specified!" << endl;
 				parallel.abortForce();
 			}
 			//TODO: read fofR params and type
 			parseParameter(params, numparam, "f(R) parameters", sim.fofR_params, sim.num_fofR_params);
-			if (parseParameter(params, numparam, "gravity theory", par_string))
+			if (parseParameter(params, numparam, "f(R) type", par_string))
 			{
 				if(par_string[0] == 'R' || par_string[0] == 'r')
 				{
 					sim.fofR_type = FOFR_TYPE_RN;
+					COUT << " f(R) model: R^n" << endl;
+					if(!sim.fofR_params[0])
+					{
+						COUT << "Coefficient a of F(R) = a*R^n is set to 0. Closing...\n";
+						exit(11);
+					}
+					else if(sim.fofR_params[1]==1)
+					{
+						COUT << "Exponent n of F(R) = a*R^n is set to 1. This is just a redefinition of Newton's constant. Closing...\n";
+						exit(12);
+					}
+				}
+
+				else if(par_string[0] == 'H' || par_string[0] == 'h')
+				{
+					COUT << " f(R) model: Hu-Sawicki" << endl;
+					sim.fofR_type = FOFR_TYPE_HU_SAWICKI;
 				}
 			}
 			else
@@ -1340,7 +1356,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	// Added parser for Omega_Lambda in f(R) gravity -- Lambda will typically be zero, but can be nonzero
 	if(sim.mg_flag==FOFR)
-		if(parseParameter(params, numparam, "Omega_Lambda", cosmo.Omega_Lambda))
+		if(parseParameter(params, numparam, "Omega_Lambda", cosmo.Omega_Lambda) && cosmo.Omega_Lambda)
 		{
 			COUT << "Gravity theory: f(R), plus" << COLORTEXT_YELLOW << " EXPLICIT " << COLORTEXT_RESET << "Lambda term, with Omega_Lambda = " << cosmo.Omega_Lambda << endl;
 		}

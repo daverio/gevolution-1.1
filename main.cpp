@@ -79,9 +79,6 @@
 #include "output.hpp"
 #include "hibernation.hpp"
 
-
-
-
 using namespace std;
 
 using namespace LATfield2;
@@ -175,8 +172,13 @@ int main(int argc, char **argv)
 #endif
 
 	COUT << COLORTEXT_WHITE << endl;
-	COUT << "  _   _      _         __ ,  _" << endl;
-	COUT << " (_| (-' \\/ (_) (_ (_| (  ( (_) /\\/	version 1.1         running on " << n*m << " cores." << endl;
+
+  COUT << "    _|_|  _|_|_|                                    _|              _|      _|                       " << endl
+       << "  _|      _|    _|    _|_|    _|      _|    _|_|    _|  _|    _|  _|_|_|_|        _|_|    _|_|_|     " << endl
+       << "_|_|_|_|  _|_|_|    _|_|_|_|  _|      _|  _|    _|  _|  _|    _|    _|      _|  _|    _|  _|    _|   " << endl
+       << "  _|      _|    _|  _|          _|  _|    _|    _|  _|  _|    _|    _|      _|  _|    _|  _|    _|   " << endl
+       << "  _|      _|    _|    _|_|_|      _|        _|_|    _|    _|_|_|      _|_|  _|    _|_|    _|    _|      version 1.0 running on " << n*m << " cores." << endl;
+
 	COUT << "  -'" << endl << COLORTEXT_RESET << endl;
 
 	if (settingsfile == NULL)
@@ -199,6 +201,7 @@ int main(int argc, char **argv)
 	saveParameterFile(filename, params, numparam);
 
 	free(params);
+
 
 #ifdef HAVE_CLASS
 	background class_background;
@@ -330,10 +333,12 @@ else
 	const gsl_interp_type *gsl_inpl_type = gsl_interp_linear;
 
  	if(sim.mg_flag == FOFR)
+	{
 		if(sim.read_bg_from_file == 1)
-			loadBackground(a_spline,H_spline,Rbar_spline,gsl_inpl_type, sim.backgroud_filename);
-
-	////////////////////////////////////////////
+			loadBackground(a_spline,H_spline,Rbar_spline,gsl_inpl_type, sim.background_filename);
+		if(sim.fofR_type == FOFR_TYPE_HU_SAWICKI)
+			rescale_params_Hu_Sawicki(cosmo, fourpiG, sim.fofR_params);
+	}
 
 	Site x(lat);
 	rKSite kFT(latFT);
@@ -365,10 +370,9 @@ else
 			Rbar = R_initial_fR(a, 2. * fourpiG, cosmo);
 			Hubble = H_initial_fR(a, Hconf(a, fourpiG, cosmo), Rbar, F(Rbar,sim.fofR_params,sim.fofR_type), FR(Rbar,sim.fofR_params,sim.fofR_type));
 		}
-		if (sim.Cf * dx < sim.steplimit / Hubble)
-			dtau = sim.Cf * dx;
-	  else
-		dtau = sim.steplimit / Hubble;
+		if (sim.Cf * dx < sim.steplimit / Hubble) dtau = sim.Cf * dx;
+	  else dtau = sim.steplimit / Hubble;
+
 		dtau_osci = sim.fofR_timestep_epsilon * sqrt(3.0* FRR(Rbar,sim.fofR_params,sim.fofR_type))/a;
 		if(dtau > dtau_osci) dtau = dtau_osci;
 	}
@@ -379,10 +383,6 @@ else
 	  else
 		dtau = sim.steplimit / Hconf(a, fourpiG, cosmo);
 	}
-
-
-
-
 
 	dtau_old = 0.;
 
@@ -1012,7 +1012,7 @@ if (pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation
 			}
 
 #ifdef OUTPUT_BACKGROUND
-					//// write a the f(R) backgroud file
+					//// write a the f(R) background file
 			if(parallel.rank()==0)
 			{
 				ofstream fileBG;
@@ -1052,7 +1052,7 @@ if (pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation
 			else rungekutta4bg(a, fourpiG, cosmo, 0.5 * dtau / numsteps);  // evolve background by half a time step
 
 			#ifdef OUTPUT_BACKGROUND
-					//// write a the f(R) backgroud file
+					//// write the f(R) background file
 					if(parallel.rank()==0)
 					{
 						ofstream fileBG;

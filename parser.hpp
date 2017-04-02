@@ -1024,7 +1024,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	sim.vector_flag = VECTOR_PARABOLIC;
 	sim.gr_flag = 0;
 	sim.mg_flag = GENREL;
-	sim.read_bg_from_file = 0; //TODO: Check if this is correct. FALSE -> compute bg with RK4
+	sim.read_bg_from_file = 0; //TODO: Check if this is correct. 0 -> compute bg with RK4
 	sim.out_pk = 0;
 	sim.out_snapshot = 0;
 	sim.num_pk = MAX_OUTPUTS;
@@ -1338,6 +1338,13 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		cosmo.Omega_cdm = 1.;
 	}
 
+	// Added parser for Omega_Lambda in f(R) gravity -- Lambda will typically be zero, but can be nonzero
+	if(sim.mg_flag==FOFR)
+		if(parseParameter(params, numparam, "Omega_Lambda", cosmo.Omega_Lambda))
+		{
+			COUT << "Gravity theory: f(R), plus" << COLORTEXT_YELLOW << " EXPLICIT " << COLORTEXT_RESET << "Lambda term, with Omega_Lambda = " << cosmo.Omega_Lambda << endl;
+		}
+
 	cosmo.Omega_m = cosmo.Omega_cdm + cosmo.Omega_b;
 	for (i = 0; i < cosmo.num_ncdm; i++) cosmo.Omega_m += cosmo.Omega_ncdm[i];
 
@@ -1353,8 +1360,11 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	}
 	else
 	{
-		COUT << " cosmological parameters are: Omega_m0 = " << cosmo.Omega_m << ", Omega_rad0 = " << cosmo.Omega_rad << ", h = " << cosmo.h << endl;
-		cosmo.Omega_Lambda = 1. - cosmo.Omega_m - cosmo.Omega_rad;
+		COUT << " cosmological parameters are: Omega_m0 = " << cosmo.Omega_m
+				 << ", Omega_rad0 = " << cosmo.Omega_rad;
+				 if(sim.mg_flag==FOFR) COUT << ", Omega_Lambda0 = " << cosmo.Omega_Lambda;
+				 else cosmo.Omega_Lambda = 1. - cosmo.Omega_m - cosmo.Omega_rad; // Unless in f(R), set total Omega = 1
+				 COUT << ", h = " << cosmo.h << endl;
 	}
 
 	if(!parseParameter(params, numparam, "switch delta_rad", sim.z_switch_deltarad))

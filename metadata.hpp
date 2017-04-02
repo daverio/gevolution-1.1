@@ -118,8 +118,9 @@
 #define GENREL 0 // General Relativity
 #define FOFR 1   // f(R)
 
-//f(R) model
+//f(R) models
 #define FOFR_TYPE_RN 0
+#define FOFR_TYPE_HU_SAWICKI 1
 
 // color escape sequences for terminal highlighting (enable with -DCOLORTERMINAL)
 #ifdef COLORTERMINAL

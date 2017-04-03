@@ -166,9 +166,13 @@ void prepareFTsource_S00(Field<FieldType> & source,
 	double laplace;
 	double grad[3];
 
+
+	double maxt = 0.;
+
 	for (x.first(); x.test(); x.next())
 	{
-		source(x) = eightpiG * a2 * (T00(x) - bgmodel) + 6.0*Hubble*Hubble*chi(x) + 3.0*Hubble * (2.0*phi(x)-xi(x))/dtau;
+		source(x) = eightpiG * a2 * (T00(x) - bgmodel) + 6.0*Hubble*Hubble*chi(x) + 3.0*Hubble * (2.0*phi(x) - xi(x))/dtau ;
+		if(fabs(T00(x) - bgmodel) > maxt) maxt = T00(x) - bgmodel;
 		//add laplace phi
 		laplace=0.0;
 		for(int i =0;i<3;i++)laplace += phi(x+i)+phi(x-i);
@@ -183,7 +187,12 @@ void prepareFTsource_S00(Field<FieldType> & source,
 		//f(R) terms
 		source(x) -= 0.5 * a2 * (Rbar*xi(x) + Fbar - F(Rbar+ deltaR(x),paramF,Ftype));
 		source(x) += (grad[0] + grad[1] + grad[2]) * 0.75/dx2;
+
 	}
+
+	parallel.max(maxt);
+
+	COUT << "max 8piG * a2 * (T00 - bgmodel) = " << eightpiG * a2 * maxt << endl;
 }
 
 template <class FieldType>
@@ -257,18 +266,33 @@ void stepXi(Field<FieldType> & xi,
 							double dtau)
 {
 	Site x(xi.lattice());
+
+	double phidotmax = 0., summax = 0.;
+
+	for(x.first(); x.test(); x.next())
+	{
+		if(fabs(phidot(x)) > phidotmax) phidotmax = fabs(phidot(x));
+	}
+	parallel.max(phidotmax);
+	COUT << "phidotmax = " << phidotmax << endl;
+
 	FieldType * pointer;
 	for(x.first();x.test();x.next())
 	{
-		xi(x) = (source(x) + (phidot(x)-xi(x)+2.0*phi(x))/dtau )/H + 2.0 *chi(x);
-
+		xi(x) = (source(x) + (phidot(x)-xi(x) + 2.0*phi(x))/dtau )/H + 2.0 *chi(x);
+		if(fabs(xi(x)) > summax) summax = fabs(xi(x));
 		phidot(x) = 0.25*(xi(x)-phidot(x));
 		phi(x) = (phidot(x) - phi(x))/dtau;
 		xi(x) = xi(x) - 2.0* phidot(x);
 	}
+
+	parallel.max(summax);
+	COUT << "summax = " << summax << endl;
+
 	pointer = phidot.data_;
 	phidot.data_ = phi.data_;
 	phi.data_ = pointer;
+
 }
 
 template <class FieldType>

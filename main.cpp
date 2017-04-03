@@ -272,6 +272,7 @@ if(sim.mg_flag == FOFR)
 	deltaR.alloc();
 	phidot.initialize(lat,1);
 	plan_source.initialize(&source, &scalarFT);
+	plan_phi.initialize(&phi, &scalarFT);
 	plan_phidot.initialize(&phidot, &scalarFT);
 	plan_chi.initialize(&chi, &scalarFT);
 	Bi.initialize(lat,3);
@@ -308,8 +309,6 @@ else
 	plan_Bi_check.initialize(&Bi_check, &BiFT_check);
 #endif
 
-
-
 	update_cdm_fields[0] = &phi;
 	update_cdm_fields[1] = &chi;
 	update_cdm_fields[2] = &Bi;
@@ -337,7 +336,9 @@ else
 		if(sim.read_bg_from_file == 1)
 			loadBackground(a_spline,H_spline,Rbar_spline,gsl_inpl_type, sim.background_filename);
 		if(sim.fofR_type == FOFR_TYPE_HU_SAWICKI)
-			rescale_params_Hu_Sawicki(cosmo, fourpiG, sim.fofR_params);
+		{
+			rescale_params_Hu_Sawicki(cosmo, fourpiG, &sim);
+		}
 	}
 
 	Site x(lat);
@@ -375,6 +376,7 @@ else
 
 		dtau_osci = sim.fofR_timestep_epsilon * sqrt(3.0* FRR(Rbar,sim.fofR_params,sim.fofR_type))/a;
 		if(dtau > dtau_osci) dtau = dtau_osci;
+		// COUT << "dtau = " << dtau << "    dtau_osci = " << dtau_osci << endl;
 	}
 	else
 	{
@@ -403,6 +405,30 @@ else
 		COUT << " error: IC generator not implemented!" << endl;
 		parallel.abortForce();
 	}
+
+	COUT << "We get at least until here!\n";
+
+	double Phi_max = 0., chi_max = 0., xi_max = 0., B_max = 0., norm_B;
+
+	for(x.first(); x.test(); x.next())
+	{
+		if(fabs(phi(x))>Phi_max) Phi_max = fabs(phi(x));
+		if(fabs(chi(x))>chi_max) chi_max = fabs(chi(x));
+		if(fabs(xi(x))>xi_max) xi_max = fabs(xi(x));
+		norm_B = Bi(x,0)*Bi(x,0) + Bi(x,1)*Bi(x,1) + Bi(x,2)*Bi(x,2);
+		if(norm_B > B_max) B_max = norm_B;
+	}
+
+	parallel.max(Phi_max);
+	parallel.max(chi_max);
+	parallel.max(xi_max);
+	parallel.max(B_max);
+
+	COUT << "maxvel[0] = " << maxvel[0] << endl
+			 << "Phi_max = " << Phi_max << endl
+			 << "chi_max = " << chi_max << endl
+			 << "xi_max = "  << xi_max << endl
+			 << "B_max = " << B_max << endl;
 
 	if (sim.baryon_flag > 1)
 	{
@@ -479,6 +505,10 @@ else
 
 	while (true)    // main loop
 	{
+
+		COUT << "Cycle number " << cycle << endl;
+		COUT << "Scale factor = " << a << "  Hubble = " << Hubble << "   Rbar = " << Rbar << "   dtau = " << dtau << "  dtau_osci = " << dtau_osci << endl;
+
 #ifdef BENCHMARK
 		cycle_start_time = MPI_Wtime();
 #endif
@@ -577,9 +607,6 @@ else
 			projection_T0i_comm(&Si);
 		}
 
-
-
-
 		projection_init(&Sij);
 		projection_Tij_project(&pcls_cdm, &Sij, a, &phi);
 		if (sim.baryon_flag)
@@ -629,10 +656,7 @@ else
 						Hubble = gsl_spline_eval(H_spline, tau, gsl_inpl_acc);
 						Rbar = gsl_spline_eval(Rbar_spline, tau, gsl_inpl_acc);
 					}
-					else{
-						Rbar = R_initial_fR(a, 2. * fourpiG, cosmo);
-						Hubble = H_initial_fR(a, Hconf(a, fourpiG, cosmo), Rbar, F(Rbar,sim.fofR_params,sim.fofR_type), FR(Rbar,sim.fofR_params,sim.fofR_type));
-					}
+
 					prepareFTsource_S00(source,phi,chi,xi,deltaR,zeta,
 															cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo),
 															dx*dx,
@@ -662,7 +686,7 @@ else
 #ifdef BENCHMARK
 				ref2_time= MPI_Wtime();
 #endif
-				if(sim.mg_flag== FOFR)plan_phidot.execute(FFT_BACKWARD);
+				if(sim.mg_flag== FOFR) plan_phidot.execute(FFT_BACKWARD);
 				else plan_phi.execute(FFT_BACKWARD);	 // go back to position space
 #ifdef BENCHMARK
 				fft_time += MPI_Wtime() - ref2_time;
@@ -699,7 +723,7 @@ else
 			if (dtau_old > 0.)
 			{
 			/// step b) and c)
-				prepareFTsource_S0i(Si,phi,Bi,2.0 * fourpiG * a * a,a*a);
+				prepareFTsource_S0i(Si,phi,Bi,2.0 * fourpiG * a * a, a*a);
 				plan_Si.execute(FFT_FORWARD);
 				projectFTsource_S0i(SiFT,scalarFT);
 				plan_source.execute(FFT_BACKWARD);
@@ -712,7 +736,26 @@ else
 
 		phi.updateHalo();  // communicate halo values
 
+		for(x.first(); x.test(); x.next())
+		{
+			if(fabs(phi(x))>Phi_max) Phi_max = fabs(phi(x));
+			if(fabs(chi(x))>chi_max) chi_max = fabs(chi(x));
+			if(fabs(xi(x))>xi_max) xi_max = fabs(xi(x));
+			norm_B = Bi(x,0)*Bi(x,0) + Bi(x,1)*Bi(x,1) + Bi(x,2)*Bi(x,2);
+			if(norm_B > B_max) B_max = norm_B;
+		}
 
+		parallel.max(Phi_max);
+		parallel.max(chi_max);
+		parallel.max(xi_max);
+		parallel.max(B_max);
+
+		COUT << "maxvel[0] = " << maxvel[0] << endl
+				 << "Phi_max = " << Phi_max << endl
+				 << "chi_max = " << chi_max << endl
+				 << "xi_max = "  << xi_max << endl
+				 << "B_max = " << B_max << endl;
+		cin.get();
 
 
 		// record some background data
@@ -940,6 +983,7 @@ if (pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation
 #endif
 				}
 			}
+
 #ifdef BENCHMARK
 			update_q_time += MPI_Wtime() - ref2_time;
 			ref2_time = MPI_Wtime();

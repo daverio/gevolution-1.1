@@ -129,7 +129,7 @@ inline double H_initial_fR(const double a, const double H, const double R, const
 
 inline double R_initial_fR(const double a, const double eightpiG, const cosmology cosmo)
 {
-	return - eightpiG * Omega_m(a,cosmo) / a/a/a; // TODO: Not very accurate at this stage, but let's try this first
+	return - eightpiG * Omega_m(a,cosmo); // TODO: Not very accurate at this stage, but let's try this first
 }
 
 

@@ -25,10 +25,10 @@
 // Constructed parameters:
 // params[3] = c1, calibrated to give c1*m2/c2 = 2 * 8piG * rho_Lambda [see 0705.1158 equations (25,26)]
 
-void rescale_params_Hu_Sawicki(const cosmology cosmo, const double fourpiG, double (&params)[MAX_FOFR_PARAMS])
+void rescale_params_Hu_Sawicki(const cosmology cosmo, const double fourpiG, metadata* sim)
 {
-	params[3] *= params[1] * 6. * (1 - cosmo.Omega_m - cosmo.Omega_rad) / cosmo.Omega_m; //Omega_m > 0, checked in parseMetadata()
-	params[0] *= fourpiG * cosmo.Omega_m / 1.5;
+	sim->fofR_params[3] *= sim->fofR_params[1] * 6. * (1 - cosmo.Omega_m - cosmo.Omega_rad) / cosmo.Omega_m; //Omega_m > 0, checked in parseMetadata()
+	sim->fofR_params[0] *= fourpiG * cosmo.Omega_m / 1.5;
 }
 
 

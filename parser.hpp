@@ -1219,12 +1219,12 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 					if(!sim.fofR_params[0])
 					{
 						COUT << "Coefficient a of F(R) = a*R^n is set to 0. Closing...\n";
-						exit(11);
+						// exit(11);
 					}
 					else if(sim.fofR_params[1]==1)
 					{
 						COUT << "Exponent n of F(R) = a*R^n is set to 1. This is just a redefinition of Newton's constant. Closing...\n";
-						exit(12);
+						// exit(12);
 					}
 				}
 
@@ -1356,10 +1356,16 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	// Added parser for Omega_Lambda in f(R) gravity -- Lambda will typically be zero, but can be nonzero
 	if(sim.mg_flag==FOFR)
+	{
 		if(parseParameter(params, numparam, "Omega_Lambda", cosmo.Omega_Lambda) && cosmo.Omega_Lambda)
 		{
 			COUT << "Gravity theory: f(R), plus" << COLORTEXT_YELLOW << " EXPLICIT " << COLORTEXT_RESET << "Lambda term, with Omega_Lambda = " << cosmo.Omega_Lambda << endl;
 		}
+		else
+		{
+			cosmo.Omega_Lambda = 0.;
+		}
+	}
 
 	cosmo.Omega_m = cosmo.Omega_cdm + cosmo.Omega_b;
 	for (i = 0; i < cosmo.num_ncdm; i++) cosmo.Omega_m += cosmo.Omega_ncdm[i];

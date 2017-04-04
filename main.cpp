@@ -376,7 +376,6 @@ else
 
 		dtau_osci = sim.fofR_timestep_epsilon * sqrt(3.0* FRR(Rbar,sim.fofR_params,sim.fofR_type))/a;
 		if(dtau > dtau_osci) dtau = dtau_osci;
-		// COUT << "dtau = " << dtau << "    dtau_osci = " << dtau_osci << endl;
 	}
 	else
 	{
@@ -508,7 +507,7 @@ else
 		cycle_start_time = MPI_Wtime();
 #endif
 		// construct stress-energy tensor
-		if(sim.mg_flag== FOFR)projection_init(&zeta);
+		if(sim.mg_flag == FOFR)projection_init(&zeta);
 		else projection_init(&source);
 
 #ifdef HAVE_CLASS
@@ -518,7 +517,7 @@ else
 
 		if (sim.gr_flag > 0)
 		{
-			if(sim.mg_flag== GENREL)
+			if(sim.mg_flag == GENREL)
 			{
 			//in poisson gauge
 				projection_T00_project(&pcls_cdm, &source, a, &phi);
@@ -537,7 +536,7 @@ else
 					}
 					projection_T00_comm(&source);
 			}
-			else if (sim.mg_flag == FOFR)
+			else if (sim.mg_flag == FOFR) // Write  -a^3 T00 in zeta -- Note the sign and the power of scale factor!
 			{
 				projection_T00_project(&pcls_cdm, &zeta, a, &phi);
 				if (sim.baryon_flag)
@@ -588,7 +587,7 @@ else
 				projection_T0i_comm(&Bi);
 			}
 		}
-		else if (sim.mg_flag == FOFR)
+		else if (sim.mg_flag == FOFR) // Write a^4 T^0_i on Si
 		{
 			projection_init(&Si);
 			projection_T0i_project(&pcls_cdm, &Si, &phi);
@@ -602,7 +601,7 @@ else
 			projection_T0i_comm(&Si);
 		}
 
-		projection_init(&Sij);
+		projection_init(&Sij); // Write a^4 Tij on Sij
 		projection_Tij_project(&pcls_cdm, &Sij, a, &phi);
 		if (sim.baryon_flag)
 			projection_Tij_project(&pcls_b, &Sij, a, &phi);
@@ -622,10 +621,10 @@ else
 		{
 			T00hom = 0.;
 
-			if(sim.mg_flag == FOFR)
+			if(sim.mg_flag == FOFR) // Compute homogeneous part of T00
 			{
 				for (x.first(); x.test(); x.next())
-					T00hom += zeta(x);//TODO: deltaR or zeta?
+					T00hom += zeta(x);
 			}
 			else
 			{
@@ -652,6 +651,7 @@ else
 						Rbar = gsl_spline_eval(Rbar_spline, tau, gsl_inpl_acc);
 					}
 
+					// Write source term for the 00 equation on source
 					prepareFTsource_S00(source,
 															phi,
 															chi,
@@ -676,19 +676,22 @@ else
 #ifdef BENCHMARK
 				ref2_time= MPI_Wtime();
 #endif
-				plan_source.execute(FFT_FORWARD);  // go to k-space
+				plan_source.execute(FFT_FORWARD);  // go to k-space, {source} --> FFT_FORWARD --> {scalarFT}
 #ifdef BENCHMARK
 				fft_time += MPI_Wtime() - ref2_time;
 				fft_count++;
 #endif
+				// phi update (k-space)
 				if(sim.mg_flag == FOFR) solveModifiedPoissonFT(scalarFT, scalarFT, 1. / (dx * dx), 3. * Hubble / dtau_old + 3.0*Hubble*Hubble);
-				else solveModifiedPoissonFT(scalarFT, scalarFT, 1. / (dx * dx), 3. * Hconf(a, fourpiG, cosmo) / dtau_old);  // phi update (k-space)
+				else solveModifiedPoissonFT(scalarFT, scalarFT, 1. / (dx * dx), 3. * Hconf(a, fourpiG, cosmo) / dtau_old);
 
 #ifdef BENCHMARK
 				ref2_time= MPI_Wtime();
 #endif
-				if(sim.mg_flag== FOFR) plan_phidot.execute(FFT_BACKWARD);
-				else plan_phi.execute(FFT_BACKWARD);	 // go back to position space
+				// go back to position space
+				if(sim.mg_flag == FOFR) plan_phidot.execute(FFT_BACKWARD); // {scalarFT} --> FFT_BACKWARD --> {phidot} in f(R).
+																																	 // Now {phidot} contains (2*phi - xi) at the new timestep
+				else plan_phi.execute(FFT_BACKWARD); // {scalarFT} --> FFT_BACKWARD --> {phi} in GR, Newton
 #ifdef BENCHMARK
 				fft_time += MPI_Wtime() - ref2_time;
 				fft_count++;
@@ -719,15 +722,15 @@ else
 		}
 
 
-		if(sim.mg_flag== FOFR)
+		if(sim.mg_flag == FOFR)
 		{
 			if (dtau_old > 0.)
 			{
 			/// step b) and c)
-				prepareFTsource_S0i(Si, phi, Bi, 2. * fourpiG * dx / a / a);
-				plan_Si.execute(FFT_FORWARD);
-				projectFTsource_S0i(SiFT, scalarFT);
-				plan_source.execute(FFT_BACKWARD);
+				prepareFTsource_S0i(Si, 2. * fourpiG * dx / a / a); // Prepare
+				plan_Si.execute(FFT_FORWARD); // {Si} --> FFT_FORWARD --> {SiFT}
+				projectFTsource_S0i(SiFT, scalarFT); // Contract with projector --> {scalarFT}
+				plan_source.execute(FFT_BACKWARD); // {scalarFT} --> FFT_BACKWARD --> {source}
 				stepXi(xi, source, phidot, phi, chi, Hubble, dtau_old);
 
 			//step d

@@ -173,20 +173,20 @@ void prepareFTsource_S00(Field<FieldType> & source,
 		source(x) =  eightpiG_over_a * (T00(x) - bgmodel) - 6.*Hubble*Hubble*chi(x) - 3.*Hubble * (2.*phi(x) - xi(x))/dtau ;
 
 		if(fabs(T00(x) - bgmodel) > maxt) maxt = T00(x) - bgmodel;
-		if(fabs(2.*phi(x)-xi(x)) > maxd) maxd = 2.*phi(x)-xi(x);
+		if(fabs(2.*phi(x) - xi(x)) > maxd) maxd = 2.*phi(x) - xi(x);
 
 		source(x) += 0.5 * a2 * (Rbar*xi(x) + Fbar - F(Rbar+ deltaR(x), paramF, Ftype));
 		source(x) *= dx2;
 
 		//add laplace phi
-		laplace=0.0;
+		laplace = 0.;
 		for(int i=0; i<3; i++) laplace += phi(x+i)+phi(x-i);
 		laplace -= 6.*phi(x);
 		source(x) -= (8.*phi(x) + xi(x) + FRbar)*laplace;
 		//add gradient^2 phi
-		for(int i =0;i<3;i++)
+		for(int i=0; i<3; i++)
 		{
-			grad[i] = phi(x+i)-phi(x-i);
+			grad[i] = phi(x+i) - phi(x-i);
 			grad[i] *= grad[i];
 		}
 		//f(R) terms
@@ -196,18 +196,15 @@ void prepareFTsource_S00(Field<FieldType> & source,
 
 	parallel.max(maxt);
 
-	COUT << "  max 8piG * a2 * (T00 - bgmodel) = " << eightpiG_over_a * maxt << endl;
-	COUT << "  max 2*phi - xi = " << maxd << endl;
+	COUT << "  max 8piG * (T00 - bgmodel) = " << eightpiG_over_a * maxt << endl;
+	COUT << "  max (2*phi - xi)_{t-1} = " << maxd << endl;
 }
 
 template <class FieldType>
 void prepareFTsource_S0i(Field<FieldType> & S0i,
-												 Field<FieldType> & phi,
-												 Field<FieldType> & Bi,
 												 double eightpiG_dx_over_a2)
 {
-	Site x(phi.lattice());
-
+	Site x(S0i.lattice());
 	for (x.first(); x.test(); x.next())
 	{
 			S0i(x) *= eightpiG_dx_over_a2;
@@ -273,22 +270,25 @@ void stepXi(Field<FieldType> & xi,
 	for(x.first(); x.test(); x.next())
 	{
 		if(fabs(phidot(x)) > phidotmax) phidotmax = fabs(phidot(x));
+		if(fabs(2*phi(x) + xi(x)) > summax) summax = fabs(2*phi(x) + xi(x));
 	}
 	parallel.max(phidotmax);
-	COUT << "  phidotmax = " << phidotmax << endl;
+	parallel.max(summax);
+	COUT << "  max (2*phi - xi)_{t} = " << phidotmax << endl;
+	COUT << "  max (2*phi + xi)_{t-1} = " << summax << endl;
+	summax = 0.;
 
 	FieldType * pointer;
 	for(x.first();x.test();x.next())
 	{
-		xi(x) = (source(x) + (phidot(x) - xi(x) + 2.0*phi(x))/dtau )/H + 2.0 *chi(x);
+		xi(x) = (source(x) - (phidot(x) + xi(x) - 2.*phi(x))/dtau)/H + 2.*chi(x);
 		if(fabs(xi(x)) > summax) summax = fabs(xi(x));
-		phidot(x) = 0.25*(xi(x)-phidot(x));
+		phidot(x) = 0.25*(xi(x) + phidot(x));
 		phi(x) = (phidot(x) - phi(x))/dtau;
-		xi(x) = xi(x) - 2.0* phidot(x);
+		xi(x) = xi(x) - 2.*phidot(x);
 	}
-
 	parallel.max(summax);
-	COUT << "  max 2*phi + xi = " << summax << endl;
+	COUT << "  max (2*phi + xi)_{t} = " << summax << endl;
 
 	pointer = phidot.data_;
 	phidot.data_ = phi.data_;

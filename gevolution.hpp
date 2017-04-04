@@ -155,7 +155,7 @@ void prepareFTsource_S00(Field<FieldType> & source,
 												 double dtau,
 												 double Hubble,
 												 double a2,
-												 double eightpiG,
+												 double eightpiG_over_a,
 												 double Rbar,
 												 double Fbar,
 												 double FRbar,
@@ -166,18 +166,23 @@ void prepareFTsource_S00(Field<FieldType> & source,
 	double laplace;
 	double grad[3];
 
-
-	double maxt = 0.;
+	double maxt = 0., maxd = 0.;
 
 	for (x.first(); x.test(); x.next())
 	{
-		source(x) = eightpiG * a2 * (T00(x) - bgmodel) + 6.0*Hubble*Hubble*chi(x) + 3.0*Hubble * (2.0*phi(x) - xi(x))/dtau ;
+		source(x) =  eightpiG_over_a * (T00(x) - bgmodel) - 6.*Hubble*Hubble*chi(x) - 3.*Hubble * (2.*phi(x) - xi(x))/dtau ;
+
 		if(fabs(T00(x) - bgmodel) > maxt) maxt = T00(x) - bgmodel;
+		if(fabs(2.*phi(x)-xi(x)) > maxd) maxd = 2.*phi(x)-xi(x);
+
+		source(x) += 0.5 * a2 * (Rbar*xi(x) + Fbar - F(Rbar+ deltaR(x), paramF, Ftype));
+		source(x) *= dx2;
+
 		//add laplace phi
 		laplace=0.0;
-		for(int i =0;i<3;i++)laplace += phi(x+i)+phi(x-i);
-		laplace -= 6.0*phi(x);
-		source(x) += (8.0*phi(x) + xi(x) + FRbar)*laplace/dx2;
+		for(int i=0; i<3; i++) laplace += phi(x+i)+phi(x-i);
+		laplace -= 6.*phi(x);
+		source(x) -= (8.*phi(x) + xi(x) + FRbar)*laplace;
 		//add gradient^2 phi
 		for(int i =0;i<3;i++)
 		{
@@ -185,31 +190,27 @@ void prepareFTsource_S00(Field<FieldType> & source,
 			grad[i] *= grad[i];
 		}
 		//f(R) terms
-		source(x) -= 0.5 * a2 * (Rbar*xi(x) + Fbar - F(Rbar+ deltaR(x),paramF,Ftype));
-		source(x) += (grad[0] + grad[1] + grad[2]) * 0.75/dx2;
+		source(x) -= (grad[0] + grad[1] + grad[2]) * 0.75;
 
 	}
 
 	parallel.max(maxt);
 
-	COUT << "max 8piG * a2 * (T00 - bgmodel) = " << eightpiG * a2 * maxt << endl;
+	COUT << "  max 8piG * a2 * (T00 - bgmodel) = " << eightpiG_over_a * maxt << endl;
+	COUT << "  max 2*phi - xi = " << maxd << endl;
 }
 
 template <class FieldType>
 void prepareFTsource_S0i(Field<FieldType> & S0i,
 												 Field<FieldType> & phi,
 												 Field<FieldType> & Bi,
-												 double eightpiGa2,
-											 	 double a2)
+												 double eightpiG_dx_over_a2)
 {
 	Site x(phi.lattice());
 
-	double phicjk[3][3];
-
 	for (x.first(); x.test(); x.next())
 	{
-			S0i(x) *= eightpiGa2;
-			//for(int i=0;i<3;i++)phicjk[i][i] =
+			S0i(x) *= eightpiG_dx_over_a2;
 	}
 }
 
@@ -274,12 +275,12 @@ void stepXi(Field<FieldType> & xi,
 		if(fabs(phidot(x)) > phidotmax) phidotmax = fabs(phidot(x));
 	}
 	parallel.max(phidotmax);
-	COUT << "phidotmax = " << phidotmax << endl;
+	COUT << "  phidotmax = " << phidotmax << endl;
 
 	FieldType * pointer;
 	for(x.first();x.test();x.next())
 	{
-		xi(x) = (source(x) + (phidot(x)-xi(x) + 2.0*phi(x))/dtau )/H + 2.0 *chi(x);
+		xi(x) = (source(x) + (phidot(x) - xi(x) + 2.0*phi(x))/dtau )/H + 2.0 *chi(x);
 		if(fabs(xi(x)) > summax) summax = fabs(xi(x));
 		phidot(x) = 0.25*(xi(x)-phidot(x));
 		phi(x) = (phidot(x) - phi(x))/dtau;
@@ -287,7 +288,7 @@ void stepXi(Field<FieldType> & xi,
 	}
 
 	parallel.max(summax);
-	COUT << "summax = " << summax << endl;
+	COUT << "  max 2*phi + xi = " << summax << endl;
 
 	pointer = phidot.data_;
 	phidot.data_ = phi.data_;
@@ -348,7 +349,7 @@ double computeDRzeta(Field<FieldType> & deltaR,
 		}
 		else
 		{
-			COUT<<"FRR is equal to 0, aborting"<<endl;
+			COUT<<" FRR is equal to 0, aborting"<<endl;
 			exit(2);
 		}
 	}
@@ -385,7 +386,7 @@ void prepareFTsource(Field<FieldType> & phi, Field<FieldType> & chi, Field<Field
 	{
 		result(x) = coeff2 * (source(x) - bgmodel);
 #ifdef PHINONLINEAR
-#ifdef ORIGINALMETRIC
+#ifdef ORIGINALMETRIC // TODO: impose that f(R) works only for ORIGINALMETRIC
 		result(x) *= 1. - 4. * phi(x);
 		result(x) -= 0.375 * (phi(x-0) - phi(x+0)) * (phi(x-0) - phi(x+0));
 		result(x) -= 0.375 * (phi(x-1) - phi(x+1)) * (phi(x-1) - phi(x+1));
@@ -591,7 +592,10 @@ void projectFTvector(Field<Cplx> & SiFT, Field<Cplx> & BiFT, const Real coeff = 
 	{
 		k2 = gridk2[k.coord(0)] + gridk2[k.coord(1)] + gridk2[k.coord(2)];
 
+		// tmp = k^i S^0_i / k^2
 		tmp = (kshift[k.coord(0)] * SiFT(k, 0) + kshift[k.coord(1)] * SiFT(k, 1) + kshift[k.coord(2)] * SiFT(k, 2)) / k2;
+
+		// BiFT_i = (k^2 \delta^{ij} - k^i k^j) S^0_j * 4 \pi G dx^2 / k^4
 
 		BiFT(k, 0) = (SiFT(k, 0) - kshift[k.coord(0)].conj() * tmp) * 4. * coeff / (k2 + modif);
 		BiFT(k, 1) = (SiFT(k, 1) - kshift[k.coord(1)].conj() * tmp) * 4. * coeff / (k2 + modif);
@@ -739,7 +743,7 @@ void solveModifiedPoissonFT(Field<Cplx> & sourceFT, Field<Cplx> & potFT, Real co
 
 	for (; k.test(); k.next())
 	{
-		potFT(k) = sourceFT(k) * coeff / (gridk2[k.coord(0)] + gridk2[k.coord(1)] + gridk2[k.coord(2)] + modif);
+		potFT(k) = sourceFT(k) * coeff / ( gridk2[k.coord(0)] + gridk2[k.coord(1)] + gridk2[k.coord(2)] + modif);
 	}
 
 	free(gridk2);

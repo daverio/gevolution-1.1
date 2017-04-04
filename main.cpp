@@ -406,29 +406,27 @@ else
 		parallel.abortForce();
 	}
 
-	COUT << "We get at least until here!\n";
-
 	double Phi_max = 0., chi_max = 0., xi_max = 0., B_max = 0., norm_B;
 
 	for(x.first(); x.test(); x.next())
 	{
 		if(fabs(phi(x))>Phi_max) Phi_max = fabs(phi(x));
 		if(fabs(chi(x))>chi_max) chi_max = fabs(chi(x));
-		if(fabs(xi(x))>xi_max) xi_max = fabs(xi(x));
+		if(sim.mg_flag == FOFR) if(fabs(xi(x))>xi_max) xi_max = fabs(xi(x));
 		norm_B = Bi(x,0)*Bi(x,0) + Bi(x,1)*Bi(x,1) + Bi(x,2)*Bi(x,2);
 		if(norm_B > B_max) B_max = norm_B;
 	}
 
 	parallel.max(Phi_max);
 	parallel.max(chi_max);
-	parallel.max(xi_max);
+	if(sim.mg_flag == FOFR) parallel.max(xi_max);
 	parallel.max(B_max);
 
 	COUT << "maxvel[0] = " << maxvel[0] << endl
 			 << "Phi_max = " << Phi_max << endl
-			 << "chi_max = " << chi_max << endl
-			 << "xi_max = "  << xi_max << endl
+	 	 	 << "chi_max = " << chi_max << endl
 			 << "B_max = " << B_max << endl;
+	if(sim.mg_flag == FOFR) COUT << "xi_max = "  << xi_max << endl;
 
 	if (sim.baryon_flag > 1)
 	{
@@ -444,12 +442,6 @@ else
 		for (i = 0; i < numspecies; i++)
 			maxvel[i] /= sqrt(maxvel[i] * maxvel[i] + 1.0);
 	}
-
-	if(sim.mg_flag == FOFR)
-	{
-		for(x.first();x.test();x.next())xi(x)=0.0;
-	}
-
 
 #ifdef CHECK_B
 	if (sim.vector_flag == VECTOR_ELLIPTIC)
@@ -506,8 +498,11 @@ else
 	while (true)    // main loop
 	{
 
+		if(sim.mg_flag == FOFR)
+		{
 		COUT << "Cycle number " << cycle << endl;
 		COUT << "Scale factor = " << a << "  Hubble = " << Hubble << "   Rbar = " << Rbar << "   dtau = " << dtau << "  dtau_osci = " << dtau_osci << endl;
+		}
 
 #ifdef BENCHMARK
 		cycle_start_time = MPI_Wtime();
@@ -542,7 +537,7 @@ else
 					}
 					projection_T00_comm(&source);
 			}
-			else if (sim.mg_flag== FOFR)
+			else if (sim.mg_flag == FOFR)
 			{
 				projection_T00_project(&pcls_cdm, &zeta, a, &phi);
 				if (sim.baryon_flag)
@@ -554,7 +549,7 @@ else
 						else if (sim.radiation_flag == 0)
 						{
 							//TODO
-							COUT<<"be careful background energy density of relativistic particlues is not computed properly..."<<endl;
+							COUT<<" Be careful, background energy density of relativistic particles not computed properly..." << endl;
 							tmp = bg_ncdm(a, cosmo, i);
 							for(x.first(); x.test(); x.next())
 							zeta(x) += tmp;
@@ -577,7 +572,7 @@ else
 		}
 
 
-		if(sim.mg_flag== GENREL)
+		if(sim.mg_flag == GENREL)
 		{
 			if (sim.vector_flag == VECTOR_ELLIPTIC)
 			{
@@ -593,7 +588,7 @@ else
 				projection_T0i_comm(&Bi);
 			}
 		}
-		else if (sim.mg_flag== FOFR)
+		else if (sim.mg_flag == FOFR)
 		{
 			projection_init(&Si);
 			projection_T0i_project(&pcls_cdm, &Si, &phi);
@@ -627,10 +622,10 @@ else
 		{
 			T00hom = 0.;
 
-			if(sim.mg_flag== FOFR)
+			if(sim.mg_flag == FOFR)
 			{
 				for (x.first(); x.test(); x.next())
-					T00hom += deltaR(x);
+					T00hom += zeta(x);//TODO: deltaR or zeta?
 			}
 			else
 			{
@@ -649,7 +644,7 @@ else
 
 			if (dtau_old > 0.)
 			{
-				if(sim.mg_flag== FOFR)
+				if(sim.mg_flag == FOFR)
 				{
 					if(sim.read_bg_from_file == 1)
 					{
@@ -657,19 +652,25 @@ else
 						Rbar = gsl_spline_eval(Rbar_spline, tau, gsl_inpl_acc);
 					}
 
-					prepareFTsource_S00(source,phi,chi,xi,deltaR,zeta,
+					prepareFTsource_S00(source,
+															phi,
+															chi,
+															xi,
+															deltaR,
+															zeta,
 															cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo),
 															dx*dx,
 															dtau_old,
 															Hubble,
 															a*a,
-															2.0*fourpiG,
+															2.0*fourpiG/a,
 															Rbar,
 															F(Rbar,sim.fofR_params,sim.fofR_type),
 															FR(Rbar,sim.fofR_params,sim.fofR_type),
 															sim.fofR_params,
 															sim.fofR_type);
 				}
+
 				else prepareFTsource<Real>(phi, chi, source, cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo), source, 3. * Hconf(a, fourpiG, cosmo) * dx * dx / dtau_old, fourpiG * dx * dx / a, 3. * Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) * dx * dx);  // prepare nonlinear source for phi update
 
 #ifdef BENCHMARK
@@ -680,7 +681,7 @@ else
 				fft_time += MPI_Wtime() - ref2_time;
 				fft_count++;
 #endif
-				if(sim.mg_flag== FOFR) solveModifiedPoissonFT(scalarFT, scalarFT, 1. / (dx * dx), 3. * Hubble / dtau_old + 3.0*Hubble*Hubble);
+				if(sim.mg_flag == FOFR) solveModifiedPoissonFT(scalarFT, scalarFT, 1. / (dx * dx), 3. * Hubble / dtau_old + 3.0*Hubble*Hubble);
 				else solveModifiedPoissonFT(scalarFT, scalarFT, 1. / (dx * dx), 3. * Hconf(a, fourpiG, cosmo) / dtau_old);  // phi update (k-space)
 
 #ifdef BENCHMARK
@@ -723,40 +724,39 @@ else
 			if (dtau_old > 0.)
 			{
 			/// step b) and c)
-				prepareFTsource_S0i(Si,phi,Bi,2.0 * fourpiG * a * a, a*a);
+				prepareFTsource_S0i(Si, phi, Bi, 2. * fourpiG * dx / a / a);
 				plan_Si.execute(FFT_FORWARD);
-				projectFTsource_S0i(SiFT,scalarFT);
+				projectFTsource_S0i(SiFT, scalarFT);
 				plan_source.execute(FFT_BACKWARD);
-				stepXi(xi,source,phidot,phi,chi,Hubble,dtau_old);
+				stepXi(xi, source, phidot, phi, chi, Hubble, dtau_old);
 
 			//step d
 			}
 			computeTtrace(deltaR,zeta,Sij);
+			for(x.first(); x.test(); x.next())
+			{
+				if(fabs(phi(x))>Phi_max) Phi_max = fabs(phi(x));
+				if(fabs(chi(x))>chi_max) chi_max = fabs(chi(x));
+				if(sim.mg_flag == FOFR) if(fabs(xi(x))>xi_max) xi_max = fabs(xi(x));
+				norm_B = Bi(x,0)*Bi(x,0) + Bi(x,1)*Bi(x,1) + Bi(x,2)*Bi(x,2);
+				if(norm_B > B_max) B_max = norm_B;
+			}
+
+			parallel.max(Phi_max);
+			parallel.max(chi_max);
+			if(sim.mg_flag == FOFR) parallel.max(xi_max);
+			parallel.max(B_max);
+
+			COUT << "  maxvel[0] = " << maxvel[0] << endl
+			 		 << "  Phi_max = " << Phi_max << endl
+			 		 << "  chi_max = " << chi_max << endl
+			 		 << "  B_max = " << B_max << endl
+		 	  	 << "  xi_max = "  << xi_max << endl;
+
+			cin.get();
 		}
 
 		phi.updateHalo();  // communicate halo values
-
-		for(x.first(); x.test(); x.next())
-		{
-			if(fabs(phi(x))>Phi_max) Phi_max = fabs(phi(x));
-			if(fabs(chi(x))>chi_max) chi_max = fabs(chi(x));
-			if(fabs(xi(x))>xi_max) xi_max = fabs(xi(x));
-			norm_B = Bi(x,0)*Bi(x,0) + Bi(x,1)*Bi(x,1) + Bi(x,2)*Bi(x,2);
-			if(norm_B > B_max) B_max = norm_B;
-		}
-
-		parallel.max(Phi_max);
-		parallel.max(chi_max);
-		parallel.max(xi_max);
-		parallel.max(B_max);
-
-		COUT << "maxvel[0] = " << maxvel[0] << endl
-				 << "Phi_max = " << Phi_max << endl
-				 << "chi_max = " << chi_max << endl
-				 << "xi_max = "  << xi_max << endl
-				 << "B_max = " << B_max << endl;
-		cin.get();
-
 
 		// record some background data
 		if (kFT.setCoord(0, 0, 0))
@@ -811,7 +811,7 @@ else
 		fft_count++;
 #endif
 
-		if(sim.mg_flag== FOFR)addXi(chi,xi);
+		if(sim.mg_flag== FOFR) addXi(chi,xi);
 
 		chi.updateHalo();  // communicate halo values
 

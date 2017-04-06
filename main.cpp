@@ -86,10 +86,13 @@ using namespace LATfield2;
 int main(int argc, char **argv)
 {
 
+	Site ref_site;
+
 #ifdef BENCHMARK
 	//benchmarking variables
 
 	double ref_time, ref2_time, cycle_start_time;
+
 
 	double initialization_time;
 	double run_time;
@@ -379,6 +382,9 @@ else
 	}
 	else
 	{
+		Hubble = Hconf(a, fourpiG, cosmo);
+		Rbar = - 2. * fourpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) / a / a / a;
+
 		if (sim.Cf * dx < sim.steplimit / Hconf(a, fourpiG, cosmo))
 			dtau = sim.Cf * dx;
 	  else
@@ -404,28 +410,6 @@ else
 		COUT << " error: IC generator not implemented!" << endl;
 		parallel.abortForce();
 	}
-
-	double Phi_max = 0., chi_max = 0., xi_max = 0., B_max = 0., norm_B;
-
-	for(x.first(); x.test(); x.next())
-	{
-		if(fabs(phi(x))>Phi_max) Phi_max = fabs(phi(x));
-		if(fabs(chi(x))>chi_max) chi_max = fabs(chi(x));
-		if(sim.mg_flag == FOFR) if(fabs(xi(x))>xi_max) xi_max = fabs(xi(x));
-		norm_B = Bi(x,0)*Bi(x,0) + Bi(x,1)*Bi(x,1) + Bi(x,2)*Bi(x,2);
-		if(norm_B > B_max) B_max = norm_B;
-	}
-
-	parallel.max(Phi_max);
-	parallel.max(chi_max);
-	if(sim.mg_flag == FOFR) parallel.max(xi_max);
-	parallel.max(B_max);
-
-	COUT << "maxvel[0] = " << maxvel[0] << endl
-			 << "Phi_max = " << Phi_max << endl
-	 	 	 << "chi_max = " << chi_max << endl
-			 << "B_max = " << B_max << endl;
-	if(sim.mg_flag == FOFR) COUT << "xi_max = "  << xi_max << endl;
 
 	if (sim.baryon_flag > 1)
 	{
@@ -497,11 +481,10 @@ else
 	while (true)    // main loop
 	{
 
-		if(sim.mg_flag == FOFR)
-		{
-		COUT << "Cycle number " << cycle << endl;
-		COUT << "Scale factor = " << a << "  Hubble = " << Hubble << "   Rbar = " << Rbar << "   dtau = " << dtau << "  dtau_osci = " << dtau_osci << endl;
-		}
+		COUT << "\n----------------------------------------------- CYCLE " << cycle << " -----------------------------------------------------------\n";
+		cin.get();
+
+		COUT << "Scale factor = " << a << "  Hubble = " << Hubble << "   Rbar = " << Rbar << "   dtau/H = " << dtau_old/Hubble << endl << endl;
 
 #ifdef BENCHMARK
 		cycle_start_time = MPI_Wtime();
@@ -624,13 +607,20 @@ else
 			if(sim.mg_flag == FOFR) // Compute homogeneous part of T00
 			{
 				for (x.first(); x.test(); x.next())
+				{
 					T00hom += zeta(x);
+				}
+				check_field_max(zeta, "zeta", sim.mg_flag);
 			}
 			else
 			{
-			for (x.first(); x.test(); x.next())
-				T00hom += source(x);
+				for (x.first(); x.test(); x.next())
+				{
+					T00hom += source(x);
+				}
+				check_field_max(source, "source", sim.mg_flag);
 			}
+
 
 			parallel.sum<Real>(T00hom);
 			T00hom /= (Real) numpts3d;
@@ -651,8 +641,8 @@ else
 						Rbar = gsl_spline_eval(Rbar_spline, tau, gsl_inpl_acc);
 					}
 
-					// Write source term for the 00 equation on source
-					prepareFTsource_S00(source,
+					// Write source term for the 00 equation in {source}
+					ref_site = prepareFTsource_S00(source,
 															phi,
 															chi,
 															xi,
@@ -670,8 +660,12 @@ else
 															sim.fofR_params,
 															sim.fofR_type);
 				}
+				else
+				{
+					prepareFTsource<Real>(phi, chi, source, cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo), source, 3. * Hconf(a, fourpiG, cosmo) * dx * dx / dtau_old, fourpiG * dx * dx / a, 3. * Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) * dx * dx);  // prepare nonlinear source for phi update
+				}
 
-				else prepareFTsource<Real>(phi, chi, source, cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo), source, 3. * Hconf(a, fourpiG, cosmo) * dx * dx / dtau_old, fourpiG * dx * dx / a, 3. * Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) * dx * dx);  // prepare nonlinear source for phi update
+				check_field_max(phi, "Phi", sim.mg_flag);
 
 #ifdef BENCHMARK
 				ref2_time= MPI_Wtime();
@@ -696,10 +690,28 @@ else
 				fft_time += MPI_Wtime() - ref2_time;
 				fft_count++;
 #endif
+
+
+				if(sim.mg_flag == FOFR)
+				{
+					if (dtau_old > 0.)
+					{
+					  // step b) and c)
+						prepareFTsource_S0i(Si, 2. * fourpiG * dx / a / a); // Prepare
+						plan_Si.execute(FFT_FORWARD); // {Si} --> FFT_FORWARD --> {SiFT}
+						projectFTsource_S0i(SiFT, scalarFT); // Contract with projector --> {scalarFT}
+						plan_source.execute(FFT_BACKWARD); // {scalarFT} --> FFT_BACKWARD --> {source}
+
+						//step d
+						stepXi(xi, source, phidot, phi, chi, Hubble, dtau_old, ref_site);
+					}
+					computeTtrace(deltaR,zeta,Sij,a);
+				}
 			}
 		}
 		else
 		{
+
 #ifdef BENCHMARK
 			ref2_time= MPI_Wtime();
 #endif
@@ -721,43 +733,6 @@ else
 #endif
 		}
 
-
-		if(sim.mg_flag == FOFR)
-		{
-			if (dtau_old > 0.)
-			{
-			/// step b) and c)
-				prepareFTsource_S0i(Si, 2. * fourpiG * dx / a / a); // Prepare
-				plan_Si.execute(FFT_FORWARD); // {Si} --> FFT_FORWARD --> {SiFT}
-				projectFTsource_S0i(SiFT, scalarFT); // Contract with projector --> {scalarFT}
-				plan_source.execute(FFT_BACKWARD); // {scalarFT} --> FFT_BACKWARD --> {source}
-				stepXi(xi, source, phidot, phi, chi, Hubble, dtau_old);
-
-			//step d
-			}
-			computeTtrace(deltaR,zeta,Sij);
-			for(x.first(); x.test(); x.next())
-			{
-				if(fabs(phi(x))>Phi_max) Phi_max = fabs(phi(x));
-				if(fabs(chi(x))>chi_max) chi_max = fabs(chi(x));
-				if(sim.mg_flag == FOFR) if(fabs(xi(x))>xi_max) xi_max = fabs(xi(x));
-				norm_B = Bi(x,0)*Bi(x,0) + Bi(x,1)*Bi(x,1) + Bi(x,2)*Bi(x,2);
-				if(norm_B > B_max) B_max = norm_B;
-			}
-
-			parallel.max(Phi_max);
-			parallel.max(chi_max);
-			if(sim.mg_flag == FOFR) parallel.max(xi_max);
-			parallel.max(B_max);
-
-			COUT << "  maxvel[0] = " << maxvel[0] << endl
-			 		 << "  Phi_max = " << Phi_max << endl
-			 		 << "  chi_max = " << chi_max << endl
-			 		 << "  B_max = " << B_max << endl
-		 	  	 << "  xi_max = "  << xi_max << endl;
-
-			cin.get();
-		}
 
 		phi.updateHalo();  // communicate halo values
 
@@ -814,14 +789,14 @@ else
 		fft_count++;
 #endif
 
-		if(sim.mg_flag== FOFR) addXi(chi,xi);
+		if(sim.mg_flag == FOFR && dtau_old > 0.) addXi(chi,xi);
 
 		chi.updateHalo();  // communicate halo values
 
 		if (sim.vector_flag == VECTOR_ELLIPTIC)
 		{
 #ifdef BENCHMARK
-			ref2_time= MPI_Wtime();
+			ref2_time = MPI_Wtime();
 #endif
 			plan_Bi.execute(FFT_FORWARD);
 #ifdef BENCHMARK
@@ -839,7 +814,7 @@ else
 		if (sim.gr_flag > 0)
 		{
 #ifdef BENCHMARK
-			ref2_time= MPI_Wtime();
+			ref2_time = MPI_Wtime();
 #endif
 			plan_Bi.execute(FFT_BACKWARD);  // go back to position space
 #ifdef BENCHMARK
@@ -849,10 +824,10 @@ else
 			Bi.updateHalo();  // communicate halo values
 		}
 
-		if(sim.mg_flag== FOFR)
+		if(sim.mg_flag == FOFR)
 		{
-			max_FRR = computeDRzeta(deltaR,zeta,xi,Rbar,FR(Rbar,sim.fofR_params,sim.fofR_type),
-										2.0*fourpiG, Tbar(a,cosmo),sim.fofR_params,sim.fofR_type);
+			max_FRR = computeDRzeta(deltaR, zeta, xi, Rbar, FR(Rbar, sim.fofR_params, sim.fofR_type),
+										2.0*fourpiG, Tbar(a,cosmo), sim.fofR_params, sim.fofR_type);
 		}
 
 
@@ -925,8 +900,14 @@ if (pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation
 			{
 				COUT << "), baryon max |v| = " << maxvel[1] << " (Courant factor = " << maxvel[1] * dtau / dx;
 			}
-			if(sim.mg_flag==FOFR) COUT << "), time step / Hubble time = " <<  Hubble * dtau;
-			else COUT << "), time step / Hubble time = " << Hconf(a, fourpiG, cosmo) * dtau;
+			if(sim.mg_flag == FOFR)
+			{
+				COUT << "), time step / Hubble time = " <<  Hubble * dtau;
+			}
+			else
+			{
+				COUT << "), time step / Hubble time = " << Hconf(a, fourpiG, cosmo) * dtau;
+			}
 
 			for (i = 0; i < cosmo.num_ncdm; i++)
 			{
@@ -944,7 +925,8 @@ if (pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation
 			COUT << endl;
 		}
 
-		if(sim.mg_flag==FOFR)tau_temp = tau;
+		if(sim.mg_flag == FOFR) tau_temp = tau;
+
 		for (j = 0; j < numsteps; j++) // particle update
 		{
 #ifdef BENCHMARK
@@ -1012,13 +994,19 @@ if (pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation
 			{
 				if(sim.mg_flag == FOFR)
 				{
-					if(sim.read_bg_from_file == 1){
+					if(sim.read_bg_from_file == 1)
+					{
 						tau_temp += 0.5 * dtau / numsteps;
 						a = gsl_spline_eval(a_spline, tau_temp, gsl_inpl_acc);
 					}
 					else rungekutta_fR(a, Hubble, Rbar, fourpiG, cosmo, dtau, sim.fofR_params, sim.fofR_type);
 				}
-				else rungekutta4bg(a, fourpiG, cosmo, 0.5 * dtau / numsteps);  // evolve background by half a time step
+				else
+				{
+					rungekutta4bg(a, fourpiG, cosmo, 0.5 * dtau / numsteps);  // evolve background by half a time step
+					Hubble = Hconf(a, fourpiG, cosmo);
+					Rbar = - 2. * fourpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) / a / a / a;
+				}
 			}
 
 			f_params[0] = a;
@@ -1049,13 +1037,19 @@ if (pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation
 			{
 				if(sim.mg_flag == FOFR)
 				{
-					if(sim.read_bg_from_file == 1){
+					if(sim.read_bg_from_file == 1)
+					{
 						tau_temp += 0.5 * dtau / numsteps;
 						a = gsl_spline_eval(a_spline, tau_temp, gsl_inpl_acc);
 					}
 					else rungekutta_fR(a, Hubble, Rbar, fourpiG, cosmo, dtau, sim.fofR_params, sim.fofR_type);
 				}
-				else rungekutta4bg(a, fourpiG, cosmo, 0.5 * dtau / numsteps);  // evolve background by half a time step
+				else
+				{
+					rungekutta4bg(a, fourpiG, cosmo, 0.5 * dtau / numsteps);  // evolve background by half a time step
+					Hubble = Hconf(a, fourpiG, cosmo);
+					Rbar = - 2. * fourpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) / a / a / a;
+				}
 			}
 
 #ifdef OUTPUT_BACKGROUND
@@ -1068,7 +1062,6 @@ if (pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation
 				fileBG.close();
 			}
 #endif
-
 
 			f_params[0] = a;
 			f_params[1] = a * a * sim.numpts;
@@ -1090,7 +1083,8 @@ if (pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation
 
 			if(sim.mg_flag == FOFR)
 			{
-				if(sim.read_bg_from_file == 1){
+				if(sim.read_bg_from_file == 1)
+				{
 					tau_temp += 0.5 * dtau / numsteps;
 					a = gsl_spline_eval(a_spline, tau_temp, gsl_inpl_acc);
 				}
@@ -1171,28 +1165,26 @@ if (pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation
 			restartcount++;
 		}
 
-		dtau_old = dtau;
 
 		if(sim.mg_flag == FOFR)
 		{
 			dtau_osci = sim.fofR_timestep_epsilon * sqrt(3.0*max_FRR)/a;
 
-			if(sim.read_bg_from_file == 1)
-			{
-				Hubble = gsl_spline_eval(H_spline, tau, gsl_inpl_acc);
-				Rbar = gsl_spline_eval(Rbar_spline, tau, gsl_inpl_acc);
-			}
-			else
-			{
-				Rbar = R_initial_fR(a, 2. * fourpiG, cosmo);
-				Hubble = H_initial_fR(a, Hconf(a, fourpiG, cosmo), Rbar, F(Rbar,sim.fofR_params,sim.fofR_type), FR(Rbar,sim.fofR_params,sim.fofR_type));
-			}
+			// if(sim.read_bg_from_file == 1)
+			// {
+			// 	Hubble = gsl_spline_eval(H_spline, tau, gsl_inpl_acc);
+			// 	Rbar = gsl_spline_eval(Rbar_spline, tau, gsl_inpl_acc);
+			// }
+			// else
+			// {
+			// 	Rbar = R_initial_fR(a, 2. * fourpiG, cosmo);
+			// 	Hubble = H_initial_fR(a, Hconf(a, fourpiG, cosmo), Rbar, F(Rbar,sim.fofR_params,sim.fofR_type), FR(Rbar,sim.fofR_params,sim.fofR_type));
+			// }
 
 			if (sim.Cf * dx < sim.steplimit / Hubble)
 				dtau = sim.Cf * dx;
 			else
 				dtau = sim.steplimit / Hubble;
-
 			if(dtau > dtau_osci) dtau = dtau_osci;
 		}
 		else
@@ -1202,9 +1194,10 @@ if (pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation
 		else
 			dtau = sim.steplimit / Hconf(a, fourpiG, cosmo);
 		}
+
+		dtau_old = dtau;
+
 		cycle++;
-
-
 
 
 

@@ -31,6 +31,29 @@
 using namespace std;
 using namespace LATfield2;
 
+template <class FieldType>
+Site check_field_max(Field<FieldType> & field, string field_name, int flag, string message = "")
+{
+  Site x(field.lattice());
+  Site y;
+  double max = 0.;
+  for(x.first(); x.test(); x.next())
+  {
+    if(fabs(field(x)) > max)
+    {
+      max = fabs(field(x));
+      y = x;
+    }
+  }
+  parallel.max(max);
+
+  COUT << message;
+  if(flag == FOFR) COUT << "  f(R)";
+  else COUT << "  GR";
+  COUT << "  max " << field_name << " = " << max << endl << endl;
+  return y;
+}
+
 
 //////////////////////////
 // prepareFTsource (1)
@@ -49,7 +72,6 @@ using namespace LATfield2;
 // Returns:
 //
 //////////////////////////
-
 template <class FieldType>
 void prepareFTsource(Field<FieldType> & phi, Field<FieldType> & Tij, Field<FieldType> & Sij, const double coeff)
 {
@@ -144,7 +166,7 @@ void prepareFTsource(Field<FieldType> & phi, Field<FieldType> & Tij, Field<Field
 }
 
 template <class FieldType>
-void prepareFTsource_S00(Field<FieldType> & source,
+Site prepareFTsource_S00(Field<FieldType> & source,
 												 Field<FieldType> & phi,
 												 Field<FieldType> & chi,
 												 Field<FieldType> & xi,
@@ -163,18 +185,15 @@ void prepareFTsource_S00(Field<FieldType> & source,
 												 const int Ftype)
 {
 	Site x(phi.lattice());
+  Site y(phi.lattice());
 	double laplace;
 	double grad[3];
 
-	double maxt = 0., maxd = 0.;
-
 	for (x.first(); x.test(); x.next())
 	{
-		source(x) =  eightpiG_over_a * (T00(x) - bgmodel) - 6.*Hubble*Hubble*chi(x) - 3.*Hubble * (2.*phi(x) - xi(x))/dtau ;
+		source(x) = eightpiG_over_a * (T00(x) - bgmodel) - 6.*Hubble*Hubble*chi(x) - 3.*Hubble * (2.*phi(x) - xi(x))/dtau;
 
-		if(fabs(T00(x) - bgmodel) > maxt) maxt = T00(x) - bgmodel;
-		if(fabs(2.*phi(x) - xi(x)) > maxd) maxd = 2.*phi(x) - xi(x);
-
+		//f(R) terms
 		source(x) += 0.5 * a2 * (Rbar*xi(x) + Fbar - F(Rbar+ deltaR(x), paramF, Ftype));
 		source(x) *= dx2;
 
@@ -183,21 +202,20 @@ void prepareFTsource_S00(Field<FieldType> & source,
 		for(int i=0; i<3; i++) laplace += phi(x+i)+phi(x-i);
 		laplace -= 6.*phi(x);
 		source(x) -= (8.*phi(x) + xi(x) + FRbar)*laplace;
-		//add gradient^2 phi
 		for(int i=0; i<3; i++)
 		{
 			grad[i] = phi(x+i) - phi(x-i);
 			grad[i] *= grad[i];
 		}
-		//f(R) terms
 		source(x) -= (grad[0] + grad[1] + grad[2]) * 0.75;
-
 	}
 
-	parallel.max(maxt);
+  // maxc = fabs(6.*Hubble*Hubble*chi(y)) * dx2;
+  // maxp = 3.*Hubble * (2.*phi(y) - xi(y))/dtau * dx2;
+  // maxf = 0.5 * a2 * (Rbar*xi(y) + Fbar - F(Rbar+ deltaR(y), paramF, Ftype)) * dx2;
 
-	COUT << "  max 8piG * (T00 - bgmodel) = " << eightpiG_over_a * maxt << endl;
-	COUT << "  max (2*phi - xi)_{t-1} = " << maxd << endl;
+  return y;
+
 }
 
 template <class FieldType>
@@ -261,34 +279,19 @@ void stepXi(Field<FieldType> & xi,
 							Field<FieldType> & phi,
 							Field<FieldType> & chi,
 							double H,
-							double dtau)
+							double dtau,
+              Site y)
 {
 	Site x(xi.lattice());
 
-	double phidotmax = 0., summax = 0.;
-
+	FieldType * pointer;
 	for(x.first(); x.test(); x.next())
 	{
-		if(fabs(phidot(x)) > phidotmax) phidotmax = fabs(phidot(x));
-		if(fabs(2*phi(x) + xi(x)) > summax) summax = fabs(2*phi(x) + xi(x));
-	}
-	parallel.max(phidotmax);
-	parallel.max(summax);
-	COUT << "  max (2*phi - xi)_{t} = " << phidotmax << endl;
-	COUT << "  max (2*phi + xi)_{t-1} = " << summax << endl;
-	summax = 0.;
-
-	FieldType * pointer;
-	for(x.first();x.test();x.next())
-	{
 		xi(x) = (source(x) - (phidot(x) + xi(x) - 2.*phi(x))/dtau)/H + 2.*chi(x);
-		if(fabs(xi(x)) > summax) summax = fabs(xi(x));
 		phidot(x) = 0.25*(xi(x) + phidot(x));
 		phi(x) = (phidot(x) - phi(x))/dtau;
 		xi(x) = xi(x) - 2.*phidot(x);
 	}
-	parallel.max(summax);
-	COUT << "  max (2*phi + xi)_{t} = " << summax << endl;
 
 	pointer = phidot.data_;
 	phidot.data_ = phi.data_;
@@ -299,12 +302,15 @@ void stepXi(Field<FieldType> & xi,
 template <class FieldType>
 void computeTtrace(Field<FieldType> & T,
 							Field<FieldType> & T00,
-							Field<FieldType> & Tij)
+							Field<FieldType> & Tij,
+              double a)
 {
 	Site x(T.lattice());
+  double a3 = a*a*a;
 	for(x.first();x.test();x.next())
 	{
-		T(x) = T00(x) + Tij(x,0,0) + Tij(x,1,1) + Tij(x,2,2);
+		T(x) = T00(x) - (Tij(x,0,0) + Tij(x,1,1) + Tij(x,2,2))/a;
+    T(x) /= a3;
 	}
 }
 
@@ -313,9 +319,9 @@ void addXi(Field<FieldType> & chi,
 							Field<FieldType> & xi)
 {
 	Site x(chi.lattice());
-	for(x.first();x.test();x.next())
+	for(x.first(); x.test(); x.next())
 	{
-		chi(x)+=xi(x);
+		chi(x) += xi(x);
 	}
 }
 
@@ -385,6 +391,7 @@ void prepareFTsource(Field<FieldType> & phi, Field<FieldType> & chi, Field<Field
 	for (x.first(); x.test(); x.next())
 	{
 		result(x) = coeff2 * (source(x) - bgmodel);
+
 #ifdef PHINONLINEAR
 #ifdef ORIGINALMETRIC // TODO: impose that f(R) works only for ORIGINALMETRIC
 		result(x) *= 1. - 4. * phi(x);

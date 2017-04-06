@@ -123,13 +123,13 @@ inline double getBackground(gsl_spline * spline, double tau, gsl_interp_accel * 
 
 inline double H_initial_fR(const double a, const double H, const double R, const double f, const double fr)
 {
-	return sqrt( (H*H + a*a*(fr*R - f)/6.) / (1. + fr) );
+	return sqrt( (H*H + 0*a*a*(fr*R - f)/6.) / (1. + 0*fr) );
 }
 
 
 inline double R_initial_fR(const double a, const double eightpiG, const cosmology cosmo)
 {
-	return - eightpiG * Omega_m(a,cosmo); // TODO: Not very accurate at this stage, but let's try this first
+	return - eightpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) / a / a / a; // TODO: Maybe not accurate enough at this stage, but let's try this first
 }
 
 
@@ -170,13 +170,10 @@ double func_RK_Rdot(const double a,
 		COUT << "FRR evaluates to zero. Closing..." << endl;
 		exit(3);
 	}
-
 }
 
 
-
-
-// rungekutta for f(R) background
+// Runge-Kutta (4) solver for f(R) background
 void rungekutta_fR(double &a,
 									 double &H,
 									 double &R,

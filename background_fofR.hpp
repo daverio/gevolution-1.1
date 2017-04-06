@@ -24,9 +24,9 @@
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_spline.h>
 
-inline double Tbar(const double a,const cosmology cosmo)
+inline double Tbar(const double a, const cosmology cosmo)
 {
-	return Omega_m(a,cosmo) + 4.0*Omega_Lambda(a,cosmo);
+	return - (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo))/a/a/a - 4.*cosmo.Omega_Lambda;
 }
 
 void loadBackground(gsl_spline *& a_spline,
@@ -88,19 +88,13 @@ void loadBackground(gsl_spline *& a_spline,
 		parallel.broadcast_dim0(H,lineCount,0);
 		parallel.broadcast_dim0(Rbar,lineCount,0);
 
-
-
-
 		a_spline  = gsl_spline_alloc (t, lineCount);
 		H_spline  = gsl_spline_alloc (t, lineCount);
 		Rbar_spline  = gsl_spline_alloc (t, lineCount);
 
-
-
 		gsl_spline_init (a_spline, tau, a, lineCount);
 		gsl_spline_init (H_spline, tau, H, lineCount);
 		gsl_spline_init (Rbar_spline, tau, Rbar, lineCount);
-
 
 		if(parallel.grid_rank()[0]==0)file.close();
 
@@ -129,7 +123,7 @@ inline double H_initial_fR(const double a, const double H, const double R, const
 
 inline double R_initial_fR(const double a, const double eightpiG, const cosmology cosmo)
 {
-	return - eightpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) / a / a / a; // TODO: Maybe not accurate enough at this stage, but let's try this first
+	return eightpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) / a / a / a; // TODO: Maybe not accurate enough at this stage, but let's try this first
 }
 
 
@@ -165,9 +159,15 @@ double func_RK_Rdot(const double a,
 	double rho = Hconf(a, fourpiG, cosmo);
 	rho *= 3. * rho; // Actually computes 8 pi G * rho * a**2
 
-	if(frr) return ((rho - 3.*H*H*(1.+fr) + 0.5*(fr * R - F(R, params, fofR_type))*a*a) / (3. * frr * H));
-	else{
-		COUT << "FRR evaluates to zero. Closing..." << endl;
+	// return - 6 * fourpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * H / a / a / a;
+
+	if(3. * frr * H) return - (rho - 3.*H*H*(1. + fr) + 0.5*(fr * R - F(R, params, fofR_type))*a*a) / (3. * frr * H);
+	else
+	{
+		COUT << " FRR evaluates to zero. Closing..." << endl
+				 << " R = " << R << endl
+				 << " H = " << H << endl
+				 << " FRR = " << frr << endl;
 		exit(3);
 	}
 }
@@ -191,17 +191,25 @@ void rungekutta_fR(double &a,
 	H1 = func_RK_Hdot(a, H, R);
 	R1 = func_RK_Rdot(a, H, R, cosmo, fourpiG, params, fofR_type);
 
+	COUT << " a1 = " << a1 << "  H1 = " << H1 << "  R1 = " << R1 << endl;
+
 	a2 = func_RK_adot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau);
 	H2 = func_RK_Hdot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau);
 	R2 = func_RK_Rdot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau, cosmo, fourpiG, params, fofR_type);
+
+	COUT << " a2 = " << a2 << "  H2 = " << H2 << "  R2 = " << R2 << endl;
 
 	a3 = func_RK_adot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau);
 	H3 = func_RK_Hdot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau);
 	R3 = func_RK_Rdot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau, cosmo, fourpiG, params, fofR_type);
 
+	COUT << " a3 = " << a3 << "  H3 = " << H3 << "  R3 = " << R3 << endl;
+
 	a4 = func_RK_adot(a + a3 * dtau, H + H3 * dtau);
 	H4 = func_RK_Hdot(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau);
 	R4 = func_RK_Rdot(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau, cosmo, fourpiG, params, fofR_type);
+
+	COUT << " a4 = " << a4 << "  H4 = " << H4 << "  R4 = " << R4 << endl;
 
 	a += dtau * (a1 + 2.*a2 + 2.*a3 + a4) / 6.;
 	H += dtau * (H1 + 2.*H2 + 2.*H3 + H4) / 6.;

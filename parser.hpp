@@ -1230,6 +1230,11 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 				else if(par_string[0] == 'H' || par_string[0] == 'h')
 				{
+					if(sim.num_fofR_params < 4)
+					{
+						COUT << "                  Not enough parameters for Hu-Sawicki model! Closing...\n";
+						exit(-22);
+					}
 					COUT << " f(R) model: Hu-Sawicki" << endl;
 					sim.fofR_type = FOFR_TYPE_HU_SAWICKI;
 				}
@@ -1375,13 +1380,13 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	}
 
 	// Added parser for Omega_Lambda in f(R) gravity -- Lambda will typically be zero, but can be nonzero
-	if(sim.mg_flag==FOFR)
+	if(sim.mg_flag == FOFR)
 	{
-		if(parseParameter(params, numparam, "Omega_Lambda", cosmo.Omega_Lambda) && cosmo.Omega_Lambda > 0 && cosmo.Omega_Lambda <= 1)
+		if(parseParameter(params, numparam, "Omega_Lambda", cosmo.Omega_Lambda) && cosmo.Omega_Lambda > 0 && cosmo.Omega_Lambda <= 1 - cosmo.Omega_m - cosmo.Omega_rad)
 		{
 			COUT << "Gravity theory: f(R), with" << COLORTEXT_YELLOW << " EXPLICIT " << COLORTEXT_RESET << "Lambda term, with Omega_Lambda = " << cosmo.Omega_Lambda << endl;
 		}
-		else if(cosmo.Omega_Lambda > 1)
+		else if(cosmo.Omega_Lambda > 1 - cosmo.Omega_m - cosmo.Omega_rad)
 		{
 			cosmo.Omega_Lambda = 1. - cosmo.Omega_m - cosmo.Omega_rad;
 			COUT << "Gravity theory: f(R), with" << COLORTEXT_YELLOW << " EXPLICIT " << COLORTEXT_RESET << "Lambda term, with Omega_Lambda = 1 - Omega_m - Omega_rad = " << cosmo.Omega_Lambda << endl;

@@ -341,13 +341,13 @@ double computeDRzeta(Field<FieldType> & deltaR,
 									 const int fofR_type)
 {
 	Site x(deltaR.lattice());
-	double temp,temp2;
+	double temp, temp2;
 	double max_FRR = 0.0;
 	for(x.first();x.test();x.next())
 	{
-		temp = eightpiG * (deltaR(x)-Tbar);
+		temp = eightpiG * (deltaR(x) - Tbar);
 		temp2 = FRR(Rbar - temp, params,fofR_type);
-		if(max_FRR<temp2)max_FRR = temp2;
+		if(max_FRR < temp2) max_FRR = temp2;
 		if(temp2!=0)
 		{
 			zeta(x) = (xi(x) + FRbar + FR(Rbar - temp, params,fofR_type))/temp2;

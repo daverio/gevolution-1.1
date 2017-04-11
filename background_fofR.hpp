@@ -26,7 +26,7 @@
 
 inline double Tbar(const double a, const cosmology cosmo)
 {
-	return - (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo))/a/a/a - 4.*cosmo.Omega_Lambda;
+	return - ( (cosmo.Omega_cdm + cosmo.Omega_b)/a/a/a + 4.*cosmo.Omega_Lambda );
 }
 
 void loadBackground(gsl_spline *& a_spline,
@@ -50,12 +50,12 @@ void loadBackground(gsl_spline *& a_spline,
 					return;
 			}
 
-			COUT<<"loading background file: "<< filename <<endl;
+			COUT << "loading background file: "<< filename <<endl;
 
 			getline(file, line);
 			getline(file, line);
 			iss.str(line);
-			iss>>lineCount;
+			iss >> lineCount;
 
 
 		}
@@ -123,7 +123,7 @@ inline double H_initial_fR(const double a, const double H, const double R, const
 
 inline double R_initial_fR(const double a, const double eightpiG, const cosmology cosmo)
 {
-	return eightpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) / a / a / a; // TODO: Maybe not accurate enough at this stage, but let's try this first
+	return eightpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a + 4. * (1 - cosmo.Omega_cdm - cosmo.Omega_b - bg_ncdm(a, cosmo)) ); // TODO: Maybe not accurate enough at this stage, but let's try this first
 }
 
 
@@ -191,25 +191,25 @@ void rungekutta_fR(double &a,
 	H1 = func_RK_Hdot(a, H, R);
 	R1 = func_RK_Rdot(a, H, R, cosmo, fourpiG, params, fofR_type);
 
-	COUT << " a1 = " << a1 << "  H1 = " << H1 << "  R1 = " << R1 << endl;
+	// COUT << " a1 = " << a1 << "  H1 = " << H1 << "  R1 = " << R1 << endl;
 
 	a2 = func_RK_adot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau);
 	H2 = func_RK_Hdot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau);
 	R2 = func_RK_Rdot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau, cosmo, fourpiG, params, fofR_type);
 
-	COUT << " a2 = " << a2 << "  H2 = " << H2 << "  R2 = " << R2 << endl;
+	// COUT << " a2 = " << a2 << "  H2 = " << H2 << "  R2 = " << R2 << endl;
 
 	a3 = func_RK_adot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau);
 	H3 = func_RK_Hdot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau);
 	R3 = func_RK_Rdot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau, cosmo, fourpiG, params, fofR_type);
 
-	COUT << " a3 = " << a3 << "  H3 = " << H3 << "  R3 = " << R3 << endl;
+	// COUT << " a3 = " << a3 << "  H3 = " << H3 << "  R3 = " << R3 << endl;
 
 	a4 = func_RK_adot(a + a3 * dtau, H + H3 * dtau);
 	H4 = func_RK_Hdot(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau);
 	R4 = func_RK_Rdot(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau, cosmo, fourpiG, params, fofR_type);
 
-	COUT << " a4 = " << a4 << "  H4 = " << H4 << "  R4 = " << R4 << endl;
+	// COUT << " a4 = " << a4 << "  H4 = " << H4 << "  R4 = " << R4 << endl;
 
 	a += dtau * (a1 + 2.*a2 + 2.*a3 + a4) / 6.;
 	H += dtau * (H1 + 2.*H2 + 2.*H3 + H4) / 6.;

@@ -25,7 +25,7 @@
 // Constructed parameters:
 // params[3] = c1, calibrated to give c1*m2/c2 = 2 * 8piG * rho_Lambda [see 0705.1158 equations (25,26)]
 
-void rescale_params_Hu_Sawicki(const cosmology cosmo, const double fourpiG, metadata* sim)
+void rescale_params_Hu_Sawicki(const cosmology cosmo, const double fourpiG, metadata * sim)
 {
 	sim->fofR_params[3] *= sim->fofR_params[1] * 6. * (1 - cosmo.Omega_m - cosmo.Omega_rad) / cosmo.Omega_m; //Omega_m > 0, checked in parseMetadata()
 	sim->fofR_params[0] *= fourpiG * cosmo.Omega_m / 1.5;
@@ -50,11 +50,12 @@ Real F(double R, double * params, const int fofR_type)
 		case(FOFR_TYPE_HU_SAWICKI):
 		{
 			double m2, c1, c2, n;
+			double Rpow = pow(R/m2, n);
 			m2 = params[0];
 			c2 = params[1];
 			n  = params[2];
 			c1 = params[3];
-			output = - m2 * c1 * pow(R/m2, n) / (1. + c2 * pow(R/m2, n));
+			output = - m2 * c1 * Rpow / (1. + c2 * Rpow);
 			break;
 		}
 
@@ -83,11 +84,12 @@ Real FR(double R, double * params, const int fofR_type)
 		case(FOFR_TYPE_HU_SAWICKI):
 		{
 			double m2, c1, c2, n;
+			double Rpow = pow(R/m2, n);
 			m2 = params[0];
 			c2 = params[1];
 			n  = params[2];
 			c1 = params[3];
-			output = - c1 * n * pow(R/m2, n-1.) / ( (1. + c2*pow(R/m2, n)) * (1. + c2*pow(R/m2, n)) );
+			output = - c1 * n * Rpow * m2 / R / ( (1. + c2*Rpow) * (1. + c2*Rpow) );
 			break;
 		}
 
@@ -115,11 +117,12 @@ Real FRR(double R, double * params, const int fofR_type)
 		case(FOFR_TYPE_HU_SAWICKI):
 		{
 			double m2, c1, c2, n;
+			double Rpow = pow(R/m2, n);
 			m2 = params[0];
 			c2 = params[1];
 			n  = params[2];
 			c1 = params[3];
-			output = c1 * m2 * n * pow(R/m2, n) * (1. - n + c2*(1. + n)*pow(R/m2, n) ) / ( R * R * (1. + c2*pow(R/m2, n)) * (1. + c2*pow(R/m2, n)) * (1. + c2*pow(R/m2, n)) );
+			output = c1 * m2 * n * Rpow * (1. - n + c2*(1. + n)*Rpow ) / ( R * R * (1. + c2*Rpow) * (1. + c2*Rpow) * (1. + c2*Rpow) );
 			break;
 		}
 
@@ -127,8 +130,16 @@ Real FRR(double R, double * params, const int fofR_type)
 			exit(2);
 	}
 
+	if(!output)
+	{
+		COUT << " Something went wrong when computing FRR. Closing...";
+		exit(-11);
+	}
+
 	return output;
 }
+
+
 
 
 

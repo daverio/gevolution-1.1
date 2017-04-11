@@ -1205,7 +1205,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			sim.mg_flag = FOFR;
 			if(sim.read_bg_from_file == 1 && sim.background_filename[0] == '\0')
 			{
-				COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": Gravity set to f(R), but no background file have been specified!" << endl;
+				COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": No background file has been specified! Closing...\n" << endl;
 				parallel.abortForce();
 			}
 			//TODO: read fofR params and type
@@ -1219,12 +1219,12 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 					if(!sim.fofR_params[0])
 					{
 						COUT << "Coefficient a of F(R) = a*R^n is set to 0. Closing...\n";
-						// exit(11);
+						parallel.abortForce();
 					}
 					else if(sim.fofR_params[1]==1)
 					{
 						COUT << "Exponent n of F(R) = a*R^n is set to 1. This is just a redefinition of Newton's constant. Closing...\n";
-						// exit(12);
+						parallel.abortForce();
 					}
 				}
 
@@ -1233,7 +1233,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 					if(sim.num_fofR_params < 4)
 					{
 						COUT << "                  Not enough parameters for Hu-Sawicki model! Closing...\n";
-						exit(-22);
+						parallel.abortForce();
 					}
 					COUT << " f(R) model: Hu-Sawicki" << endl;
 					sim.fofR_type = FOFR_TYPE_HU_SAWICKI;
@@ -1372,12 +1372,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": total radiation energy density out of range!" << endl;
 		parallel.abortForce();
 	}
-	else
-	{
-		COUT << " cosmological parameters are: Omega_m0 = " << cosmo.Omega_m
-				 << ", Omega_rad0 = " << cosmo.Omega_rad
-				 << ", h = " << cosmo.h << endl;
-	}
 
 	// Added parser for Omega_Lambda in f(R) gravity -- Lambda will typically be zero, but can be nonzero
 	if(sim.mg_flag == FOFR)
@@ -1397,6 +1391,11 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		}
 	}
 	else cosmo.Omega_Lambda = 1. - cosmo.Omega_m - cosmo.Omega_rad; // Unless in f(R), set total Omega = 1
+
+	COUT << " cosmological parameters are: Omega_m0 = " << cosmo.Omega_m
+			 << ", Omega_rad0 = " << cosmo.Omega_rad
+			 << ", Omega_Lambda = " << cosmo.Omega_Lambda
+			 << ", h = " << cosmo.h << endl;
 
 	if(!parseParameter(params, numparam, "switch delta_rad", sim.z_switch_deltarad))
 		sim.z_switch_deltarad = 0.;

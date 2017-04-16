@@ -183,6 +183,10 @@ struct metadata
 	int num_restart;
 	int num_fofR_params;
 	int read_bg_from_file;
+
+	int S0i_mode;// TODO remove after FULL debugging
+	int back_to_GR;
+
 	double Cf;
 	double fofR_timestep_epsilon;
 	double movelimit;

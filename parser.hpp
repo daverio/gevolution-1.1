@@ -1040,6 +1040,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	sim.fofR_type = 0;
 	for (i = 0; i < MAX_FOFR_PARAMS; i++) sim.fofR_params[i] = 0;
 	sim.num_fofR_params = MAX_FOFR_PARAMS;
+	sim.S0i_mode = 2;
 
 	if (parseParameter(params, numparam, "vector method", par_string))
 	{
@@ -1173,6 +1174,8 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	if (ic.Cf < 0.) ic.Cf = sim.Cf;
 
 	parseParameter(params, numparam, "f(R) epsilon", sim.fofR_timestep_epsilon);
+	parseParameter(params, numparam, "S0i mode", sim.S0i_mode);
+	parseParameter(params, numparam, "Back to GR", sim.back_to_GR);
 	parseParameter(params, numparam, "time step limit", sim.steplimit);
 	parseParameter(params, numparam, "read background from file", sim.read_bg_from_file);
 

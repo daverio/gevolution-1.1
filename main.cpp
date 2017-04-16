@@ -106,7 +106,7 @@ int main(int argc, char **argv)
 	double update_q_time = 0;
 	int update_q_count = 0;
 	double moveParts_time = 0;
-	int  moveParts_count =0;
+	int  moveParts_count = 0;
 
 #endif  //BENCHMARK
 
@@ -218,7 +218,7 @@ int main(int argc, char **argv)
 	box[1] = sim.numpts;
 	box[2] = sim.numpts;
 
-	Lattice lat(3,box,1);
+	Lattice lat(3,box,2);
 	Lattice latFT;
 	latFT.initializeRealFFT(lat,0);
 
@@ -244,8 +244,10 @@ int main(int argc, char **argv)
 	Field<Real> zeta;
 	Field<Real> deltaR;
 	Field<Real> phidot;
+	Field<Real> xidot;
 	Field<Cplx> SiFT;
 
+	double temp_val;// TODO Remove after debugging
 
 PlanFFT<Cplx> plan_source;
 PlanFFT<Cplx> plan_phi;
@@ -267,6 +269,8 @@ if(sim.mg_flag == FOFR)
 	scalarFT.initialize(latFT,1);
 	xi.initialize(lat,1);
 	xi.alloc();
+	xidot.initialize(lat,1);
+	xidot.alloc();
 	zeta.initialize(lat,1);
 	zeta.alloc();
 	deltaR.initialize(lat,1);
@@ -290,9 +294,11 @@ else
 {
 	source.initialize(lat,1);
 	phi.initialize(lat,1);
+	phidot.initialize(lat,1);
 	chi.initialize(lat,1);
 	scalarFT.initialize(latFT,1);
 	plan_source.initialize(&source, &scalarFT);
+	plan_phidot.initialize(&phidot, &scalarFT);
 	plan_phi.initialize(&phi, &scalarFT);
 	plan_chi.initialize(&chi, &scalarFT);
 	Sij.initialize(lat,3,3,symmetric);
@@ -337,6 +343,8 @@ else
 
 	dx = 1.0 / (double) sim.numpts;
 	numpts3d = (long) sim.numpts * (long) sim.numpts * (long) sim.numpts;
+
+	COUT << "numpts = " << sim.numpts << "   linesize = " << phi.lattice().size(1) << endl;
 
 	for (i = 0; i < 3; i++) // particles may never move farther than to the adjacent domain
 	{
@@ -474,10 +482,8 @@ else
 	while (true)    // main loop
 	{
 
-		COUT << "\n---------- CYCLE " << cycle << " ----------\n";
-		cin.get();
-
-		COUT << " Scale factor = " << a << "  Hubble = " << Hubble << "   Rbar = " << Rbar << "   dtau / Hubble time = " << dtau_old * Hubble << endl;
+		// COUT << "\n---------- CYCLE " << cycle << " ----------\n";
+		// COUT << " Scale factor = " << a << "  Hubble = " << Hubble << "   Rbar = " << Rbar << "   dtau / Hubble time = " << dtau_old * Hubble << endl;
 
 #ifdef BENCHMARK
 		cycle_start_time = MPI_Wtime();
@@ -492,6 +498,7 @@ else
 
 		if (sim.gr_flag > 0)
 		{
+
 			projection_T00_project(&pcls_cdm, &source, a, &phi);
 			if (sim.baryon_flag)
 				projection_T00_project(&pcls_b, &source, a, &phi);
@@ -537,6 +544,7 @@ else
 				}
 				projection_T0i_comm(&Bi);
 			}
+			verify_0i(phi, phidot, chi, Bi, a*a, Hubble, fourpiG / a / a, dx);
 		}
 		else if (sim.mg_flag == FOFR) // Write a^4 T^0_i on Si -- TODO: Is it a^4 or a^3?
 		{
@@ -593,15 +601,16 @@ else
 				if(dtau_old == 0) // If 0-th step, prepare xi and zeta
 				{
 					xi_initial_conditions (xi, phi, deltaR, Rbar, FR(Rbar, sim.fofR_params, sim.fofR_type), sim.fofR_params, sim.fofR_type); // Needs value of deltaT (computeTtrace)
+					xidot_initial_conditions(xidot);
 					zeta_initial_conditions(zeta);
 				}
 			}
 
-			check_field_max(source, "source", "BEFORE prepareFTsource\n");
-			check_field_max(phi, "phi");
+			// check_field(source, "source", "BEFORE prepareFTsource\n");
+			// check_field(phi, "phi");
 			if(sim.mg_flag == FOFR)
 			{
-				check_field_max(xi, "xi");
+				// check_field(xi, "xi");
 			}
 
 			if (dtau_old > 0.)
@@ -620,6 +629,7 @@ else
 																				 			 phi,
 																				 			 chi,
 																				 			 xi,
+																							 xidot,
 																				 			 deltaR, // contains 8piG * deltaT
 																				 			 zeta,
 																				 			 source, // where the result will be written
@@ -628,23 +638,25 @@ else
 																				 			 dtau_old,
 																				 			 Hubble,
 																				 			 a*a,
-																				 			 2.0 * fourpiG / a,
+																				 			 fourpiG / a,
 																				 			 Rbar,
 																				 			 F(Rbar,sim.fofR_params,sim.fofR_type),
 																				 			 FR(Rbar,sim.fofR_params,sim.fofR_type),
 																				 			 sim.fofR_params,
-																				 			 sim.fofR_type);
+																				 			 sim.fofR_type,
+																						 	 sim.back_to_GR);
 				}
 				else
 				{
 					prepareFTsource<Real>(phi, chi, source, cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo), source, 3. * Hconf(a, fourpiG, cosmo) * dx * dx / dtau_old, fourpiG * dx * dx / a, 3. * Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) * dx * dx);  // prepare nonlinear source for phi update
 				}
 
-				check_field_max(source, "source", "AFTER prepareFTsource, BEFORE solveModifiedPoissonFT\n");
-				check_field_max(phi, "phi");
+				// check_field(source, "source", "AFTER prepareFTsource, BEFORE solveModifiedPoissonFT\n");
+				// check_field(phi, "phi");
+				// check_field(phidot, "phidot");
 				if(sim.mg_flag == FOFR)
 				{
-					check_field_max(xi, "xi");
+					// check_field(xi, "xi");
 				}
 
 #ifdef BENCHMARK
@@ -655,6 +667,9 @@ else
 				fft_time += MPI_Wtime() - ref2_time;
 				fft_count++;
 #endif
+				// check_field(source, "source", "AFTER plan_source.execute(), BEFORE solveModifiedPoissonFT\n");
+				// check_field(phi, "phi");
+				// check_field(phidot, "phidot");
 				// phi update (k-space)
 				if(sim.mg_flag == FOFR) solveModifiedPoissonFT(scalarFT, scalarFT, 1. / (dx * dx), 3. * Hubble / dtau_old);
 				else solveModifiedPoissonFT(scalarFT, scalarFT, 1. / (dx * dx), 3. * Hconf(a, fourpiG, cosmo) / dtau_old);
@@ -663,12 +678,10 @@ else
 				ref2_time= MPI_Wtime();
 #endif
 				// go back to position space
-				if(sim.mg_flag == FOFR)
-				{
-					plan_phidot.execute(FFT_BACKWARD); // {scalarFT} --> FFT_BACKWARD --> {phidot} in f(R). Now {phidot} contains (2*phi - xi) at the new timestep
-				}
-
-				else plan_phi.execute(FFT_BACKWARD); // {scalarFT} --> FFT_BACKWARD --> {phi} in GR, Newton
+				plan_phidot.execute(FFT_BACKWARD);
+				update_phi_phidot(phi, phidot, dtau_old);
+				phi.updateHalo();
+				phidot.updateHalo();
 
 #ifdef BENCHMARK
 				fft_time += MPI_Wtime() - ref2_time;
@@ -676,44 +689,56 @@ else
 #endif
 
 			}
-			check_field_max(source, "source", "BEFORE stepXi, {phidot} = 2phi - xi at new time t\n");
-			check_field_max(phi, "phi");
+			// check_field(source, "source", "BEFORE prepareFTsource_S0i\n");
+			// check_field(phidot, "phidot");
+
 			if(sim.mg_flag == FOFR && dtau_old > 0.)
 			{
-				int S0i_mode = 2; // 1 to Fourier transform full source term (explicit derivatives), any other int for the other method
 				// step b) and c)
 				prepareFTsource_S0i(Si,
 				                    phi,
 				                    xi,
 														chi,
 				                    phidot,
+														Bi,
 				                    Si,
 														2. * fourpiG / a / a,
 				                    dx,
 				                    dtau_old,
+														a * a,
 														Hubble,
-														S0i_mode);
+														sim.S0i_mode,
+														sim.back_to_GR);
+
+				// check_vector_field(Si, "Si");
+
 				plan_Si.execute(FFT_FORWARD); // {Si} --> FFT_FORWARD --> {SiFT}
 				projectFTsource_S0i(SiFT, scalarFT); // Contract with projector --> {scalarFT}
 				plan_source.execute(FFT_BACKWARD); // {scalarFT} --> FFT_BACKWARD --> {source}
 
-				check_field_max(phidot, "phidot");
-				check_field_max(xi, "xi");
-				check_field_max(chi, "chi");
+				update_xi(source,
+				          phi,
+				          phidot,
+				          xi,
+				          chi,
+				          xi,
+				          Hubble,
+				          dtau_old,
+				          sim.S0i_mode,
+									sim.back_to_GR);
 
-				//step d
-				stepXi(xi, source, phidot, phi, chi, Hubble, dtau_old, ref_site, S0i_mode);
-				check_field_max(source, "source", "AFTER stepXi\n");
-				check_field_max(phi, "phi");
-				check_field_max(xi, "xi");
-				check_field_max(phidot, "phidot");
+				xi.updateHalo();
+				// check_field(source, "source", "AFTER update_xi\n");
+				// check_field(phi, "phi");
+				// check_field(xi, "xi");
+				// check_field(phidot, "phidot");
 			}
 		}
-		else
+		else // Newtonian Evolution
 		{
 
 #ifdef BENCHMARK
-			ref2_time= MPI_Wtime();
+			ref2_time = MPI_Wtime();
 #endif
 			plan_source.execute(FFT_FORWARD);  // Newton: directly go to k-space
 #ifdef BENCHMARK
@@ -731,9 +756,9 @@ else
 			fft_time += MPI_Wtime() - ref2_time;
 			fft_count++;
 #endif
+			phi.updateHalo();  // communicate halo values
+			phidot.updateHalo();
 		}
-
-		phi.updateHalo();  // communicate halo values
 
 		// record some background data
 		if (kFT.setCoord(0, 0, 0))
@@ -789,7 +814,7 @@ else
 		fft_count++;
 #endif
 
-		if(sim.mg_flag == FOFR && dtau_old > 0.) addXi(chi,xi);
+		if(sim.mg_flag == FOFR && dtau_old > 0.) addXi(chi,xi,sim.back_to_GR);
 
 		chi.updateHalo();  // communicate halo values
 
@@ -817,6 +842,7 @@ else
 			ref2_time = MPI_Wtime();
 #endif
 			plan_Bi.execute(FFT_BACKWARD);  // go back to position space
+			// check_vector_field(Bi, "Bi", "Checking magnitude of Bi\n");
 #ifdef BENCHMARK
 			fft_time += MPI_Wtime() - ref2_time;
 			fft_count += 3;
@@ -1170,8 +1196,6 @@ if (pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation
 
 		if(sim.mg_flag == FOFR)
 		{
-			COUT << " dtau before = " << dtau << endl;
-			COUT << " max_FRR = " << max_FRR << endl;
 			dtau_osci = sim.fofR_timestep_epsilon * sqrt(3.0*max_FRR)/a;
 			sim.fofR_timestep_epsilon * sqrt(3.0* FRR(Rbar,sim.fofR_params,sim.fofR_type))/a;
 			if (sim.Cf * dx < sim.steplimit / Hubble)
@@ -1179,7 +1203,6 @@ if (pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation
 			else
 				dtau = sim.steplimit / Hubble;
 			if(dtau > dtau_osci) dtau = dtau_osci;
-			COUT << " dtau after = " << dtau << endl;
 		}
 		else
 		{

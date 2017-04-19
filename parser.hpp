@@ -1176,9 +1176,9 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	parseParameter(params, numparam, "f(R) epsilon", sim.fofR_timestep_epsilon);
 	parseParameter(params, numparam, "S0i mode", sim.S0i_mode);
 	parseParameter(params, numparam, "Back to GR", sim.back_to_GR);
+	parseParameter(params, numparam, "Check fields", sim.check_fields);
 	parseParameter(params, numparam, "time step limit", sim.steplimit);
 	parseParameter(params, numparam, "read background from file", sim.read_bg_from_file);
-
 
 	if (parseParameter(params, numparam, "gravity theory", par_string))
 	{

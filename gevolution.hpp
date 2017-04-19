@@ -117,29 +117,60 @@ void verify_0i(Field<FieldType> & phi,
 {
   Site x(phi.lattice());
   double max = 0., sum = 0., hom = 0., temp;
+  double lap_phidot = 0., H_phi = 0., H_chi = 0., T_term = 0., tot = 0.;
+  double dx2 = dx*dx;
   int i;
   for(x.first(); x.test(); x.next())
   {
-    temp = phi(x+0) + phi(x+1) + phi(x+2) + phi(x-0) + phi(x-1) + phi(x-2) - 6.*phi(x);
-    temp -= chi(x+0) + chi(x+1) + chi(x+2) + chi(x-0) + chi(x-1) + chi(x-2) - 6.*chi(x);
-    temp *= H;
-    temp += phidot(x+0) + phidot(x+1) + phidot(x+2) + phidot(x-0) + phidot(x-1) + phidot(x-2) - 6.*phidot(x);
-    temp /= dx * dx;
-    for(i=0; i<3; i++)
-    {
-      temp += fourpiG_over_a2 * (T0ia4(x,i) - T0ia4(x-i,i))/dx;
-    }
-    if(fabs(temp) > max) max = fabs(temp);
+    tot = 0.;
+    temp = H*(phi(x+0) + phi(x+1) + phi(x+2) + phi(x-0) + phi(x-1) + phi(x-2) - 6.*phi(x))/dx2;
     hom += temp;
-    sum += fabs(temp);
+    tot += temp;
+    temp = fabs(temp);
+    if(temp > H_phi) H_phi = fabs(temp);
+
+    temp = - H*(chi(x+0) + chi(x+1) + chi(x+2) + chi(x-0) + chi(x-1) + chi(x-2) - 6.*chi(x))/dx2;
+    hom += temp;
+    tot += temp;
+    temp = fabs(temp);
+    if(temp > H_chi) H_chi = fabs(temp);
+
+    temp = H*(phidot(x+0) + phidot(x+1) + phidot(x+2) + phidot(x-0) + phidot(x-1) + phidot(x-2) - 6.*phidot(x))/dx2;
+    hom += temp;
+    tot += temp;
+    temp = fabs(temp);
+    if(temp > lap_phidot) lap_phidot = fabs(temp);
+
+    temp = fourpiG_over_a2 * (T0ia4(x,0) - T0ia4(x-0,0) + T0ia4(x,1) - T0ia4(x-1,1)  +T0ia4(x,2) - T0ia4(x-2,2))/dx;
+    hom += temp;
+    tot += temp;
+    temp = fabs(temp);
+    if(temp > T_term) T_term = fabs(temp);
+
+    temp = fabs(tot);
+    if(temp > max) max = temp;
+    sum += temp;
+
   }
   parallel.max(max);
+  parallel.max(H_phi);
+  parallel.max(lap_phidot);
+  parallel.max(H_chi);
+  parallel.max(T_term);
+
   parallel.sum(sum);
   parallel.sum(hom);
   sum /= 64 * 64 * 64;
   hom /= 64 * 64 * 64;
 
-  COUT << " Testing the 0i equation:\n\tmax = " << max << "\n\thom = " << hom << "\n\t|avg| = " << sum << endl;
+  COUT << " Testing the 0i equation:\n\tmax = " << max
+       << "\n\thom = " << hom
+       << "\n\t|avg| = " << sum
+       << "\n\tH_phi = " << H_phi
+       << "\n\tlap_phidot = " << lap_phidot
+       << "\n\tH_chi = " << H_chi
+       << "\n\tT_term = " << T_term
+       << endl;
   return;
 }
 
@@ -260,7 +291,7 @@ void prepareFTsource(Field<FieldType> & phi, Field<FieldType> & Tij, Field<Field
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
-Site prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
+void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
 												 Field<FieldType> & phi,
 												 Field<FieldType> & chi,
 												 Field<FieldType> & xi,
@@ -287,37 +318,49 @@ Site prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
 	double grad[3];
   int i = 0;
 
-	for (x.first(); x.test(); x.next())
-	{
-		source(x) = fourpiG_over_a * (a3T00(x) - a3bg);
-    source(x) *= 1. - 4.*phi(x) - (flag_GR ? 0. : 0.5 * (xi(x) + FRbar));
-    source(x) += 3. * Hubble * Hubble * (phi(x) - (flag_GR ? 0. : 0.5 * xi(x) - chi(x)));
-    source(x) -= 3. * Hubble * phi(x) / dtau - 1.5 * Hubble * xidot(x);
-
-		//f(R) terms
-    source(x) += flag_GR ? 0. : 0.25 * a2 * (Rbar*xi(x) + Fbar - F(Rbar - eightpiG_deltaT(x) + zeta(x), paramF, Ftype));
-		source(x) *= dx2; // Multiply by dx^2 all terms not containing derivatives
-
-    // Now the derivative terms:
-		// Laplacian
-    if(flag_GR == 0)
+  if(!flag_GR)
+  {
+    for (x.first(); x.test(); x.next())
     {
+      source(x) = fourpiG_over_a * (a3T00(x) - a3bg);
       for(i=0; i<3; i++)
       {
         laplace += xi(x+i) + xi(x-i);
+        grad[i] = phi(x+i) - phi(x-i);
+        grad[i] *= grad[i];
       }
       laplace -= 6.*xi(x);
-      source(x) += (0.5 - 2.*phi(x) + 0.25*(xi(x) + 0.5*FRbar)) * laplace;
-    }
-    // Gradient squared
-    for(int i=0; i<3; i++)
-		{
-			grad[i] = phi(x+i) - phi(x-i);
-			grad[i] *= grad[i];
-		}
-		source(x) -= 0.375 * (grad[0] + grad[1] + grad[2]);
+      source(x) = (source(x) + 0.5*laplace/dx2) * (1. - 4.*phi(x) + 0.5 * (xi(x) + FRbar));
+      source(x) += 3. * Hubble * Hubble * (phi(x) - 0.5 * xi(x) - chi(x));
+      source(x) -= 3. * Hubble * phi(x) / dtau - 1.5 * Hubble * xidot(x);
+
+  		//f(R) terms
+      source(x) += 0.25 * a2 * (Rbar*xi(x) + Fbar - F(Rbar - eightpiG_deltaT(x) + zeta(x), paramF, Ftype));
+  		source(x) *= dx2; // Multiply by dx^2 all terms not containing derivatives
+
+      // gradient squared
+  		source(x) -= 0.375 * (grad[0] + grad[1] + grad[2]);
+  	}
+  }
+  else
+  {
+    for (x.first(); x.test(); x.next())
+    {
+      source(x) = fourpiG_over_a * (a3T00(x) - a3bg);
+      source(x) *= 1. - 4.*phi(x);
+      source(x) += 3. * Hubble * Hubble * (phi(x) - chi(x));
+      source(x) -= 3. * Hubble * phi(x) / dtau - 1.5 * Hubble * xidot(x);
+		  source(x) *= dx2; // Multiply by dx^2 all terms not containing derivatives
+      // Gradient squared
+      for(int i=0; i<3; i++)
+		  {
+        grad[i] = phi(x+i) - phi(x-i);
+			  grad[i] *= grad[i];
+		   }
+       source(x) -= 0.375 * (grad[0] + grad[1] + grad[2]);
+     }
 	}
-  return y;
+  return;
 }
 
 
@@ -336,7 +379,6 @@ void update_phi_phidot(Field<FieldType> & phi, Field<FieldType> & phidot, double
     phi(x) = p;
   }
 }
-
 
 
 /////////////////////////////////////////////////
@@ -360,43 +402,69 @@ void prepareFTsource_S0i(Field<FieldType> & S0i, // a^4 * T0i
                          int flag_GR = 0)
 {
 	Site x(S0i.lattice());
-  Bi.updateHalo();
-  phi.updateHalo();
-  phidot.updateHalo();
-  chi.updateHalo();
-  xi.updateHalo();
   int i, j;
   double temp, temp2;
 
-  if(mode == 1)
+  if(mode == 1) // Prepare full source term
   {
-	  for (x.first(); x.test(); x.next())
-	   {
-       for(i=0; i<3; i++)
-       {
-         temp = 0.;
-         temp2 = 0.;
-         for(j=0; j<3; j++)
+    if(!flag_GR)
+    {
+      for (x.first(); x.test(); x.next())
+  	   {
+         for(i=0; i<3; i++)
          {
-           //2 * dx2 * Laplace(phi) on i-th edge
-           temp += i!=j ? phi(x+i+j) + phi(x+i-j) - 2.*phi(x+i) + phi(x+j) + phi(x-j) - 2.*phi(x)
-                        : phi(x+i+i) - phi(x) - phi(x+i) + phi(x-i)
-                        ;
-           // (2 * dx2 * phi_{,ij} on i-th edge) * (4 * B_j on i-th edge)
-           temp2 += i!=j ? (phi(x+i+j) + phi(x-j) - phi(x+j) - phi(x+i-j)) * (Bi(x+i,j) + Bi(x+i-j,j) + Bi(x,j) + Bi(x-j,j))
-                         : (phi(x+i+i) + phi(x-i) - phi(x+i) - phi(x)) * 4. * Bi(x,i)
-                         ;
+           temp = 0.;
+           temp2 = 0.;
+           for(j=0; j<3; j++)
+           {
+             //2 * dx2 * Laplace(phi) on i-th edge
+             temp += i!=j ? phi(x+i+j) + phi(x+i-j) - 2.*phi(x+i) + phi(x+j) + phi(x-j) - 2.*phi(x)
+                          : phi(x+i+i) - phi(x) - phi(x+i) + phi(x-i)
+                          ;
+             // (2 * dx2 * phi_{,ij} on i-th edge) * (4 * B_j on i-th edge)
+             temp2 += i!=j ? (phi(x+i+j) + phi(x-j) - phi(x+j) - phi(x+i-j)) * (Bi(x+i,j) + Bi(x+i-j,j) + Bi(x,j) + Bi(x-j,j))
+                           : (phi(x+i+i) + phi(x-i) - phi(x+i) - phi(x)) * 4. * Bi(x,i)
+                           ;
+           }
+           temp *= 0.5 * Bi(x,i);
+           temp2 *= 0.125;
+           temp = (temp + temp2) / a2 / dx / dx;
+           temp += eightpiG_over_a2 * S0i(x);
+           result(x,i) = 2. * Hubble * (phi(x+i) - phi(x) - chi(x+i) + chi(x)) + 2. * (phidot(x+i) - phidot(x)) + (xi(x+i) - xi(x))/dtau;
+           result(x,i) = result(x,i) / dx + temp;
          }
-         temp *= 0.5 * Bi(x,i);
-         temp2 *= 0.125;
-         temp = (temp + temp2) / a2 / dx / dx;
-         temp += eightpiG_over_a2 * S0i(x);
-         result(x,i) = 2. * Hubble * (phi(x+i) - phi(x) - chi(x+i) + chi(x)) + 0*2. * (phidot(x+i) - phidot(x)) + (flag_GR ? 0. : (xi(x+i) - xi(x))/dtau);
-         result(x,i) = result(x,i) / dx + temp;
+       }
+    }
+    else
+    {
+      for (x.first(); x.test(); x.next())
+  	   {
+         for(i=0; i<3; i++)
+         {
+           temp = 0.;
+           temp2 = 0.;
+           for(j=0; j<3; j++)
+           {
+             //2 * dx2 * Laplace(phi) on i-th edge
+             temp += i!=j ? phi(x+i+j) + phi(x+i-j) - 2.*phi(x+i) + phi(x+j) + phi(x-j) - 2.*phi(x)
+                          : phi(x+i+i) - phi(x) - phi(x+i) + phi(x-i)
+                          ;
+             // (2 * dx2 * phi_{,ij} on i-th edge) * (4 * B_j on i-th edge)
+             temp2 += i!=j ? (phi(x+i+j) + phi(x-j) - phi(x+j) - phi(x+i-j)) * (Bi(x+i,j) + Bi(x+i-j,j) + Bi(x,j) + Bi(x-j,j))
+                           : (phi(x+i+i) + phi(x-i) - phi(x+i) - phi(x)) * 4. * Bi(x,i)
+                           ;
+           }
+           temp *= 0.5 * Bi(x,i);
+           temp2 *= 0.125;
+           temp = (temp + temp2) / a2 / dx / dx;
+           temp += eightpiG_over_a2 * S0i(x);
+           result(x,i) = 2. * Hubble * (phi(x+i) - phi(x) - chi(x+i) + chi(x)) + 2. * (phidot(x+i) - phidot(x));
+           result(x,i) = result(x,i) / dx + temp;
+         }
        }
      }
    }
-   else
+   else // If mode != 1: prepare only matter source
    {
      for(x.first(); x.test(); x.next())
      {
@@ -484,36 +552,47 @@ void projectFTsource_S0i(Field<FieldType> & S0iFT,
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
-void  update_xi(Field<FieldType> & source,
-                Field<FieldType> & phi,
-                Field<FieldType> & phidot,
-                Field<FieldType> & xi,
-                Field<FieldType> & chi,
-                Field<FieldType> & result,
-                double Hubble,
-                double dtau,
-                int mode = 1,
-                int flag_GR = 0)
+void update_xi_xidot(Field<FieldType> & source,
+                     Field<FieldType> & phi,
+                     Field<FieldType> & phidot,
+                     Field<FieldType> & xi,
+                     Field<FieldType> & xidot,
+                     Field<FieldType> & chi,
+                     double Hubble,
+                     double dtau,
+                     int mode = 1,
+                     int flag_GR = 0)
 {
   Site x(xi.lattice());
   double coeff = 1./dtau - Hubble;
-  if(mode != 1)
+  double temp;
+  if(flag_GR)
   {
     for(x.first(); x.test(); x.next())
     {
-      result(x) = source(x) + 2. * Hubble * (phi(x) - chi(x)) + 2. * phidot(x) + (flag_GR ? 0. : xi(x)/dtau);
-      result(x) /= coeff;
+      xi(x) = 0.;
+    }
+  }
+  else if(mode != 1)
+  {
+    for(x.first(); x.test(); x.next())
+    {
+      temp = source(x) + 2. * Hubble * (phi(x) - chi(x)) + 2. * phidot(x);
+      temp /= coeff;
+      xidot(x) = (temp - xi(x))/dtau;
+      xi(x) = temp;
     }
 	}
   else
   {
     for(x.first(); x.test(); x.next())
     {
-      result(x) = source(x) / coeff;
+      temp = source(x) / coeff;
+      xidot(x) = (temp - xi(x))/dtau;
+      xi(x) = temp;
     }
   }
 }
-
 
 
 /////////////////////////////////////////////////

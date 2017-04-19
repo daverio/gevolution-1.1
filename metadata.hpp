@@ -186,6 +186,7 @@ struct metadata
 
 	int S0i_mode;// TODO remove after FULL debugging
 	int back_to_GR;
+	int check_fields;
 
 	double Cf;
 	double fofR_timestep_epsilon;

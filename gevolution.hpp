@@ -32,34 +32,116 @@ using namespace std;
 using namespace LATfield2;
 
 template <class FieldType>
-Site check_field_max(Field<FieldType> & field, string field_name, string message = "", int n = 64)
+Site check_field(Field<FieldType> & field, string field_name, string message = "", int n = 64)
 {
   Site x(field.lattice());
   Site y;
-  double max = 0., sum = 0.;
+  double max = 0., hom = 0., sum = 0., temp;
   for(x.first(); x.test(); x.next())
   {
-    sum += field(x);
-    if(fabs(field(x)) > max)
+    temp = field(x);
+    hom += temp;
+    sum += fabs(temp);
+    if(fabs(temp) > max)
     {
-      max = fabs(field(x));
+      max = fabs(temp);
       y = x;
     }
   }
-  parallel.sum(sum);
-  sum = sum / n / n / n;
   parallel.max(max);
+  parallel.sum(sum);
+  parallel.sum(hom);
+  sum /= n * n * n;
+  hom /= n * n * n;
   COUT << message
   // MPI_Barrier(MPI_COMM_WORLD);
        << "  Field: " << field_name
        << ",  Max = " << max
-       << ",  homog. part = " << sum
+       << ",  hom = " << hom
+       << ",  |avg| = " << sum
        << ",  val(x_max) = " << field(y)
       //  << ", rank = " << parallel.rank()
        << endl;
   return y;
 }
 
+
+template <class FieldType>
+Site check_vector_field(Field<FieldType> & field, string field_name, string message = "", int n = 64)
+{
+  Site x(field.lattice()), y;
+  double max[3] = {0.,0.,0.}, hom[3] = {0.,0.,0.}, sum[3] = {0.,0.,0.}, temp;
+  int i;
+
+  COUT << message;
+
+  for(i=0; i<3; i++)
+  {
+    for(x.first(); x.test(); x.next())
+    {
+      temp = field(x,i);
+      hom[i] += temp;
+      sum[i] += fabs(temp);
+      if(fabs(temp) > max[i])
+      {
+        max[i] = fabs(temp);
+        y = x;
+      }
+    }
+  parallel.max(max[i]);
+  parallel.sum(sum[i]);
+  parallel.sum(hom[i]);
+  sum[i] = sum[i] / n / n / n;
+  // MPI_Barrier(MPI_COMM_WORLD);
+  COUT << "  Field: " << field_name << "[" << i << "]"
+       << ",  Max = " << max[i]
+       << ",  hom = " << hom[i]
+       << ",  |avg| = " << sum[i]
+       << ",  val(x_max) = " << field(y)
+      //  << ", rank = " << parallel.rank()
+       << endl;
+  }
+  return y;
+}
+
+
+template <class FieldType>
+void verify_0i(Field<FieldType> & phi,
+               Field<FieldType> & phidot,
+               Field<FieldType> & chi,
+               Field<FieldType> & T0ia4,
+               double a2,
+               double H,
+               double fourpiG_over_a2,
+               double dx)
+{
+  Site x(phi.lattice());
+  double max = 0., sum = 0., hom = 0., temp;
+  int i;
+  for(x.first(); x.test(); x.next())
+  {
+    temp = phi(x+0) + phi(x+1) + phi(x+2) + phi(x-0) + phi(x-1) + phi(x-2) - 6.*phi(x);
+    temp -= chi(x+0) + chi(x+1) + chi(x+2) + chi(x-0) + chi(x-1) + chi(x-2) - 6.*chi(x);
+    temp *= H;
+    temp += phidot(x+0) + phidot(x+1) + phidot(x+2) + phidot(x-0) + phidot(x-1) + phidot(x-2) - 6.*phidot(x);
+    temp /= dx * dx;
+    for(i=0; i<3; i++)
+    {
+      temp += fourpiG_over_a2 * (T0ia4(x,i) - T0ia4(x-i,i))/dx;
+    }
+    if(fabs(temp) > max) max = fabs(temp);
+    hom += temp;
+    sum += fabs(temp);
+  }
+  parallel.max(max);
+  parallel.sum(sum);
+  parallel.sum(hom);
+  sum /= 64 * 64 * 64;
+  hom /= 64 * 64 * 64;
+
+  COUT << " Testing the 0i equation:\n\tmax = " << max << "\n\thom = " << hom << "\n\t|avg| = " << sum << endl;
+  return;
+}
 
 
 //////////////////////////
@@ -195,7 +277,8 @@ Site prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
 												 const double Fbar,
 												 const double FRbar,
 												 double * paramF,
-												 const int Ftype)
+												 const int Ftype,
+                         int flag_GR = 0)
 {
 	Site x(phi.lattice());
   Site y(phi.lattice());
@@ -206,22 +289,25 @@ Site prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
 	for (x.first(); x.test(); x.next())
 	{
 		source(x) = eightpiG_over_a * (a3T00(x) - a3bg);
-    source(x) /= 1 + 4.*phi(x) + 0.5 * (xi(x) + FRbar);
-    source(x) += 6. * Hubble * Hubble * (phi(x) - 0.5 * xi(x) - chi(x));
-    source(x) -= 3.*Hubble * (2.*phi(x) - xi(x))/dtau;
+    source(x) *= 1 - 4.*phi(x) - (flag_GR ? 0. : 0.5 * (xi(x) + FRbar) );
+    source(x) += 6. * Hubble * Hubble * (phi(x) - (flag_GR ? 0. : 0.5 * xi(x)) - chi(x));
+    source(x) -= 3.*Hubble * (2.*phi(x) - (flag_GR ? 0. : xi(x)) )/dtau;
 
 		//f(R) terms
-    source(x) += 0.5 * a2 * (Rbar*xi(x) + Fbar - F(Rbar - eightpiG_deltaT(x) + zeta(x), paramF, Ftype));
+    source(x) += flag_GR ? 0. : 0.5 * a2 * (Rbar*xi(x) + Fbar - F(Rbar - eightpiG_deltaT(x) + zeta(x), paramF, Ftype));
 		source(x) *= dx2; // Multiply by dx^2 all terms not containing derivatives
 
     // Now the derivative terms:
 		// Laplacian
-		for(i=0; i<3; i++)
+    if(flag_GR == 0)
     {
-      laplace += xi(x+i) + xi(x-i);
+      for(i=0; i<3; i++)
+      {
+        laplace += xi(x+i) + xi(x-i);
+      }
+      laplace -= 6.*xi(x);
+      source(x) -= (4.*phi(x) + 0.5*(xi(x) + FRbar)) * laplace;
     }
-		laplace -= 6.*xi(x);
-		source(x) -= (4.*phi(x) + 0.5*(xi(x) + FRbar)) * laplace;
     // Gradient squared
     for(int i=0; i<3; i++)
 		{
@@ -242,40 +328,73 @@ Site prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
 /////////////////////////////////////////////////
 template <class FieldType>
 void prepareFTsource_S0i(Field<FieldType> & S0i, // a^4 * T0i
-                         Field<FieldType> & phi_old,
-                         Field<FieldType> & xi_old,
-                         Field<FieldType> & chi_old,
+                         Field<FieldType> & phi,
+                         Field<FieldType> & xi,
+                         Field<FieldType> & chi,
                          Field<FieldType> & two_phi_minus_xi_new,
+                         Field<FieldType> & Bi,
                          Field<FieldType> & result,
 												 double eightpiG_over_a2,
                          double dx,
                          double dtau,
+                         double a2,
                          double Hubble,
-                         int mode = 1)
+                         int mode = 1,
+                         int flag_GR = 0)
 {
 	Site x(S0i.lattice());
-  int i;
-	for (x.first(); x.test(); x.next())
-	{
-    for(i=0; i<3; i++)
-    {
-      result(x,i) = S0i(x,i) * eightpiG_over_a2;
-      if(mode==1)
-      {
-        result(x,i) += (two_phi_minus_xi_new(x+i) - two_phi_minus_xi_new(x))/dtau/dx;
-        result(x,i) -= (2.*phi_old(x+i) - 2.*phi_old(x) - xi_old(x+i) + xi_old(x))/dtau/dx;
-        result(x,i) /= -Hubble;
-        result(x,i) += 2*(chi_old(x+i) - chi_old(x))/dx;
-      }
-      else
-      {
-        result(x,i) /= -Hubble;
-      }
-      result(x,i) *= dx;
-    }
-	}
-}
+  int i, j;
+  double temp, temp2;
 
+  if(mode == 1)
+  {
+	  for (x.first(); x.test(); x.next())
+	   {
+       for(i=0; i<3; i++)
+       {
+         temp = 0.;
+         temp2 = 0.;
+         for(j=0; j<3; j++)
+         {
+           temp += phi(x+i+j) + phi(x+j) + phi(x+i-j) + phi(x-j) - 2.*phi(x+i) - 2.*phi(x); //2 * dx2 * Laplace(phi) on i-th edge
+           temp2 += phi(x+i+j) + phi(x-j) - phi(x+j) - phi(x+i-j); // 2 * dx2 * phi_{,ij} on i-th edge
+           temp2 *= Bi(x+i,j) + Bi(x+i-j,j) + Bi(x,j) + Bi(x-j,j); // 4 * B_j on i-th edge
+         }
+         temp *= 0.5 * Bi(x,i);
+         temp2 *= 0.125;
+         temp = (temp + temp2) / a2 / dx / dx;
+         temp += eightpiG_over_a2 * S0i(x);
+         result(x,i) = two_phi_minus_xi_new(x+i) - two_phi_minus_xi_new(x);
+         result(x,i) -= 2.*(phi(x+i) - phi(x)) - (flag_GR ? 0. : (xi(x+i) - xi(x)));
+         result(x,i) /= dtau * dx;
+         result(x,i) += temp;
+         result(x,i) /= - Hubble;
+         result(x,i) += 2.*(chi(x+i) - chi(x))/dx;
+       }
+     }
+   }
+   else
+   {
+     for(x.first(); x.test(); x.next())
+     {
+       for(i=0; i<3; i++)
+       {
+         temp = 0.;
+         temp2 = 0.;
+         for(j=0; j<3; j++)
+         {
+           temp += phi(x+i+j) + phi(x+j) + phi(x+i-j) + phi(x-j) - 2.*phi(x+i) - 2.*phi(x); //2 * dx2 * Laplace(phi) on i-th edge
+           temp2 += phi(x+i+j) + phi(x-j) - phi(x+j) - phi(x+i-j); // 2 * dx2 * phi_{,ij} on i-th edge
+           temp2 *= Bi(x+i,j) + Bi(x+i-j,j) + Bi(x,j) + Bi(x-j,j); // 4 * B_j on i-th edge
+         }
+         temp *= 0.5 * Bi(x,i);
+         temp2 *= 0.125;
+         temp = (temp + temp2) / a2;
+         result(x,i) = - (temp + S0i(x,i) * eightpiG_over_a2) / Hubble;
+       }
+     }
+   }
+}
 
 
 /////////////////////////////////////////////////
@@ -295,13 +414,13 @@ void projectFTsource_S0i(Field<FieldType> & S0iFT,
 	rKSite k(S0iFT.lattice());
 	gridk2 = (Real *) malloc(linesize * sizeof(Real));
 	kshift = (Cplx *) malloc(linesize * sizeof(Cplx));
-	double temp = (long)linesize * (long)linesize * (long)linesize;
-	Cplx im = Cplx(0.0,1.0);// TODO: Check whether +i or -i here
+	double temp = (long) linesize * (long) linesize * (long) linesize;
+	Cplx im = Cplx(0.0,-1.0);
 
 
 	for (i = 0; i < linesize; i++)
 	{
-		gridk2[i] = 2. * (Real) linesize * sin(M_PI * (Real) i / (Real) linesize); // TODO: Check factor linesize here
+		gridk2[i] = 2. * (Real) linesize * sin(M_PI * (Real) i / (Real) linesize); // Factor linesize here is the same as 1/dx, as in the correct definition of k[i]
 		kshift[i] = gridk2[i] * Cplx(cos(M_PI * (Real) i / (Real) linesize), -sin(M_PI * (Real) i / (Real) linesize));
 		gridk2[i] *= gridk2[i];
 	}
@@ -315,16 +434,49 @@ void projectFTsource_S0i(Field<FieldType> & S0iFT,
 
 	for (; k.test(); k.next())
 	{
-		output(k) = S0iFT(k,0)*kshift[k.coord(0)] + S0iFT(k,1)*kshift[k.coord(1)] + S0iFT(k,2)*kshift[k.coord(2)];
-		output(k) /= gridk2[k.coord(0)] + gridk2[k.coord(1)] + gridk2[k.coord(2)];
-		output(k) /= temp;
-		output(k) *= im;
+    if(k.coord(0) + k.coord(1) + k.coord(2) == -1)
+    {
+      output(k) = Cplx(0.,0.);
+      // COUT << " k = (" << k.coord(0) << ", " << k.coord(1) << ", " << k.coord(2) << ")\n";
+    }
+    else
+    {
+      output(k) = S0iFT(k,0)*kshift[k.coord(0)] + S0iFT(k,1)*kshift[k.coord(1)] + S0iFT(k,2)*kshift[k.coord(2)];
+      output(k) /= gridk2[k.coord(0)] + gridk2[k.coord(1)] + gridk2[k.coord(2)];
+      output(k) /= temp;
+      output(k) *= im;
+    }
 	}
-
 	free(gridk2);
 	free(kshift);
 }
 
+/////////////////////////////////////////////////
+// Finish the source term for the T0i, spin-0 equation
+// TODO: Add comments here
+/////////////////////////////////////////////////
+template <class FieldType>
+void complete_source_xi(Field<FieldType> & source,
+                        Field<FieldType> & phi_old,
+                        Field<FieldType> & two_phi_minus_xi_new,
+                        Field<FieldType> & xi_old,
+                        Field<FieldType> & chi_old,
+                        Field<FieldType> & result,
+                        double H,
+                        double dtau,
+                        int mode = 1,
+                        int flag_GR = 0)
+{
+  Site x(xi_old.lattice());
+  if(mode != 1)
+  {
+    for(x.first(); x.test(); x.next())
+    {
+      result(x) = source(x) - (two_phi_minus_xi_new(x) - 2.*phi_old(x) + (flag_GR ? 0. : xi_old(x)) )/H/dtau;
+      result(x) += 2.*chi_old(x);
+    }
+	}
+}
 
 
 /////////////////////////////////////////////////
@@ -341,25 +493,18 @@ void stepXi(Field<FieldType> & xi,
 						double H,
 						double dtau,
             Site y,
-            int mode = 1)
+            int flag_GR = 0
+            )
 {
 	Site x(xi.lattice());
-	FieldType * pointer;
-
+	FieldType temp;
   for(x.first(); x.test(); x.next())
-	{
-    xi(x) = source(x);
-    if(mode != 1)
-    {
-      xi(x) += -(2.*phi(x) + xi(x))/H/dtau + 2.*chi(x);
-    }
-    phidot(x) = 0.25*(xi(x) + phidot(x));
-    xi(x) -= 2.*phidot(x);
-		phi(x) = (phidot(x) - phi(x))/dtau;
-	}
-	pointer = phidot.data_;
-	phidot.data_ = phi.data_;
-	phi.data_ = pointer;
+  {
+    temp = phi(x);
+    phi(x) = 0.25 * ( phidot(x) + source(x) );
+    phidot(x) = (phi(x) - temp)/dtau;
+    xi(x) = flag_GR ? 0. : source(x) - 2.*phi(x);
+  }
 }
 
 
@@ -441,13 +586,17 @@ void computeTtrace(Field<FieldType> & dT,
 /////////////////////////////////////////////////
 template <class FieldType>
 void addXi(Field<FieldType> & chi,
-							Field<FieldType> & xi)
+					 Field<FieldType> & xi,
+           int flag_GR = 0)
 {
 	Site x(chi.lattice());
-	for(x.first(); x.test(); x.next())
-	{
-		chi(x) += xi(x);
-	}
+  if(!flag_GR)
+  {
+    for(x.first(); x.test(); x.next())
+	   {
+       chi(x) += xi(x);
+	   }
+  }
 }
 
 
@@ -459,14 +608,14 @@ void addXi(Field<FieldType> & chi,
 /////////////////////////////////////////////////
 template <class FieldType>
 double computeDRzeta(Field<FieldType> & deltaT,
-									 Field<FieldType> & zeta,
-									 Field<FieldType> & xi,
-                   Field<FieldType> & deltaR,
-									 double Rbar,
-								 	 double FRbar,
-								 	 double Tbar,
-								 	 double * params,
-									 const int fofR_type)
+									   Field<FieldType> & zeta,
+									   Field<FieldType> & xi,
+                     Field<FieldType> & deltaR,
+									   double Rbar,
+								 	   double FRbar,
+								 	   double Tbar,
+								 	   double * params,
+									   const int fofR_type)
 {
 	Site x(xi.lattice());
 	double temp, temp2;
@@ -579,7 +728,7 @@ void projectFTscalar(Field<Cplx> & SijFT, Field<Cplx> & chiFT, const int add = 0
 
 	for (i = 0; i < linesize; i++)
 	{
-		gridk2[i] = 2. * (Real) linesize * sin(M_PI * (Real) i / (Real) linesize);
+		gridk2[i] = 2. * (Real) linesize * sin(M_PI * (Real) i / (Real) linesize); // TODO: can linesize and 1/dx be used interchangeably? Probably: YES
 		kshift[i] = gridk2[i] * Cplx(cos(M_PI * (Real) i / (Real) linesize), -sin(M_PI * (Real) i / (Real) linesize));
 		gridk2[i] *= gridk2[i];
 	}
@@ -601,7 +750,7 @@ void projectFTscalar(Field<Cplx> & SijFT, Field<Cplx> & chiFT, const int add = 0
 						6. * kshift[k.coord(0)] * kshift[k.coord(1)] * SijFT(k, 0, 1) -
 						6. * kshift[k.coord(0)] * kshift[k.coord(2)] * SijFT(k, 0, 2) -
 						6. * kshift[k.coord(1)] * kshift[k.coord(2)] * SijFT(k, 1, 2)) /
-						(2. * (gridk2[k.coord(0)] + gridk2[k.coord(1)] + gridk2[k.coord(2)]) * (gridk2[k.coord(0)] + gridk2[k.coord(1)] + gridk2[k.coord(2)]) * linesize);
+						(2. * (gridk2[k.coord(0)] + gridk2[k.coord(1)] + gridk2[k.coord(2)]) * (gridk2[k.coord(0)] + gridk2[k.coord(1)] + gridk2[k.coord(2)]) * linesize); // TODO: Why this factor linesize here?
 		}
 	}
 	else

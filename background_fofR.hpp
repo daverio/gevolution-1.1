@@ -157,11 +157,12 @@ double func_RK_Rdot(const double a,
 	double frr = FRR(R, params, fofR_type);
 	double fr = FR(R, params, fofR_type);
 	double rho = Hconf(a, fourpiG, cosmo);
-	rho *= 3. * rho; // Actually computes 8 pi G * rho * a**2
+	double denom = 3. * frr * H;
+	rho *= 3. * rho; // Actually computes 8 pi G * rho_background * a**2
 
 	// return - 6 * fourpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * H / a / a / a;
 
-	if(3. * frr * H) return - (rho - 3.*H*H*(1. + fr) + 0.5*(fr * R - F(R, params, fofR_type))*a*a) / (3. * frr * H);
+	if(denom) return - (rho - 3.*H*H*(1. + fr) + 0.5*(fr * R - F(R, params, fofR_type))*a*a) / denom;
 	else
 	{
 		COUT << " FRR evaluates to zero. Closing..." << endl

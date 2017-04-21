@@ -31,6 +31,81 @@
 using namespace std;
 using namespace LATfield2;
 
+
+template <class FieldType>
+void write_T00(Field<FieldType> & old, Field<FieldType> & T, double a = 1)
+{
+  Site x(old.lattice());
+  double a3 = -a*a*a;
+  for(x.first(); x.test(); x.next())
+  {
+    old(x) = T(x) / a3;
+  }
+}
+
+
+template <class FieldType>
+void write_T0i(Field<FieldType> & old, Field<FieldType> & T, double a = 1)
+{
+  Site x(old.lattice());
+  int i;
+  double a4 = a*a*a*a;
+  for(x.first(); x.test(); x.next())
+  {
+    for(i=0; i<3; i++)
+    {
+      old(x,i) = T(x,i) / a4;
+    }
+  }
+}
+
+
+template <class FieldType>
+void energy_conservation(Field<FieldType> & T00_new, // T^0_0
+                         Field<FieldType> & T00_old,
+                         Field<FieldType> & T0i_new, // T^0_i
+                         Field<FieldType> & T0i_old,
+                         double dt,
+                         double dx,
+                         long numpts3d)
+{
+  Site x(T00_new.lattice());
+  int i;
+  double temp, ft, max = 0., hom = 0., avg = 0.;
+  for(x.first(); x.test(); x.next())
+  {
+    temp = (T00_new(x) - T00_old(x)) / dt;
+    for(i=0; i<3; i++)
+    {
+      temp -= (T0i_new(x,i) - T0i_new(x-i,i) + T0i_old(x,i) - T0i_old(x-i,i)) / 2. / dx;
+    }
+    hom += temp;
+    ft = fabs(temp);
+    avg += ft;
+    if(ft > max) max = ft;
+  }
+  parallel.max(max);
+  parallel.sum(avg);
+  parallel.sum(hom);
+  avg /= numpts3d;
+  hom /= numpts3d;
+
+  COUT << "Energy Conservation:"
+       << "\n\tmax = " << max
+       << "\n\tavg = " << avg
+       << "\n\thom = " << hom
+       << endl;
+}
+
+
+
+/////////////////////////////////////////////////
+// Checks (scalar) field:
+// Max = max(fabs(field))
+// |hom| = sum(fields)/number_of_points
+// |avg| average of fabs(field), not fabs(average)!
+// TODO: Add comments here
+/////////////////////////////////////////////////
 template <class FieldType>
 Site check_field(Field<FieldType> & field, string field_name, string message = "", int n = 64)
 {
@@ -66,6 +141,11 @@ Site check_field(Field<FieldType> & field, string field_name, string message = "
 }
 
 
+/////////////////////////////////////////////////
+// Checks vector field, each component separately
+// Quantities are the same as check_field
+// TODO: Add comments here
+/////////////////////////////////////////////////
 template <class FieldType>
 Site check_vector_field(Field<FieldType> & field, string field_name, string message = "", int n = 64)
 {
@@ -104,7 +184,10 @@ Site check_vector_field(Field<FieldType> & field, string field_name, string mess
   return y;
 }
 
-
+/////////////////////////////////////////////////
+// Tests the spin-0 part of the 0-i equation
+// TODO: Add comments here
+/////////////////////////////////////////////////
 template <class FieldType>
 void verify_0i(Field<FieldType> & phi,
                Field<FieldType> & phidot,
@@ -113,7 +196,8 @@ void verify_0i(Field<FieldType> & phi,
                double a2,
                double H,
                double fourpiG_over_a2,
-               double dx)
+               double dx,
+               long numpts3d)
 {
   Site x(phi.lattice());
   double max = 0., sum = 0., hom = 0., temp;
@@ -135,13 +219,13 @@ void verify_0i(Field<FieldType> & phi,
     temp = fabs(temp);
     if(temp > H_chi) H_chi = fabs(temp);
 
-    temp = H*(phidot(x+0) + phidot(x+1) + phidot(x+2) + phidot(x-0) + phidot(x-1) + phidot(x-2) - 6.*phidot(x))/dx2;
+    temp = (phidot(x+0) + phidot(x+1) + phidot(x+2) + phidot(x-0) + phidot(x-1) + phidot(x-2) - 6.*phidot(x))/dx2;
     hom += temp;
     tot += temp;
     temp = fabs(temp);
     if(temp > lap_phidot) lap_phidot = fabs(temp);
 
-    temp = fourpiG_over_a2 * (T0ia4(x,0) - T0ia4(x-0,0) + T0ia4(x,1) - T0ia4(x-1,1)  +T0ia4(x,2) - T0ia4(x-2,2))/dx;
+    temp = fourpiG_over_a2 * (T0ia4(x,0) - T0ia4(x-0,0) + T0ia4(x,1) - T0ia4(x-1,1) + T0ia4(x,2) - T0ia4(x-2,2))/dx;
     hom += temp;
     tot += temp;
     temp = fabs(temp);
@@ -150,8 +234,8 @@ void verify_0i(Field<FieldType> & phi,
     temp = fabs(tot);
     if(temp > max) max = temp;
     sum += temp;
-
   }
+
   parallel.max(max);
   parallel.max(H_phi);
   parallel.max(lap_phidot);
@@ -160,8 +244,8 @@ void verify_0i(Field<FieldType> & phi,
 
   parallel.sum(sum);
   parallel.sum(hom);
-  sum /= 64 * 64 * 64;
-  hom /= 64 * 64 * 64;
+  sum /= numpts3d;
+  hom /= numpts3d;
 
   COUT << " Testing the 0i equation:\n\tmax = " << max
        << "\n\thom = " << hom
@@ -294,8 +378,8 @@ template <class FieldType>
 void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
 												 Field<FieldType> & phi,
 												 Field<FieldType> & chi,
-												 Field<FieldType> & xi,
-                         Field<FieldType> & xidot,
+												 Field<FieldType> & xi_new,
+                         Field<FieldType> & xi,
 											 	 Field<FieldType> & eightpiG_deltaT, // 8piG * deltaT
                          Field<FieldType> & zeta,
 												 Field<FieldType> & source, //
@@ -332,7 +416,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
       laplace -= 6.*xi(x);
       source(x) = (source(x) + 0.5*laplace/dx2) * (1. - 4.*phi(x) + 0.5 * (xi(x) + FRbar));
       source(x) += 3. * Hubble * Hubble * (phi(x) - 0.5 * xi(x) - chi(x));
-      source(x) -= 3. * Hubble * phi(x) / dtau - 1.5 * Hubble * xidot(x);
+      source(x) -= 3. * Hubble * phi(x) / dtau + 1.5 * Hubble * (xi_new(x) - xi(x))/dtau;//TODO: check that this is the right interpolation
 
   		//f(R) terms
       source(x) += 0.25 * a2 * (Rbar*xi(x) + Fbar - F(Rbar - eightpiG_deltaT(x) + zeta(x), paramF, Ftype));
@@ -349,7 +433,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
       source(x) = fourpiG_over_a * (a3T00(x) - a3bg);
       source(x) *= 1. - 4.*phi(x);
       source(x) += 3. * Hubble * Hubble * (phi(x) - chi(x));
-      source(x) -= 3. * Hubble * phi(x) / dtau - 1.5 * Hubble * xidot(x);
+      source(x) -= 3. * Hubble * phi(x) / dtau;
 		  source(x) *= dx2; // Multiply by dx^2 all terms not containing derivatives
       // Gradient squared
       for(int i=0; i<3; i++)
@@ -378,6 +462,98 @@ void update_phi_phidot(Field<FieldType> & phi, Field<FieldType> & phidot, double
     phidot(x) = (p - phi(x))/dtau;
     phi(x) = p;
   }
+}
+
+
+/////////////////////////////////////////////////
+// Prepare source for the trace equation in f(R) gravity
+// (which will evolve xi)
+// TODO: Add comments here
+/////////////////////////////////////////////////
+template <class FieldType>
+void prepareFTsource_xi(Field<FieldType> & eightpiG_deltaT,
+                        Field<FieldType> & phi,
+                        Field<FieldType> & xi,
+                        Field<FieldType> & xi_prev,
+                        Field<FieldType> & zeta,
+                        Field<FieldType> & source,
+                        double dx2,
+                        double dtau,
+                        double dtau_old,
+                        double a2,
+                        double Hubble,
+                        double Rbar,
+                        double Fbar,
+                        double FRbar,
+                        double * paramF,
+                        const int Ftype)
+{
+  Site x(xi.lattice());
+  double lapl = 0.;
+  double dtprod = dtau * dtau_old;
+  double dtsum = dtau + dtau_old;
+  double dtau_over_dx2 = dtau/dx2;
+  int i;
+
+  for(x.first(); x.test(); x.next())
+  {
+    // TODO: zeta might not be EXACTLY right, in this place. Check if it has a big impact
+    source(x) = - zeta(x) + 2.*Fbar - 2.*F(Rbar - eightpiG_deltaT(x) + zeta(x), paramF, Ftype) + Rbar * xi(x);
+    source(x) *= a2;
+    lapl = phi(x+0) + phi(x-0) + phi(x+1) + phi(x-1) + phi(x+2) + phi(x-2) - 6.*phi(x);
+    lapl *= 2. * (FRbar + xi(x)) / dx2;
+    source(x) += lapl;
+    source(x) /= 3.;
+    source(x) += 2. * xi(x)/dtprod;
+    source(x) *= dtsum;
+    lapl = xi_prev(x+0) + xi_prev(x-0) + xi_prev(x+1) + xi_prev(x-1) + xi_prev(x+2) + xi_prev(x-2) - 6.*xi_prev(x);
+    lapl *= dtau_over_dx2;
+    lapl += 2. * (Hubble - 1./dtau_old) * xi_prev(x);
+    source(x) += lapl;
+  }
+
+}
+
+
+/////////////////////////////////////////////////
+// Solve wave-like equation (trace) for xi (transformed into a Poisson-like)
+// TODO: Add comments here
+/////////////////////////////////////////////////
+void solveTraceXi(Field<Cplx> & sourceFT, Field<Cplx> & potFT, double dtau, double dtau_old, double Hubble)
+{
+	const int linesize = potFT.lattice().size(1);
+	int i;
+	Real * gridk2;
+	Real * sinc;
+  double modif = 2. * (Hubble + 1/dtau);
+  double coeff = 1. / ((long) linesize * (long) linesize * (long) linesize);
+
+	rKSite k(potFT.lattice());
+
+	gridk2 = (Real *) malloc(linesize * sizeof(Real));
+
+	for (i = 0; i < linesize; i++)
+	{
+		gridk2[i] = 2. * (Real) linesize * sin(M_PI * (Real) i / (Real) linesize);
+		gridk2[i] *= gridk2[i];
+	}
+
+	k.first();
+	if (k.coord(0) == 0 && k.coord(1) == 0 && k.coord(2) == 0)
+	{
+		if (modif == 0.)
+			potFT(k) = Cplx(0.,0.);
+		else
+			potFT(k) = sourceFT(k) * coeff / modif;
+		k.next();
+	}
+
+	for (; k.test(); k.next())
+	{
+		potFT(k) = sourceFT(k) * coeff / (gridk2[k.coord(0)] + gridk2[k.coord(1)] + gridk2[k.coord(2)] + modif);
+	}
+
+	free(gridk2);
 }
 
 
@@ -552,45 +728,15 @@ void projectFTsource_S0i(Field<FieldType> & S0iFT,
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
-void update_xi_xidot(Field<FieldType> & source,
-                     Field<FieldType> & phi,
-                     Field<FieldType> & phidot,
-                     Field<FieldType> & xi,
-                     Field<FieldType> & xidot,
-                     Field<FieldType> & chi,
-                     double Hubble,
-                     double dtau,
-                     int mode = 1,
-                     int flag_GR = 0)
+void update_xi(Field<FieldType> & xi,
+               Field<FieldType> & xi_new,
+               Field<FieldType> & xi_old)
 {
   Site x(xi.lattice());
-  double coeff = 1./dtau - Hubble;
-  double temp;
-  if(flag_GR)
+  for(x.first(); x.test(); x.next())
   {
-    for(x.first(); x.test(); x.next())
-    {
-      xi(x) = 0.;
-    }
-  }
-  else if(mode != 1)
-  {
-    for(x.first(); x.test(); x.next())
-    {
-      temp = source(x) + 2. * Hubble * (phi(x) - chi(x)) + 2. * phidot(x);
-      temp /= coeff;
-      xidot(x) = (temp - xi(x))/dtau;
-      xi(x) = temp;
-    }
-	}
-  else
-  {
-    for(x.first(); x.test(); x.next())
-    {
-      temp = source(x) / coeff;
-      xidot(x) = (temp - xi(x))/dtau;
-      xi(x) = temp;
-    }
+    xi_old(x) = xi(x);
+    xi(x) = xi_new(x);
   }
 }
 
@@ -647,12 +793,12 @@ void zeta_initial_conditions(Field<FieldType> & zeta)
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
-void xidot_initial_conditions(Field<FieldType> & xidot)
+void xi_prev_initial_conditions(Field<FieldType> & xi_prev, Field<FieldType> & xi)
 {
-  Site x(xidot.lattice());
+  Site x(xi_prev.lattice());
   for(x.first(); x.test(); x.next())
   {
-    xidot(x) = 0.; // TODO: first approximation, try different initial conditions
+    xi_prev(x) = xi(x); // TODO: first approximation, try different initial conditions
   }
 }
 
@@ -701,12 +847,55 @@ void addXi(Field<FieldType> & chi,
   }
 }
 
+/////////////////////////////////////////////////
+// Checks xi-zeta constraint:
+// xi = FR(R - 8piGdeltaT) + FRR(R - 8piGdeltaT) * zeta - FRbar
+// TODO: add comments here
+/////////////////////////////////////////////////
+template <class FieldType>
+void check_xi_constraint(Field<FieldType> & xi,
+                         Field<FieldType> & eightpiG_deltaT,
+                         Field<FieldType> & zeta,
+                         double Rbar,
+                         double FRbar,
+                         double * params,
+                         int type,
+                         int n = 64
+                         )
+{
+  Site x(xi.lattice());
+  double max = 0., hom = 0., sum = 0., temp;
+  for(x.first(); x.test(); x.next())
+  {
+    temp = xi(x) - FR(Rbar - eightpiG_deltaT(x), params, type) - FRR(Rbar - eightpiG_deltaT(x), params, type) * zeta(x) + FRbar;
+    hom += temp;
+    sum += fabs(temp);
+    if(fabs(temp) > max)
+    {
+      max = fabs(temp);
+    }
+  }
+  parallel.max(max);
+  parallel.sum(sum);
+  parallel.sum(hom);
+  sum /= n * n * n;
+  hom /= n * n * n;
+  // MPI_Barrier(MPI_COMM_WORLD);
+  COUT << "  Xi -- zeta constraint"
+       << ",  Max = " << max
+       << ",  hom = " << hom
+       << ",  |avg| = " << sum
+      //  << ", rank = " << parallel.rank()
+       << endl;
+  return;
+}
+
 
 /////////////////////////////////////////////////
 // Computes zeta and deltaR
 //
 // Returns maximum value of FRR over the entire lattice.
-// the typical osciliation frenquency will be of order a/(sqrt(3*FRR_max))
+// the typical oscillation frenquency will be of order a/(sqrt(3*FRR_max))
 /////////////////////////////////////////////////
 template <class FieldType>
 double computeDRzeta(Field<FieldType> & deltaT,
@@ -738,7 +927,7 @@ double computeDRzeta(Field<FieldType> & deltaT,
     else
 		{
 			zeta(x) = (xi(x) + FRbar - FR(Rbar - temp, params, fofR_type))/temp2;
-			deltaR(x) = zeta(x) - temp;
+			// deltaR(x) = zeta(x) - temp;
 		}
 	}
 	parallel.max(max_FRR);

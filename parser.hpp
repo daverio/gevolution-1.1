@@ -1173,10 +1173,11 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	if (ic.Cf < 0.) ic.Cf = sim.Cf;
 
-	parseParameter(params, numparam, "f(R) epsilon", sim.fofR_timestep_epsilon);
+	parseParameter(params, numparam, "f(R) epsilon", sim.fofR_timestep_epsilon);// TODO: put some of these only for f(R)
 	parseParameter(params, numparam, "S0i mode", sim.S0i_mode);
 	parseParameter(params, numparam, "Back to GR", sim.back_to_GR);
 	parseParameter(params, numparam, "Check fields", sim.check_fields);
+	parseParameter(params, numparam, "Energy Conservation", sim.energy_conservation);
 	parseParameter(params, numparam, "time step limit", sim.steplimit);
 	parseParameter(params, numparam, "read background from file", sim.read_bg_from_file);
 

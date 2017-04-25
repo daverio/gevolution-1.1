@@ -607,7 +607,7 @@ bool parseParameter(parameter * & params, const int numparam, const char * pname
 //
 //////////////////////////
 
-bool parseFieldSpecifiers(parameter * & params, const int numparam, const char * pname, int & pvalue)
+bool parseFieldSpecifiers(parameter * & params, const int numparam, const char * pname, int & pvalue, int fofR_flag)
 {
 	char * start;
 	char * comma;
@@ -628,9 +628,10 @@ bool parseFieldSpecifiers(parameter * & params, const int numparam, const char *
 					if (item[pos-1] != ' ' && item[pos-1] != '\t') break;
 				}
 				item[pos] = '\0';
-
 				if (strcmp(item, "Phi") == 0 || strcmp(item, "phi") == 0)
 					pvalue |= MASK_PHI;
+				else if( (strcmp(item, "xi") == 0 || strcmp(item, "Xi") == 0) && fofR_flag)
+					pvalue |= MASK_XI;
 				else if (strcmp(item, "Chi") == 0 || strcmp(item, "chi") == 0)
 					pvalue |= MASK_CHI;
 				else if (strcmp(item, "Pot") == 0 || strcmp(item, "pot") == 0 || strcmp(item, "Psi_N") == 0 || strcmp(item, "psi_N") == 0 || strcmp(item, "PsiN") == 0 || strcmp(item, "psiN") == 0)
@@ -664,6 +665,8 @@ bool parseFieldSpecifiers(parameter * & params, const int numparam, const char *
 
 			if (strcmp(start, "Phi") == 0 || strcmp(start, "phi") == 0)
 				pvalue |= MASK_PHI;
+			else if ( (strcmp(start, "xi") == 0 || strcmp(start, "Xi") == 0) && fofR_flag)
+				pvalue |= MASK_XI;
 			else if (strcmp(start, "Chi") == 0 || strcmp(start, "chi") == 0)
 				pvalue |= MASK_CHI;
 			else if (strcmp(start, "Pot") == 0 || strcmp(start, "pot") == 0 || strcmp(start, "Psi_N") == 0 || strcmp(start, "psi_N") == 0 || strcmp(start, "PsiN") == 0 || strcmp(start, "psiN") == 0)
@@ -1144,8 +1147,8 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	parseParameter(params, numparam, "hibernation wallclock limit", sim.wallclocklimit);
 
-	parseFieldSpecifiers(params, numparam, "snapshot outputs", sim.out_snapshot);
-	parseFieldSpecifiers(params, numparam, "Pk outputs", sim.out_pk);
+	parseFieldSpecifiers(params, numparam, "snapshot outputs", sim.out_snapshot, sim.mg_flag == FOFR);
+	parseFieldSpecifiers(params, numparam, "Pk outputs", sim.out_pk, sim.mg_flag == FOFR);
 
 	i = MAX_PCL_SPECIES;
 	parseParameter(params, numparam, "tracer factor", sim.tracer_factor, i);
@@ -1173,7 +1176,9 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	if (ic.Cf < 0.) ic.Cf = sim.Cf;
 
-	parseParameter(params, numparam, "f(R) epsilon", sim.fofR_timestep_epsilon);// TODO: put some of these only for f(R)
+	parseParameter(params, numparam, "f(R) epsilon background", sim.fofR_epsilon_bg);// TODO: put some of these only for f(R)
+	parseParameter(params, numparam, "f(R) epsilon fields", sim.fofR_epsilon_fields);
+	parseParameter(params, numparam, "Quasi-static", sim.quasi_static);
 	parseParameter(params, numparam, "S0i mode", sim.S0i_mode);
 	parseParameter(params, numparam, "Back to GR", sim.back_to_GR);
 	parseParameter(params, numparam, "Check fields", sim.check_fields);

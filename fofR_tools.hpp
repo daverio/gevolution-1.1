@@ -17,7 +17,7 @@
 // Model: f(R) = R + F(R)
 // Hu-Sawicki Model: arXiv:0705.1158 -- See paper for details
 // m2 := m^2 (comparison between these values and the nomenclature of the original paper)
-// F(R) = -M * c1 * (R/M)^n / (1 + c2*(R/M)^n)
+// F(R) = -m2 * c1 * (R/M)^n / (1 + c2*(R/M)^n)
 // In settings.ini:
 // params[0] = m^2 is given in units of (matter energy density today) * 8piG / 3.
 // params[1] = c2 (normally >> 1)
@@ -50,11 +50,11 @@ Real F(double R, double * params, const int fofR_type)
 		case(FOFR_TYPE_HU_SAWICKI):
 		{
 			double m2, c1, c2, n;
-			double Rpow = pow(R/m2, n);
 			m2 = params[0];
 			c2 = params[1];
 			n  = params[2];
 			c1 = params[3];
+			double Rpow = pow(R/m2, n);
 			output = - m2 * c1 * Rpow / (1. + c2 * Rpow);
 			break;
 		}
@@ -84,11 +84,11 @@ Real FR(double R, double * params, const int fofR_type)
 		case(FOFR_TYPE_HU_SAWICKI):
 		{
 			double m2, c1, c2, n;
-			double Rpow = pow(R/m2, n);
 			m2 = params[0];
 			c2 = params[1];
 			n  = params[2];
 			c1 = params[3];
+			double Rpow = pow(R/m2, n);
 			output = - c1 * n * Rpow * m2 / R / ( (1. + c2*Rpow) * (1. + c2*Rpow) );
 			break;
 		}
@@ -102,7 +102,7 @@ Real FR(double R, double * params, const int fofR_type)
 
 
 // F_{RR}(R) -- Second derivative with respect to R
-Real FRR(double R, double * params, const int fofR_type)
+Real FRR(double R, double * params, const int fofR_type, int n = -1)
 {
 	double output;
 
@@ -117,11 +117,11 @@ Real FRR(double R, double * params, const int fofR_type)
 		case(FOFR_TYPE_HU_SAWICKI):
 		{
 			double m2, c1, c2, n;
-			double Rpow = pow(R/m2, n);
 			m2 = params[0];
 			c2 = params[1];
 			n  = params[2];
 			c1 = params[3];
+			double Rpow = pow(R/m2, n);
 			output = c1 * m2 * n * Rpow * (1. - n + c2*(1. + n)*Rpow ) / ( R * R * (1. + c2*Rpow) * (1. + c2*Rpow) * (1. + c2*Rpow) );
 			break;
 		}
@@ -132,7 +132,7 @@ Real FRR(double R, double * params, const int fofR_type)
 
 	if(!output)
 	{
-		COUT << " Something went wrong when computing FRR. Closing...";
+		COUT << " Something went wrong when computing FRR, with code " << n << ". Closing...";
 		exit(-11);
 	}
 

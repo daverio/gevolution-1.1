@@ -26,7 +26,7 @@
 
 inline double Tbar(const double a, const cosmology cosmo)
 {
-	return - ( (cosmo.Omega_cdm + cosmo.Omega_b)/a/a/a + 4.*cosmo.Omega_Lambda );
+	return (cosmo.Omega_cdm + cosmo.Omega_b)/a/a/a + 4.*cosmo.Omega_Lambda;
 }
 
 void loadBackground(gsl_spline *& a_spline,
@@ -46,7 +46,7 @@ void loadBackground(gsl_spline *& a_spline,
 			if(!file)
 			{
 					COUT<<"Background file error: cannot open file"<<endl;
-					if(parallel.rank()==0)parallel.abortForce();
+					if(parallel.rank()==0) parallel.abortForce();
 					return;
 			}
 
@@ -115,22 +115,21 @@ inline double getBackground(gsl_spline * spline, double tau, gsl_interp_accel * 
 }
 
 
-inline double H_initial_fR(const double a, const double H, const double R, const double f, const double fr)
+inline double H_initial_fR(const double a, const double H, const double R, const double f, const double fr, const double frr_term)
 {
-	return sqrt( (H*H + 0*a*a*(fr*R - f)/6.) / (1. + 0*fr) );
+	return sqrt( (H*H + a*a*(fr*R - f)/6.) / (1. + fr - frr_term) );
 }
 
 
 inline double R_initial_fR(const double a, const double eightpiG, const cosmology cosmo)
 {
-	return eightpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a + 4. * (1 - cosmo.Omega_cdm - cosmo.Omega_b - bg_ncdm(a, cosmo)) ); // TODO: Maybe not accurate enough at this stage, but let's try this first
+	return eightpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a); // TODO: Maybe not accurate enough at this stage, but let's try this first.
 }
 
 
 ///////////////////////////////////////////////////////////
-// Method when computing the background with RK4 solver
+// Computing the background with RK4 solver
 //////////////////////////////////////////////////////////
-
 // System for f(R) background:
 // a' = func_RK_adot(...)
 // H' = func_RK_Hdot(...)
@@ -154,15 +153,19 @@ double func_RK_Rdot(const double a,
 										double * params,
 										const int fofR_type)
 {
-	double frr = FRR(R, params, fofR_type);
+	double frr = FRR(R, params, fofR_type, 25);
 	double fr = FR(R, params, fofR_type);
 	double rho = Hconf(a, fourpiG, cosmo);
-	double denom = 3. * frr * H;
 	rho *= 3. * rho; // Actually computes 8 pi G * rho_background * a**2
+	double denom = 3. * frr * H;
 
 	// return - 6 * fourpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * H / a / a / a;
 
-	if(denom) return - (rho - 3.*H*H*(1. + fr) + 0.5*(fr * R - F(R, params, fofR_type))*a*a) / denom;
+	if(denom)
+	{
+		double rdot = (rho - 3.*H*H*(1. + fr) + 0.5*(fr * R - F(R, params, fofR_type))*a*a) / denom;
+		return rdot;
+	}
 	else
 	{
 		COUT << " FRR evaluates to zero. Closing..." << endl
@@ -175,9 +178,9 @@ double func_RK_Rdot(const double a,
 
 
 // Runge-Kutta (4) solver for f(R) background
-void rungekutta_fR(double &a,
-									 double &H,
-									 double &R,
+void rungekutta_fR(double & a,
+									 double & H,
+									 double & R,
 									 const double fourpiG,
 									 const cosmology cosmo,
 									 const double dtau,

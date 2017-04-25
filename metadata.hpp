@@ -56,6 +56,8 @@
 #define MASK_XSPEC  2048
 #define MASK_DELTA  4096
 #define MASK_DBARE  8192
+#define MASK_XI  		16384
+
 
 #define ICFLAG_CORRECT_DISPLACEMENT 1
 #define ICFLAG_KSPHERE              2
@@ -184,13 +186,15 @@ struct metadata
 	int num_fofR_params;
 	int read_bg_from_file;
 	int energy_conservation;
+	int quasi_static;
 
 	int S0i_mode;// TODO remove after FULL debugging
 	int back_to_GR;
 	int check_fields;
 
 	double Cf;
-	double fofR_timestep_epsilon;
+	double fofR_epsilon_bg;
+	double fofR_epsilon_fields;
 	double movelimit;
 	double steplimit;
 	double boxsize;

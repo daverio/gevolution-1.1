@@ -77,7 +77,7 @@ void energy_conservation(Field<FieldType> & T00_new, // T^0_0
     temp = (T00_new(x) - T00_old(x)) / dt;
     for(i=0; i<3; i++)
     {
-      temp -= (T0i_new(x,i) - T0i_new(x-i,i) + T0i_old(x,i) - T0i_old(x-i,i)) / 2. / dx;
+      temp = (T0i_new(x,i) - T0i_new(x-i,i) + T0i_old(x,i) - T0i_old(x-i,i)) / 2. / dx;
     }
     hom += temp;
     ft = fabs(temp);
@@ -110,7 +110,7 @@ template <class FieldType>
 Site check_field(Field<FieldType> & field, string field_name, string message = "", int n = 64)
 {
   Site x(field.lattice());
-  Site y;
+  Site y, z[4];
   double max = 0., hom = 0., sum = 0., temp;
   for(x.first(); x.test(); x.next())
   {
@@ -120,7 +120,7 @@ Site check_field(Field<FieldType> & field, string field_name, string message = "
     if(fabs(temp) > max)
     {
       max = fabs(temp);
-      y = x;
+      z[parallel.rank()] = x;
     }
   }
   parallel.max(max);
@@ -128,6 +128,11 @@ Site check_field(Field<FieldType> & field, string field_name, string message = "
   parallel.sum(hom);
   sum /= n * n * n;
   hom /= n * n * n;
+  y = z[0];
+  for(int i=1; i<4; i++)
+  {
+    if(fabs(field(z[i])) > fabs(field(y))) y = z[i];
+  }
   COUT << message
   // MPI_Barrier(MPI_COMM_WORLD);
        << "  Field: " << field_name
@@ -486,7 +491,8 @@ void prepareFTsource_xi(Field<FieldType> & eightpiG_deltaT,
                         double Fbar,
                         double FRbar,
                         double * paramF,
-                        const int Ftype)
+                        const int Ftype,
+                        const int quasi_static)
 {
   Site x(xi.lattice());
   double lapl = 0.;
@@ -495,21 +501,37 @@ void prepareFTsource_xi(Field<FieldType> & eightpiG_deltaT,
   double dtau_over_dx2 = dtau/dx2;
   int i;
 
-  for(x.first(); x.test(); x.next())
+  if(quasi_static)
   {
-    // TODO: zeta might not be EXACTLY right, in this place. Check if it has a big impact
-    source(x) = - zeta(x) + 2.*Fbar - 2.*F(Rbar - eightpiG_deltaT(x) + zeta(x), paramF, Ftype) + Rbar * xi(x);
-    source(x) *= a2;
-    lapl = phi(x+0) + phi(x-0) + phi(x+1) + phi(x-1) + phi(x+2) + phi(x-2) - 6.*phi(x);
-    lapl *= 2. * (FRbar + xi(x)) / dx2;
-    source(x) += lapl;
-    source(x) /= 3.;
-    source(x) += 2. * xi(x)/dtprod;
-    source(x) *= dtsum;
-    lapl = xi_prev(x+0) + xi_prev(x-0) + xi_prev(x+1) + xi_prev(x-1) + xi_prev(x+2) + xi_prev(x-2) - 6.*xi_prev(x);
-    lapl *= dtau_over_dx2;
-    lapl += 2. * (Hubble - 1./dtau_old) * xi_prev(x);
-    source(x) += lapl;
+    for(x.first(); x.test(); x.next())
+    {
+      source(x) = - zeta(x) + 2.*Fbar - 2.*F(Rbar - eightpiG_deltaT(x) + zeta(x), paramF, Ftype) + Rbar * xi(x);
+      source(x) *= a2;
+      lapl = phi(x+0) + phi(x-0) + phi(x+1) + phi(x-1) + phi(x+2) + phi(x-2) - 6.*phi(x);
+      lapl *= 2. * (FRbar + xi(x)) / dx2;
+      source(x) += lapl;
+      source(x) /= 3;
+    }
+  }
+  else
+  {
+    for(x.first(); x.test(); x.next())
+    {
+      // TODO: zeta might not be EXACTLY right, in this place. Check if it has a big impact
+      source(x) = - zeta(x) + 2.*Fbar - 2.*F(Rbar - eightpiG_deltaT(x) + zeta(x), paramF, Ftype) + Rbar * xi(x);
+      source(x) *= a2;
+      lapl = phi(x+0) + phi(x-0) + phi(x+1) + phi(x-1) + phi(x+2) + phi(x-2) - 6.*phi(x);
+      lapl *= 2. * (FRbar + xi(x)) / dx2;
+      source(x) += lapl;
+      source(x) /= 3.;
+      source(x) += 2. * xi(x)/dtprod;
+      source(x) *= dtsum;
+      lapl = xi_prev(x+0) + xi_prev(x-0) + xi_prev(x+1) + xi_prev(x-1) + xi_prev(x+2) + xi_prev(x-2) - 6.*xi_prev(x);
+      lapl *= dtau_over_dx2;
+      lapl += 2. * (Hubble - 1./dtau_old) * xi_prev(x);
+      source(x) += lapl;
+      source(x) /= dtau_old;
+    }
   }
 
 }
@@ -519,13 +541,11 @@ void prepareFTsource_xi(Field<FieldType> & eightpiG_deltaT,
 // Solve wave-like equation (trace) for xi (transformed into a Poisson-like)
 // TODO: Add comments here
 /////////////////////////////////////////////////
-void solveTraceXi(Field<Cplx> & sourceFT, Field<Cplx> & potFT, double dtau, double dtau_old, double Hubble)
+void solveTraceXi(Field<Cplx> & sourceFT, Field<Cplx> & potFT, double modif)
 {
 	const int linesize = potFT.lattice().size(1);
 	int i;
 	Real * gridk2;
-	Real * sinc;
-  double modif = 2. * (Hubble + 1/dtau);
   double coeff = 1. / ((long) linesize * (long) linesize * (long) linesize);
 
 	rKSite k(potFT.lattice());
@@ -682,7 +702,6 @@ void projectFTsource_S0i(Field<FieldType> & S0iFT,
 	int i;
 	Real * gridk2;
 	Cplx * kshift;
-	Real * sinc;
 	rKSite k(S0iFT.lattice());
 	gridk2 = (Real *) malloc(linesize * sizeof(Real));
 	kshift = (Cplx *) malloc(linesize * sizeof(Cplx));
@@ -747,27 +766,37 @@ void update_xi(Field<FieldType> & xi,
 /////////////////////////////////////////////////
 template <class FieldType>
 void xi_initial_conditions (Field<FieldType> & xi,
-                    Field<FieldType> & phi,
-										Field<FieldType> & dT,
-									 	double Rbar,
-								 	 	double FRbar,
-								 	 	double * fofR_params,
-                    int fofR_type)
+                            Field<FieldType> & phi,
+										        Field<FieldType> & eightpiG_deltaT,
+									 	        double Rbar,
+								 	 	        double FRbar,
+								 	 	        double * fofR_params,
+                            int fofR_type,
+                            int GR)
 {
 	Site x(xi.lattice());
   double hom = 0.; // TODO: at the moment, I'm removing the homogeneous part of xi -- it might not be correct
-	for(x.first(); x.test(); x.next())
-	{
-		xi(x) = FR(Rbar - dT(x), fofR_params, fofR_type) - FRbar;
-    hom += xi(x);
-	}
-  parallel.sum(hom);
-  hom /= 64 * 64 * 64;
-
-  for(x.first(); x.test(); x.next())
-	{
-		xi(x) -= hom;
-	}
+  if(GR)
+  {
+    for(x.first(); x.test(); x.next())
+    {
+      xi(x) = 0.;
+    }
+  }
+  else
+  {
+    for(x.first(); x.test(); x.next())
+    {
+      xi(x) = FR(Rbar - eightpiG_deltaT(x), fofR_params, fofR_type) - FRbar;
+      hom += xi(x);
+    }
+    parallel.sum(hom);
+    hom /= 64 * 64 * 64;
+    for(x.first(); x.test(); x.next())
+    {
+      xi(x) -= hom;
+    }
+  }
 
 	return;
 }
@@ -778,12 +807,22 @@ void xi_initial_conditions (Field<FieldType> & xi,
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
-void zeta_initial_conditions(Field<FieldType> & zeta)
+void zeta_initial_conditions(Field<FieldType> & zeta, int GR)
 {
   Site x(zeta.lattice());
-  for(x.first(); x.test(); x.next())
+  if(GR)
   {
-    zeta(x) = 0.; // TODO: first approximation, try different initial conditions
+    for(x.first(); x.test(); x.next())
+    {
+      zeta(x) = 0.; // TODO: first approximation, try different initial conditions
+    }
+  }
+  else
+  {
+    for(x.first(); x.test(); x.next())
+    {
+      zeta(x) = 0.; // TODO: first approximation, try different initial conditions
+    }
   }
 }
 
@@ -793,35 +832,46 @@ void zeta_initial_conditions(Field<FieldType> & zeta)
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
-void xi_prev_initial_conditions(Field<FieldType> & xi_prev, Field<FieldType> & xi)
+void xi_prev_initial_conditions(Field<FieldType> & xi_prev, Field<FieldType> & xi, int GR)
 {
   Site x(xi_prev.lattice());
-  for(x.first(); x.test(); x.next())
+  if(GR)
   {
-    xi_prev(x) = xi(x); // TODO: first approximation, try different initial conditions
+    for(x.first(); x.test(); x.next())
+    {
+      xi_prev(x) = 0.;
+    }
+  }
+  else
+  {
+    for(x.first(); x.test(); x.next())
+    {
+      xi_prev(x) = xi(x); // TODO: first approximation, try different initial conditions
+    }
   }
 }
 
 
 /////////////////////////////////////////////////
-// Prepare source for 00 equation in f(R) gravity
-//
-// Returns deltaT = 8piG * ( (T00 + T11 + T22 + T33) - (-rho_background + 3P_background) )
+// Returns 8piG*deltaT = 8piG * ( (T00 + T11 + T22 + T33) - (-rho_background + 3P_background) )
 // t00 contains -a^3 T00, tij contains a^4 Tij
 /////////////////////////////////////////////////
 template <class FieldType>
 void computeTtrace(Field<FieldType> & dT,
-							Field<FieldType> & t00,
-							Field<FieldType> & tij,
-              double a,
-              double a3_Tbar,
-              double eightpiG)
+							     Field<FieldType> & t00,
+							     Field<FieldType> & tij,
+                   double a,
+                   double Tbar,
+                   double eightpiG)
 {
 	Site x(dT.lattice());
+  double a3 = a*a*a;
 	for(x.first(); x.test(); x.next())
 	{
-		dT(x) = - t00(x) + tij(x,0,0) + tij(x,1,1) + tij(x,2,2);
-    dT(x) -= a3_Tbar;
+		dT(x) = - t00(x);
+    dT(x) += (tij(x,0,0) + tij(x,1,1) + tij(x,2,2))/a;
+    dT(x) /= a3;
+    dT(x) += Tbar;
     dT(x) *= eightpiG;
 	}
 }
@@ -867,7 +917,7 @@ void check_xi_constraint(Field<FieldType> & xi,
   double max = 0., hom = 0., sum = 0., temp;
   for(x.first(); x.test(); x.next())
   {
-    temp = xi(x) - FR(Rbar - eightpiG_deltaT(x), params, type) - FRR(Rbar - eightpiG_deltaT(x), params, type) * zeta(x) + FRbar;
+    temp = xi(x) - FR(Rbar - eightpiG_deltaT(x), params, type) - FRR(Rbar - eightpiG_deltaT(x), params, type, 10) * zeta(x) + FRbar;
     hom += temp;
     sum += fabs(temp);
     if(fabs(temp) > max)
@@ -901,20 +951,18 @@ template <class FieldType>
 double computeDRzeta(Field<FieldType> & deltaT,
 									   Field<FieldType> & zeta,
 									   Field<FieldType> & xi,
-                     Field<FieldType> & deltaR,
 									   double Rbar,
 								 	   double FRbar,
-								 	   double Tbar,
 								 	   double * params,
 									   const int fofR_type)
 {
 	Site x(xi.lattice());
 	double temp, temp2;
-	double max_FRR = 0.0;
+	double max_FRR = 0.;
 	for(x.first(); x.test(); x.next())
 	{
 		temp = deltaT(x);
-		temp2 = FRR(Rbar - temp, params, fofR_type);
+		temp2 = FRR(Rbar - temp, params, fofR_type, 15);
 		if(fabs(temp2) > max_FRR)
     {
       max_FRR = fabs(temp2);
@@ -1304,7 +1352,6 @@ void solveModifiedPoissonFT(Field<Cplx> & sourceFT, Field<Cplx> & potFT, Real co
 	const int linesize = potFT.lattice().size(1);
 	int i;
 	Real * gridk2;
-	Real * sinc;
 	rKSite k(potFT.lattice());
 
 	gridk2 = (Real *) malloc(linesize * sizeof(Real));

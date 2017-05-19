@@ -60,54 +60,15 @@ void write_T0i(Field<FieldType> & old, Field<FieldType> & T, double a = 1)
 }
 
 
-template <class FieldType>
-void energy_conservation(Field<FieldType> & T00_new, // T^0_0
-                         Field<FieldType> & T00_old,
-                         Field<FieldType> & T0i_new, // T^0_i
-                         Field<FieldType> & T0i_old,
-                         double dt,
-                         double dx,
-                         long numpts3d)
-{
-  Site x(T00_new.lattice());
-  int i;
-  double temp, ft, max = 0., hom = 0., avg = 0.;
-  for(x.first(); x.test(); x.next())
-  {
-    temp = (T00_new(x) - T00_old(x)) / dt;
-    for(i=0; i<3; i++)
-    {
-      temp = (T0i_new(x,i) - T0i_new(x-i,i) + T0i_old(x,i) - T0i_old(x-i,i)) / 2. / dx;
-    }
-    hom += temp;
-    ft = fabs(temp);
-    avg += ft;
-    if(ft > max) max = ft;
-  }
-  parallel.max(max);
-  parallel.sum(avg);
-  parallel.sum(hom);
-  avg /= numpts3d;
-  hom /= numpts3d;
-
-  COUT << "Energy Conservation:"
-       << "\n\tmax = " << max
-       << "\n\tavg = " << avg
-       << "\n\thom = " << hom
-       << endl;
-}
-
-
-
 /////////////////////////////////////////////////
-// Checks (scalar) field:
+// Check (scalar) field:
 // Max = max(fabs(field))
 // |hom| = sum(fields)/number_of_points
 // |avg| average of fabs(field), not fabs(average)!
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
-Site check_field(Field<FieldType> & field, string field_name, string message = "", int n = 64)
+Site check_field(Field<FieldType> & field, string field_name, string message = "", int n = 64) // TODO: correct lattice size
 {
   Site x(field.lattice());
   Site y, z[4];
@@ -117,7 +78,7 @@ Site check_field(Field<FieldType> & field, string field_name, string message = "
     temp = field(x);
     hom += temp;
     sum += fabs(temp);
-    if(fabs(temp) > max)
+    if(fabs(temp) >= max)
     {
       max = fabs(temp);
       z[parallel.rank()] = x;
@@ -128,18 +89,16 @@ Site check_field(Field<FieldType> & field, string field_name, string message = "
   parallel.sum(hom);
   sum /= n * n * n;
   hom /= n * n * n;
-  y = z[0];
-  for(int i=1; i<4; i++)
-  {
-    if(fabs(field(z[i])) > fabs(field(y))) y = z[i];
-  }
+
+  y = z[parallel.rank()];
+
   COUT << message
   // MPI_Barrier(MPI_COMM_WORLD);
-       << "  Field: " << field_name
+       << " " << field_name
        << ",  Max = " << max
        << ",  hom = " << hom
-       << ",  |avg| = " << sum
-       << ",  val(x_max) = " << field(y)
+      //  << ",  |avg| = " << sum
+      //  << ",  val(x_max) = " << field(y)
       //  << ", rank = " << parallel.rank()
        << endl;
   return y;
@@ -152,7 +111,7 @@ Site check_field(Field<FieldType> & field, string field_name, string message = "
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
-Site check_vector_field(Field<FieldType> & field, string field_name, string message = "", int n = 64)
+Site check_vector_field(Field<FieldType> & field, string field_name, string message = "", int n = 64) // TODO: correct lattice size
 {
   Site x(field.lattice()), y;
   double max[3] = {0.,0.,0.}, hom[3] = {0.,0.,0.}, sum[3] = {0.,0.,0.}, temp;
@@ -392,7 +351,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
 												 const double dx2,
 												 const double dtau,
 												 const double Hubble,
-												 const double a2,
+												 const double a,
 												 const double fourpiG_over_a,
 												 const double Rbar,
 												 const double Fbar,
@@ -402,8 +361,12 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
                          int flag_GR = 0)
 {
 	Site x(phi.lattice());
+  Site xn(phi.lattice());
+  Site xp(phi.lattice());
   Site y(phi.lattice());
 	double laplace = 0.;
+  double a2 = a*a;
+  double threeH2 = 3. * Hubble * Hubble;
 	double grad[3];
   int i = 0;
 
@@ -411,20 +374,22 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
   {
     for (x.first(); x.test(); x.next())
     {
-      source(x) = fourpiG_over_a * (a3T00(x) - a3bg);
+      source(x) = fourpiG_over_a * (a3T00(x) - a3bg);// 4piG(-a3 T00 - (-a3 Tbar00)) = -4piG a3 dT00
       for(i=0; i<3; i++)
       {
-        laplace += xi(x+i) + xi(x-i);
-        grad[i] = phi(x+i) - phi(x-i);
+        xn = x+i;
+        xp = x-i;
+        laplace += xi(xn) + xi(xp);
+        grad[i] = phi(xn) - phi(xp);
         grad[i] *= grad[i];
       }
       laplace -= 6.*xi(x);
       source(x) = (source(x) + 0.5*laplace/dx2) * (1. - 4.*phi(x) + 0.5 * (xi(x) + FRbar));
-      source(x) += 3. * Hubble * Hubble * (phi(x) - 0.5 * xi(x) - chi(x));
-      source(x) -= 3. * Hubble * phi(x) / dtau + 1.5 * Hubble * (xi_new(x) - xi(x))/dtau;//TODO: check that this is the right interpolation
+      source(x) += threeH2 * (phi(x) - 0.5 * xi(x) - chi(x));
+      source(x) -= 3. * Hubble * phi(x) / dtau + 1.5 * Hubble * (xi_new(x) - xi(x)) / dtau;//TODO: check that this is the right interpolation
 
   		//f(R) terms
-      source(x) += 0.25 * a2 * (Rbar*xi(x) + Fbar - F(Rbar - eightpiG_deltaT(x) + zeta(x), paramF, Ftype));
+      source(x) += 0.25 * a2 * (Rbar * xi(x) + Fbar - F(Rbar - eightpiG_deltaT(x) + zeta(x), paramF, Ftype));
   		source(x) *= dx2; // Multiply by dx^2 all terms not containing derivatives
 
       // gradient squared
@@ -435,23 +400,24 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
   {
     for (x.first(); x.test(); x.next())
     {
-      source(x) = fourpiG_over_a * (a3T00(x) - a3bg);
+      source(x) = fourpiG_over_a * (a3T00(x) - a3bg);// 4piG(-a3 T00 - (-a3 Tbar00)) = -4piG a3 dT00
+      for(i=0; i<3; i++)
+      {
+        xn = x+i;
+        xp = x-i;
+        grad[i] = phi(xn) - phi(xp);
+        grad[i] *= grad[i];
+      }
       source(x) *= 1. - 4.*phi(x);
-      source(x) += 3. * Hubble * Hubble * (phi(x) - chi(x));
+      source(x) += threeH2 * (phi(x) - chi(x));
       source(x) -= 3. * Hubble * phi(x) / dtau;
-		  source(x) *= dx2; // Multiply by dx^2 all terms not containing derivatives
-      // Gradient squared
-      for(int i=0; i<3; i++)
-		  {
-        grad[i] = phi(x+i) - phi(x-i);
-			  grad[i] *= grad[i];
-		   }
-       source(x) -= 0.375 * (grad[0] + grad[1] + grad[2]);
+  		source(x) *= dx2; // Multiply by dx^2 all terms not containing derivatives
+      // gradient squared
+  		source(x) -= 0.375 * (grad[0] + grad[1] + grad[2]);
      }
 	}
   return;
 }
-
 
 /////////////////////////////////////////////////
 // Update value of phidot from new and old values of phi
@@ -469,7 +435,6 @@ void update_phi_phidot(Field<FieldType> & phi, Field<FieldType> & phidot, double
   }
 }
 
-
 /////////////////////////////////////////////////
 // Prepare source for the trace equation in f(R) gravity
 // (which will evolve xi)
@@ -480,7 +445,6 @@ void prepareFTsource_xi(Field<FieldType> & eightpiG_deltaT,
                         Field<FieldType> & phi,
                         Field<FieldType> & xi,
                         Field<FieldType> & xi_prev,
-                        Field<FieldType> & zeta,
                         Field<FieldType> & source,
                         double dx2,
                         double dtau,
@@ -491,50 +455,70 @@ void prepareFTsource_xi(Field<FieldType> & eightpiG_deltaT,
                         double Fbar,
                         double FRbar,
                         double * paramF,
-                        const int Ftype,
-                        const int quasi_static)
+                        const int Ftype)
 {
   Site x(xi.lattice());
-  double lapl = 0.;
+  double temp = 0.;
   double dtprod = dtau * dtau_old;
   double dtsum = dtau + dtau_old;
+  // double dtratio = dtsum / dtprod;
   double dtau_over_dx2 = dtau/dx2;
-  int i;
 
-  if(quasi_static)
+  for(x.first(); x.test(); x.next())
   {
-    for(x.first(); x.test(); x.next())
-    {
-      source(x) = - zeta(x) + 2.*Fbar - 2.*F(Rbar - eightpiG_deltaT(x) + zeta(x), paramF, Ftype) + Rbar * xi(x);
-      source(x) *= a2;
-      lapl = phi(x+0) + phi(x-0) + phi(x+1) + phi(x-1) + phi(x+2) + phi(x-2) - 6.*phi(x);
-      lapl *= 2. * (FRbar + xi(x)) / dx2;
-      source(x) += lapl;
-      source(x) /= 3;
-    }
+    source(x) = phi(x+0) + phi(x-0) + phi(x+1) + phi(x-2) + phi(x+2) + phi(x-2) - 6.*phi(x);
+    source(x) *= (FRbar + xi(x))/dx2;
+    temp = - (1 + 2.*FR(Rbar - eightpiG_deltaT(x), paramF, Ftype))/FRR(Rbar - eightpiG_deltaT(x), paramF, Ftype) + Rbar;
+    temp *= xi(x);
+    temp += 2. * (Fbar - F(Rbar - eightpiG_deltaT(x), paramF, Ftype));
+    temp *= a2 / 3.;
+    source(x) += temp;
+    source(x) += 2. * xi(x) / dtprod;
+    source(x) *= dtsum;
+    temp = xi_prev(x+0) + xi_prev(x-0) + xi_prev(x+1) + xi_prev(x-2) + xi_prev(x+2) + xi_prev(x-2) - 6.*xi_prev(x);
+    temp *= dtau_over_dx2;
+    temp += 2. * (Hubble - 1./dtau_old) * xi_prev(x);
+    source(x) += temp;
+    source(x) /= dtau_old;
   }
-  else
-  {
-    for(x.first(); x.test(); x.next())
-    {
-      // TODO: zeta might not be EXACTLY right, in this place. Check if it has a big impact
-      source(x) = - zeta(x) + 2.*Fbar - 2.*F(Rbar - eightpiG_deltaT(x) + zeta(x), paramF, Ftype) + Rbar * xi(x);
-      source(x) *= a2;
-      lapl = phi(x+0) + phi(x-0) + phi(x+1) + phi(x-1) + phi(x+2) + phi(x-2) - 6.*phi(x);
-      lapl *= 2. * (FRbar + xi(x)) / dx2;
-      source(x) += lapl;
-      source(x) /= 3.;
-      source(x) += 2. * xi(x)/dtprod;
-      source(x) *= dtsum;
-      lapl = xi_prev(x+0) + xi_prev(x-0) + xi_prev(x+1) + xi_prev(x-1) + xi_prev(x+2) + xi_prev(x-2) - 6.*xi_prev(x);
-      lapl *= dtau_over_dx2;
-      lapl += 2. * (Hubble - 1./dtau_old) * xi_prev(x);
-      source(x) += lapl;
-      source(x) /= dtau_old;
-    }
-  }
-
 }
+
+
+/////////////////////////////////////////////////
+// Prepare source for the trace equation in f(R) gravity
+// (which will evolve xi)
+// TODO: Add comments here
+/////////////////////////////////////////////////
+template <class FieldType>
+void prepareFTsource_xi_quasistatic(Field<FieldType> & eightpiG_deltaT,
+                                    Field<FieldType> & zeta,
+                                    Field<FieldType> & phi,
+                                    Field<FieldType> & xi,
+                                    Field<FieldType> & source,
+                                    double dx2,
+                                    double a2,
+                                    double two_Hubble_over_dtau,
+                                    double Rbar,
+                                    double Fbar,
+                                    double FRbar,
+                                    double * paramF,
+                                    const int Ftype)
+{
+  Site x(xi.lattice());
+  double temp = 0.;
+  for(x.first(); x.test(); x.next())
+  {
+    source(x) = phi(x+0) + phi(x-0) + phi(x+1) + phi(x-2) + phi(x+2) + phi(x-2) - 6.*phi(x);
+    source(x) *= 2. * (FRbar + xi(x)) / dx2;
+    temp = (xi(x) - FR(Rbar - eightpiG_deltaT(x), paramF, Ftype) + FRbar) / FRR(Rbar - eightpiG_deltaT(x), paramF, Ftype) + 2. * (F(Rbar - eightpiG_deltaT(x), paramF, Ftype) - Fbar);
+    temp *= a2;
+    source(x) -= temp;
+    source(x) /= 3.;
+    source(x) += two_Hubble_over_dtau * xi(x);
+  }
+}
+
+
 
 
 /////////////////////////////////////////////////
@@ -766,7 +750,6 @@ void update_xi(Field<FieldType> & xi,
 /////////////////////////////////////////////////
 template <class FieldType>
 void xi_initial_conditions (Field<FieldType> & xi,
-                            Field<FieldType> & phi,
 										        Field<FieldType> & eightpiG_deltaT,
 									 	        double Rbar,
 								 	 	        double FRbar,
@@ -775,7 +758,6 @@ void xi_initial_conditions (Field<FieldType> & xi,
                             int GR)
 {
 	Site x(xi.lattice());
-  double hom = 0.; // TODO: at the moment, I'm removing the homogeneous part of xi -- it might not be correct
   if(GR)
   {
     for(x.first(); x.test(); x.next())
@@ -788,13 +770,6 @@ void xi_initial_conditions (Field<FieldType> & xi,
     for(x.first(); x.test(); x.next())
     {
       xi(x) = FR(Rbar - eightpiG_deltaT(x), fofR_params, fofR_type) - FRbar;
-      hom += xi(x);
-    }
-    parallel.sum(hom);
-    hom /= 64 * 64 * 64;
-    for(x.first(); x.test(); x.next())
-    {
-      xi(x) -= hom;
     }
   }
 
@@ -814,7 +789,7 @@ void zeta_initial_conditions(Field<FieldType> & zeta, int GR)
   {
     for(x.first(); x.test(); x.next())
     {
-      zeta(x) = 0.; // TODO: first approximation, try different initial conditions
+      zeta(x) = 0.;
     }
   }
   else
@@ -823,6 +798,22 @@ void zeta_initial_conditions(Field<FieldType> & zeta, int GR)
     {
       zeta(x) = 0.; // TODO: first approximation, try different initial conditions
     }
+  }
+  zeta.updateHalo();
+}
+
+
+/////////////////////////////////////////////////
+// Initial conditions for deltaR
+// TODO: Add comments here
+/////////////////////////////////////////////////
+template <class FieldType>
+void deltaR_initial_conditions(Field<FieldType> & deltaR, Field<FieldType> & eightpiG_deltaT, Field<FieldType> & zeta)
+{
+  Site x(deltaR.lattice());
+  for(x.first(); x.test(); x.next())
+  {
+    deltaR(x) = - eightpiG_deltaT(x) + zeta(x); // TODO: first approximation, try different initial conditions
   }
 }
 
@@ -854,7 +845,7 @@ void xi_prev_initial_conditions(Field<FieldType> & xi_prev, Field<FieldType> & x
 
 /////////////////////////////////////////////////
 // Returns 8piG*deltaT = 8piG * ( (T00 + T11 + T22 + T33) - (-rho_background + 3P_background) )
-// t00 contains -a^3 T00, tij contains a^4 Tij
+// t00 contains -a^3 T00, tij contains a^3 Tij
 /////////////////////////////////////////////////
 template <class FieldType>
 void computeTtrace(Field<FieldType> & dT,
@@ -868,8 +859,8 @@ void computeTtrace(Field<FieldType> & dT,
   double a3 = a*a*a;
 	for(x.first(); x.test(); x.next())
 	{
-		dT(x) = - t00(x);
-    dT(x) += (tij(x,0,0) + tij(x,1,1) + tij(x,2,2))/a;
+		dT(x) = -t00(x);
+    dT(x) += tij(x,0,0) + tij(x,1,1) + tij(x,2,2);
     dT(x) /= a3;
     dT(x) += Tbar;
     dT(x) *= eightpiG;
@@ -910,14 +901,14 @@ void check_xi_constraint(Field<FieldType> & xi,
                          double FRbar,
                          double * params,
                          int type,
-                         int n = 64
+                         int n = 64 // TODO: lattice size
                          )
 {
   Site x(xi.lattice());
   double max = 0., hom = 0., sum = 0., temp;
   for(x.first(); x.test(); x.next())
   {
-    temp = xi(x) - FR(Rbar - eightpiG_deltaT(x), params, type) - FRR(Rbar - eightpiG_deltaT(x), params, type, 10) * zeta(x) + FRbar;
+    temp = xi(x)/(FR(Rbar - eightpiG_deltaT(x) + zeta(x), params, type) - FRbar) - 1.;
     hom += temp;
     sum += fabs(temp);
     if(fabs(temp) > max)
@@ -948,40 +939,52 @@ void check_xi_constraint(Field<FieldType> & xi,
 // the typical oscillation frenquency will be of order a/(sqrt(3*FRR_max))
 /////////////////////////////////////////////////
 template <class FieldType>
-double computeDRzeta(Field<FieldType> & deltaT,
+double computeDRzeta(Field<FieldType> & eightpiG_deltaT,
+                     Field<FieldType> & deltaR,
 									   Field<FieldType> & zeta,
 									   Field<FieldType> & xi,
 									   double Rbar,
 								 	   double FRbar,
 								 	   double * params,
-									   const int fofR_type)
+									   const int fofR_type,
+                     double prec)
 {
-	Site x(xi.lattice());
-	double temp, temp2;
-	double max_FRR = 0.;
-	for(x.first(); x.test(); x.next())
-	{
-		temp = deltaT(x);
-		temp2 = FRR(Rbar - temp, params, fofR_type, 15);
-		if(fabs(temp2) > max_FRR)
+  // Using Newton-Raphson Method
+  Site x(xi.lattice());
+  double R_temp, temp, max_FRR = 0., FRR_temp;
+  int count;
+  for(x.first(); x.test(); x.next())
+  {
+    R_temp = Rbar - eightpiG_deltaT(x);
+    count = 0;
+    while(temp > prec)
     {
-      max_FRR = fabs(temp2);
+      FRR_temp = FRR(R_temp, params, fofR_type, 15);
+      temp = fabs(xi(x)/(FR(R_temp, params, fofR_type) - FRbar) - 1.);
+      R_temp = FRR_temp > 0 ? R_temp + (xi(x) - FR(R_temp, params, fofR_type) + FRbar)/FRR_temp : 1.1 * R_temp; // Displace R_temp slightly, if FRR(R_temp) is "bad"
+      count ++;
+      if(count > 100)
+      {
+        cout << "Could only reach a precision of " << temp << endl;
+        break;
+      }
     }
-		if(!temp2)
-    {
-      COUT << " FRR is equal to 0, aborting" << endl;
-      exit(2);
-    }
-    else
-		{
-			zeta(x) = (xi(x) + FRbar - FR(Rbar - temp, params, fofR_type))/temp2;
-			// deltaR(x) = zeta(x) - temp;
-		}
-	}
-	parallel.max(max_FRR);
+    FRR_temp = fabs(FRR(R_temp, params, fofR_type, 15));
+    if(max_FRR < FRR_temp) max_FRR = FRR_temp;
+    deltaR(x) = R_temp - Rbar;
+    zeta(x) = deltaR(x) + eightpiG_deltaT(x);
+  }
+
+  parallel.max(max_FRR);
   if(max_FRR and !std::isnan(max_FRR)) return max_FRR;
-  else return FRR(Rbar, params, fofR_type);
+  else
+  {
+    COUT << " Warning: returning FRRbar\n";
+    return FRR(Rbar, params, fofR_type);
+  }
 }
+
+
 
 //////////////////////////
 // prepareFTsource (2)

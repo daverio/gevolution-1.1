@@ -452,25 +452,25 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 
 		if (sim.out_pk & MASK_RBARE)
 		{
-			sprintf(filename, "%s%s%03d_rhoN.dat", sim.output_path, sim.basename_pk, pkcount);
+			sprintf(filename, "%s%s_%s%03d_rhoN.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 			writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * pow(a, 6.0), filename, "power spectrum of rho_N", a);
 		}
 
 		if (sim.out_pk & MASK_DBARE)
 		{
-			sprintf(filename, "%s%s%03d_deltaN.dat", sim.output_path, sim.basename_pk, pkcount);
+			sprintf(filename, "%s%s_%s%03d_deltaN.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 			writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * cosmo.Omega_m * cosmo.Omega_m, filename, "power spectrum of delta_N", a);
 		}
 
 		if (sim.out_pk & MASK_T00 && sim.gr_flag == 0)
 		{
-			sprintf(filename, "%s%s%03d_T00.dat", sim.output_path, sim.basename_pk, pkcount);
+			sprintf(filename, "%s%s_%s%03d_T00.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 			writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * pow(a, 6.0), filename, "power spectrum of T00", a);
 		}
 
 		if (sim.out_pk & MASK_DELTA && sim.gr_flag == 0)
 		{
-			sprintf(filename, "%s%s%03d_delta.dat", sim.output_path, sim.basename_pk, pkcount);
+			sprintf(filename, "%s%s_%s%03d_delta.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 			writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * cosmo.Omega_m * cosmo.Omega_m, filename, "power spectrum of delta", a);
 		}
 
@@ -478,7 +478,7 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 		{
 			solveModifiedPoissonFT(*scalarFT, *scalarFT, fourpiG / a);
 			extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, false, KTYPE_LINEAR);
-			sprintf(filename, "%s%s%03d_psiN.dat", sim.output_path, sim.basename_pk, pkcount);
+			sprintf(filename, "%s%s_%s%03d_psiN.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 			writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI, filename, "power spectrum of psi_N", a);
 		}
 
@@ -489,7 +489,7 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 			scalarProjectionCIC_comm(source);
 			plan_source->execute(FFT_FORWARD);
 			extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR);
-			sprintf(filename, "%s%s%03d_cdm.dat", sim.output_path, sim.basename_pk, pkcount);
+			sprintf(filename, "%s%s_%s%03d_cdm.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 			writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * (sim.baryon_flag ? (cosmo.Omega_cdm * cosmo.Omega_cdm) : ((cosmo.Omega_cdm + cosmo.Omega_b) * (cosmo.Omega_cdm + cosmo.Omega_b))), filename, "power spectrum of delta_N for cdm", a);
 			if (sim.baryon_flag)
 			{
@@ -504,12 +504,12 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 				scalarProjectionCIC_comm(source);
 				plan_source->execute(FFT_FORWARD);
 				extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR);
-				sprintf(filename, "%s%s%03d_b.dat", sim.output_path, sim.basename_pk, pkcount);
+				sprintf(filename, "%s%s_%s%03d_b.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 				writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * cosmo.Omega_b * cosmo.Omega_b, filename, "power spectrum of delta_N for baryons", a);
 				if (sim.out_pk & MASK_XSPEC)
 				{
 					extractCrossSpectrum(*scalarFT, *SijFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR);
-					sprintf(filename, "%s%s%03d_cdmxb.dat", sim.output_path, sim.basename_pk, pkcount);
+					sprintf(filename, "%s%s_%s%03d_cdmxb.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 					writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * cosmo.Omega_cdm * cosmo.Omega_b, filename, "cross power spectrum of delta_N for cdm x baryons", a);
 				}
 			}
@@ -521,7 +521,7 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 				scalarProjectionCIC_comm(source);
 				plan_source->execute(FFT_FORWARD);
 				extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR);
-				sprintf(filename, "%s%s%03d_ncdm%d.dat", sim.output_path, sim.basename_pk, pkcount, i);
+				sprintf(filename, "%s%s_%s%03d_ncdm%d.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount, i);
 				sprintf(buffer, "power spectrum of delta_N for ncdm %d", i);
 				writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * cosmo.Omega_ncdm[i] * cosmo.Omega_ncdm[i], filename, buffer, a);
 				Omega_ncdm += cosmo.Omega_ncdm[i];
@@ -540,7 +540,7 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 						(*scalarFT)(kFT) += (*SijFT)(kFT, i);
 				}
 				extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR);
-				sprintf(filename, "%s%s%03d_ncdm.dat", sim.output_path, sim.basename_pk, pkcount);
+				sprintf(filename, "%s%s_%s%03d_ncdm.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 				writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * Omega_ncdm * Omega_ncdm, filename, "power spectrum of delta_N for total ncdm", a);
 			}
 			if (cosmo.num_ncdm > 1)
@@ -552,7 +552,7 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 						if (sim.out_pk & MASK_XSPEC || (i == 0 && j == 1) || (i == 2 && j == 3) || (i == 4 && j == 5))
 						{
 							extractCrossSpectrum(*SijFT, *SijFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR, i, j);
-							sprintf(filename, "%s%s%03d_ncdm%dx%d.dat", sim.output_path, sim.basename_pk, pkcount, i, j);
+							sprintf(filename, "%s%s_%s%03d_ncdm%dx%d.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount, i, j);
 							sprintf(buffer, "cross power spectrum of delta_N for ncdm %d x %d", i, j);
 							writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * cosmo.Omega_ncdm[i] * cosmo.Omega_ncdm[j], filename, buffer, a);
 						}
@@ -566,7 +566,7 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 	{
 		plan_phi->execute(FFT_FORWARD);
 		extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, false, KTYPE_LINEAR);
-		sprintf(filename, "%s%s%03d_phi.dat", sim.output_path, sim.basename_pk, pkcount);
+		sprintf(filename, "%s%s_%s%03d_phi.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 		writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI, filename, "power spectrum of phi", a);
 	}
 
@@ -574,7 +574,7 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 	{
 		plan_xi->execute(FFT_FORWARD);
 		extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, false, KTYPE_LINEAR);
-		sprintf(filename, "%s%s%03d_xi.dat", sim.output_path, sim.basename_pk, pkcount);
+		sprintf(filename, "%s%s_%s%03d_xi.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 		writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI, filename, "power spectrum of xi", a);
 	}
 
@@ -582,7 +582,7 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 	{
 		plan_chi->execute(FFT_FORWARD);
 		extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, false, KTYPE_LINEAR);
-		sprintf(filename, "%s%s%03d_chi.dat", sim.output_path, sim.basename_pk, pkcount);
+		sprintf(filename, "%s%s_%s%03d_chi.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 		writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI, filename, "power spectrum of chi", a);
 	}
 
@@ -601,7 +601,7 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 		projectFTtensor(*SijFT, *SijFT);
 
 		extractPowerSpectrum(*SijFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, false, KTYPE_LINEAR);
-		sprintf(filename, "%s%s%03d_hij.dat", sim.output_path, sim.basename_pk, pkcount);
+		sprintf(filename, "%s%s_%s%03d_hij.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 		writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, 2. * M_PI * M_PI, filename, "power spectrum of hij", a);
 	}
 
@@ -620,13 +620,13 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 
 		if (sim.out_pk & MASK_T00)
 		{
-			sprintf(filename, "%s%s%03d_T00.dat", sim.output_path, sim.basename_pk, pkcount);
+			sprintf(filename, "%s%s_%s%03d_T00.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 			writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * pow(a, 6.0), filename, "power spectrum of T00", a);
 		}
 
 		if (sim.out_pk & MASK_DELTA)
 		{
-			sprintf(filename, "%s%s%03d_delta.dat", sim.output_path, sim.basename_pk, pkcount);
+			sprintf(filename, "%s%s_%s%03d_delta.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 			writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)), filename, "power spectrum of delta", a);
 		}
 
@@ -639,12 +639,12 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 			extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR);
 			if (sim.out_pk & MASK_T00)
 			{
-				sprintf(filename, "%s%s%03d_T00cdm.dat", sim.output_path, sim.basename_pk, pkcount);
+				sprintf(filename, "%s%s_%s%03d_T00cdm.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 				writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * pow(a, 6.0), filename, "power spectrum of T00 for cdm", a);
 			}
 			if (sim.out_pk & MASK_DELTA)
 			{
-				sprintf(filename, "%s%s%03d_deltacdm.dat", sim.output_path, sim.basename_pk, pkcount);
+				sprintf(filename, "%s%s_%s%03d_deltacdm.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 				writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * (sim.baryon_flag ? (cosmo.Omega_cdm * cosmo.Omega_cdm) : ((cosmo.Omega_cdm + cosmo.Omega_b) * (cosmo.Omega_cdm + cosmo.Omega_b))), filename, "power spectrum of delta for cdm", a);
 			}
 			if (sim.baryon_flag)
@@ -662,18 +662,18 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 				extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR);
 				if (sim.out_pk & MASK_T00)
 				{
-					sprintf(filename, "%s%s%03d_T00b.dat", sim.output_path, sim.basename_pk, pkcount);
+					sprintf(filename, "%s%s_%s%03d_T00b.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 					writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * pow(a, 6.0), filename, "power spectrum of T00 for baryons", a);
 				}
 				if (sim.out_pk & MASK_DELTA)
 				{
-					sprintf(filename, "%s%s%03d_deltab.dat", sim.output_path, sim.basename_pk, pkcount);
+					sprintf(filename, "%s%s_%s%03d_deltab.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 					writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * cosmo.Omega_b * cosmo.Omega_b, filename, "power spectrum of delta for baryons", a);
 				}
 				if (sim.out_pk & MASK_XSPEC)
 				{
 					extractCrossSpectrum(*scalarFT, *SijFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR);
-					sprintf(filename, "%s%s%03d_deltacdmxb.dat", sim.output_path, sim.basename_pk, pkcount);
+					sprintf(filename, "%s%s_%s%03d_deltacdmxb.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 					writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * cosmo.Omega_b * cosmo.Omega_cdm, filename, "cross power spectrum of delta for cdm x baryons", a);
 				}
 			}
@@ -686,13 +686,13 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 				extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR);
 				if (sim.out_pk & MASK_T00)
 				{
-					sprintf(filename, "%s%s%03d_T00ncdm%d.dat", sim.output_path, sim.basename_pk, pkcount, i);
+					sprintf(filename, "%s%s_%s%03d_T00ncdm%d.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount, i);
 					sprintf(buffer, "power spectrum of T00 for ncdm %d", i);
 					writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * pow(a, 6.0), filename, buffer, a);
 				}
 				if (sim.out_pk & MASK_DELTA)
 				{
-					sprintf(filename, "%s%s%03d_deltancdm%d.dat", sim.output_path, sim.basename_pk, pkcount, i);
+					sprintf(filename, "%s%s_%s%03d_deltancdm%d.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount, i);
 					sprintf(buffer, "power spectrum of delta for ncdm %d", i);
 					writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * bg_ncdm(a, cosmo, i) * bg_ncdm(a, cosmo, i), filename, buffer, a);
 				}
@@ -713,12 +713,12 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 				extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR);
 				if (sim.out_pk & MASK_T00)
 				{
-					sprintf(filename, "%s%s%03d_T00ncdm.dat", sim.output_path, sim.basename_pk, pkcount);
+					sprintf(filename, "%s%s_%s%03d_T00ncdm.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 					writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * pow(a, 6.0), filename, "power spectrum of T00 for total ncdm", a);
 				}
 				if (sim.out_pk & MASK_DELTA)
 				{
-					sprintf(filename, "%s%s%03d_deltancdm.dat", sim.output_path, sim.basename_pk, pkcount);
+					sprintf(filename, "%s%s_%s%03d_deltancdm.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 					writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * bg_ncdm(a, cosmo) * bg_ncdm(a, cosmo), filename, "power spectrum of delta for total ncdm", a);
 				}
 			}
@@ -733,13 +733,13 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 							extractCrossSpectrum(*SijFT, *SijFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR, i, j);
 							if (sim.out_pk & MASK_T00)
 							{
-								sprintf(filename, "%s%s%03d_T00ncdm%dx%d.dat", sim.output_path, sim.basename_pk, pkcount, i, j);
+								sprintf(filename, "%s%s_%s%03d_T00ncdm%dx%d.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount, i, j);
 								sprintf(buffer, "cross power spectrum of T00 for ncdm %d x %d", i, j);
 								writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * pow(a, 6.0), filename, buffer, a);
 							}
 							if (sim.out_pk & MASK_DELTA)
 							{
-								sprintf(filename, "%s%s%03d_deltancdm%dx%d.dat", sim.output_path, sim.basename_pk, pkcount, i, j);
+								sprintf(filename, "%s%s_%s%03d_deltancdm%dx%d.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount, i, j);
 								sprintf(buffer, "cross power spectrum of delta for ncdm %d x %d", i, j);
 								writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * bg_ncdm(a, cosmo, i) * bg_ncdm(a, cosmo, j), filename, buffer, a);
 							}
@@ -753,7 +753,7 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 	if (sim.out_pk & MASK_B)
 	{
 		extractPowerSpectrum(*BiFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, false, KTYPE_LINEAR);
-		sprintf(filename, "%s%s%03d_B.dat", sim.output_path, sim.basename_pk, pkcount);
+		sprintf(filename, "%s%s_%s%03d_B.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 		writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, a * a * a * a * sim.numpts * sim.numpts * 2. * M_PI * M_PI, filename, "power spectrum of B", a);
 
 #ifdef CHECK_B
@@ -770,7 +770,7 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 			projectFTvector(*BiFT_check, *BiFT_check, fourpiG / (double) sim.numpts / (double) sim.numpts);
 		}
 		extractPowerSpectrum(*BiFT_check, kbin, power, kscatter, pscatter, occupation, sim.numbins, false, KTYPE_LINEAR);
-		sprintf(filename, "%s%s%03d_B_check.dat", sim.output_path, sim.basename_pk, pkcount);
+		sprintf(filename, "%s%s_%s%03d_B_check.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 		writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, a * a * a * a * sim.numpts * sim.numpts * 2. * M_PI * M_PI, filename, "power spectrum of B", a);
 #endif
 	}

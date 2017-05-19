@@ -1064,27 +1064,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		}
 	}
 
-	if (!parseParameter(params, numparam, "generic file base", sim.basename_generic))
-		sim.basename_generic[0] = '\0';
-
-	if (!parseParameter(params, numparam, "snapshot file base", sim.basename_snapshot))
-		strcpy(sim.basename_snapshot, "snapshot");
-
-	if (!parseParameter(params, numparam, "Pk file base", sim.basename_pk))
-		strcpy(sim.basename_pk, "pk");
-
-	if (!parseParameter(params, numparam, "output path", sim.output_path))
-		sim.output_path[0] = '\0';
-
-	if (!parseParameter(params, numparam, "hibernation path", sim.restart_path))
-		strcpy(sim.restart_path, sim.output_path);
-
-	if (!parseParameter(params, numparam, "hibernation file base", sim.basename_restart))
-		strcpy(sim.basename_restart, "restart");
-
-	if (!parseParameter(params, numparam, "background file", sim.background_filename))
-		sim.background_filename[0] = '\0';
-
 	parseParameter(params, numparam, "boxsize", sim.boxsize);
 	if (sim.boxsize <= 0. || !isfinite(sim.boxsize))
 	{
@@ -1147,9 +1126,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	parseParameter(params, numparam, "hibernation wallclock limit", sim.wallclocklimit);
 
-	parseFieldSpecifiers(params, numparam, "snapshot outputs", sim.out_snapshot, sim.mg_flag == FOFR);
-	parseFieldSpecifiers(params, numparam, "Pk outputs", sim.out_pk, sim.mg_flag == FOFR);
-
 	i = MAX_PCL_SPECIES;
 	parseParameter(params, numparam, "tracer factor", sim.tracer_factor, i);
 	for (; i > 0; i--)
@@ -1175,16 +1151,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	parseParameter(params, numparam, "Courant factor", sim.Cf);
 
 	if (ic.Cf < 0.) ic.Cf = sim.Cf;
-
-	parseParameter(params, numparam, "f(R) epsilon background", sim.fofR_epsilon_bg);// TODO: put some of these only for f(R)
-	parseParameter(params, numparam, "f(R) epsilon fields", sim.fofR_epsilon_fields);
-	parseParameter(params, numparam, "Quasi-static", sim.quasi_static);
-	parseParameter(params, numparam, "S0i mode", sim.S0i_mode);
-	parseParameter(params, numparam, "Back to GR", sim.back_to_GR);
-	parseParameter(params, numparam, "Check fields", sim.check_fields);
-	parseParameter(params, numparam, "Energy Conservation", sim.energy_conservation);
-	parseParameter(params, numparam, "time step limit", sim.steplimit);
-	parseParameter(params, numparam, "read background from file", sim.read_bg_from_file);
 
 	if (parseParameter(params, numparam, "gravity theory", par_string))
 	{
@@ -1267,6 +1233,57 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		sim.gr_flag = 1;
 	}
 
+	if(sim.mg_flag == FOFR)
+	{
+		parseParameter(params, numparam, "read background from file", sim.read_bg_from_file);
+		parseParameter(params, numparam, "Back to GR", sim.back_to_GR);
+		if(!sim.back_to_GR)
+		{
+			parseParameter(params, numparam, "f(R) epsilon background", sim.fofR_epsilon_bg);// TODO: put some of these only for f(R)
+			parseParameter(params, numparam, "f(R) epsilon fields", sim.fofR_epsilon_fields);
+			parseParameter(params, numparam, "f(R) target precision", sim.fofR_target_precision);
+			parseParameter(params, numparam, "Quasi-static", sim.quasi_static);
+			if(sim.quasi_static == 1) sim.fofR_epsilon_fields = 1.e+10; // If quasi-static, timestep limited by courant factor (for fields)
+			parseParameter(params, numparam, "Follow xi", sim.follow_xi);
+		}
+	}
+	parseParameter(params, numparam, "Check fields", sim.check_fields);
+	parseParameter(params, numparam, "S0i mode", sim.S0i_mode);
+	parseParameter(params, numparam, "Energy Conservation", sim.energy_conservation);
+	parseParameter(params, numparam, "time step limit", sim.steplimit);
+
+	parseFieldSpecifiers(params, numparam, "snapshot outputs", sim.out_snapshot, sim.mg_flag == FOFR);
+	parseFieldSpecifiers(params, numparam, "Pk outputs", sim.out_pk, sim.mg_flag == FOFR);
+
+	if (!parseParameter(params, numparam, "generic file base", sim.basename_generic))
+	{
+		if(sim.mg_flag == FOFR)
+		{
+			if(sim.quasi_static) strcpy(sim.basename_generic, "fR_quasi-static");
+			else if(sim.back_to_GR) strcpy(sim.basename_generic, "fR_back-to-GR");
+			else strcpy(sim.basename_generic, "fR");
+		}
+		else if(sim.gr_flag) strcpy(sim.basename_generic, "lcdm");
+		else strcpy(sim.basename_generic, "Newton");
+	}
+
+	if (!parseParameter(params, numparam, "snapshot file base", sim.basename_snapshot))
+		strcpy(sim.basename_snapshot, "snap");
+
+	if (!parseParameter(params, numparam, "Pk file base", sim.basename_pk))
+		strcpy(sim.basename_pk, "pk");
+
+	if (!parseParameter(params, numparam, "output path", sim.output_path))
+		sim.output_path[0] = '\0';
+
+	if (!parseParameter(params, numparam, "hibernation path", sim.restart_path))
+		strcpy(sim.restart_path, sim.output_path);
+
+	if (!parseParameter(params, numparam, "hibernation file base", sim.basename_restart))
+		strcpy(sim.basename_restart, "restart");
+
+	if (!parseParameter(params, numparam, "background file", sim.background_filename))
+		sim.background_filename[0] = '\0';
 
 	// parse cosmological parameters
 

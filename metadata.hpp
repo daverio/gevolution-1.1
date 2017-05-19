@@ -187,6 +187,7 @@ struct metadata
 	int read_bg_from_file;
 	int energy_conservation;
 	int quasi_static;
+	int follow_xi = 0;
 
 	int S0i_mode;// TODO remove after FULL debugging
 	int back_to_GR;
@@ -195,6 +196,7 @@ struct metadata
 	double Cf;
 	double fofR_epsilon_bg;
 	double fofR_epsilon_fields;
+	double fofR_target_precision;
 	double movelimit;
 	double steplimit;
 	double boxsize;
@@ -208,6 +210,7 @@ struct metadata
 	double z_switch_deltancdm[MAX_PCL_SPECIES-2];
 	double z_switch_Bncdm[MAX_PCL_SPECIES-2];
 	double fofR_params[MAX_FOFR_PARAMS];
+
 	char basename_snapshot[PARAM_MAX_LENGTH];
 	char basename_pk[PARAM_MAX_LENGTH];
 	char basename_generic[PARAM_MAX_LENGTH];

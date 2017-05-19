@@ -26,7 +26,7 @@
 
 inline double Tbar(const double a, const cosmology cosmo)
 {
-	return (cosmo.Omega_cdm + cosmo.Omega_b)/a/a/a + 4.*cosmo.Omega_Lambda;
+	return (cosmo.Omega_cdm + cosmo.Omega_b)/a/a/a + 4.*cosmo.Omega_Lambda;// TODO Put neutrinos in, if necessary
 }
 
 void loadBackground(gsl_spline *& a_spline,

@@ -214,6 +214,11 @@ double particleHorizon(const double a, const double fourpiG, cosmology & cosmo)
 }
 
 
+void print_cosmo(const double a, const double H, const double R)
+{
+	COUT << "a = " << a << "  H = " << H << "  R = " << R << endl;
+}
+
 
 
 

@@ -24,9 +24,10 @@
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_spline.h>
 
+
 inline double Tbar(const double a, const cosmology cosmo)
 {
-	return (cosmo.Omega_cdm + cosmo.Omega_b)/a/a/a + 4.*cosmo.Omega_Lambda;// TODO Put neutrinos in, if necessary
+	return -(cosmo.Omega_cdm + cosmo.Omega_b)/a/a/a - 4.*cosmo.Omega_Lambda;// TODO Put neutrinos in, if necessary
 }
 
 void loadBackground(gsl_spline *& a_spline,
@@ -156,7 +157,7 @@ double func_RK_Rdot(const double a,
 	double frr = FRR(R, params, fofR_type, 25);
 	double fr = FR(R, params, fofR_type);
 	double rho = Hconf(a, fourpiG, cosmo);
-	rho *= 3. * rho; // Actually computes 8 pi G * rho_background * a**2
+	rho *= 3. * rho; // Actually computes 8 pi G * rho_background * a**2 -- TODO: Should this be T00hom instead?
 	double denom = 3. * frr * H;
 
 	// return - 6 * fourpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * H / a / a / a;
@@ -220,8 +221,6 @@ void rungekutta_fR(double & a,
 	R += dtau * (R1 + 2.*R2 + 2.*R3 + R4) / 6.;
 
 }
-
-
 
 
 #endif

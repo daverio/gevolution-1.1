@@ -1,0 +1,11 @@
+#!/bin/bash
+#SBATCH -J f(R)
+#SBATCH --time=7-00:00
+#SBATCH --partition=dpt
+#SBATCH --ntasks=256
+#SBATCH --output=nqs-%J.out
+#SBATCH --error=nqs-%J.err
+module load foss/2016.06
+module load fftw3
+module load gsl
+srun -n 256 ./gevolution -n 16 -m 16 -s settings_nqs.ini

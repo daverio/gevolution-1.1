@@ -244,6 +244,8 @@ int main(int argc, char **argv)
 	Field<Real> dot_deltaR;
 	Field<Real> ddot_deltaR;
 	Field<Real> m2_deltaR;
+	Field<Real> dot_xi;
+
 
 	double temp_val;// TODO Remove after debugging
 
@@ -279,6 +281,8 @@ if(sim.mg_flag == FOFR)
 	xi.initialize(lat,1);
 	xi_prev.initialize(lat,1);
 	xi_prev.alloc();
+	dot_xi.initialize(lat,1);
+	dot_xi.alloc();
 	zeta.initialize(lat,1);
 	deltaR.initialize(lat,1);
 	deltaR_prev.initialize(lat,1);
@@ -876,25 +880,44 @@ else
 						}
 						copy_field(deltaR, m2_deltaR, a * a / 6. / sim.fofR_params[0]);
 						add_fields(deltaR, deltaT, zeta);
-						copy_field(xi, xi_prev);
+						copy_field(xi, xi_prev);// TODO: is this needed?
 						xi_set(xi, deltaR, Rbar, FRbar, sim.fofR_params, sim.fofR_type); // Needs value of deltaR
 						if(cycle) lp_update_dotR(deltaR, deltaT, dot_deltaR, dot_deltaR, Hubble, a * a / 6. / sim.fofR_params[0], dtau_old, dtau, dx * dx);
 					}
-
-					if(sim.check_fields)
-					{
-						check_field(xi_prev, "xi_prev", "    AFTER solving for deltaR\n");
-						check_field(xi, "xi");
-						check_field(deltaR_prev, "deltaR_prev");
-						check_field(deltaR, "deltaR");
-						check_field(deltaT, "deltaT");
-						check_field(zeta, "zeta");
-					}
 				}
-				else
+				else // Generic f(R) model (not R + R^2)
 				{
-					COUT << "Only f(R) = R + R^2 is implemented so far, sorry! :)\n";
-					exit(0);
+					if(sim.quasi_static)
+					{
+						COUT << "Only f(R) = R + R^2 is implemented so far, sorry! :)\n";
+						exit(0);
+					}
+					else
+					{
+						if(cycle <= 1) // Initial conditions are deltaR = - deltaT
+						{
+							copy_field(deltaR, deltaR_prev);
+							copy_field(xi, xi_prev);
+							copy_field(deltaT, deltaR, -1.);
+							xi_set(xi, deltaR, Rbar, FRbar, sim.fofR_params, sim.fofR_type);
+							deltaR.updateHalo();
+							deltaR_prev.updateHalo(); // TODO: Probably unnecessary
+							if(cycle == 1) // Builds dot_xi_{1/2} from xi_1 and xi_0
+							{
+								add_fields(xi, xi_prev, dot_xi, 1./dtau_old, -1./dtau_old);
+							}
+						}
+						else // Else builds xi_i from xi_{i-1} and dot_xi_{i-1/2}, for i >= 2
+						{
+							add_fields(xi, dot_xi, xi, 1., dtau_old);
+							xi.updateHalo();
+						}
+						computeDRzeta(deltaT, deltaR, zeta, xi, Rbar, FRbar, sim.fofR_params, sim.fofR_type, sim.fofR_target_precision);
+						if(cycle)
+						{
+							lp_update_dotxi(xi, zeta, dot_xi, dot_xi, Hubble, a*a, dtau_old, dtau, dx*dx);
+						}
+					}
 				}
 
 				if(sim.follow_xi && x.setCoord(site_xi.coord(0), site_xi.coord(1), site_xi.coord(2)));
@@ -909,8 +932,8 @@ else
 				check_field(phi, "phi");
 				if(sim.mg_flag == FOFR)
 				{
-					check_field(xi_prev, "xi_prev");
 					check_field(xi, "xi");
+					check_field(dot_xi, "dot_xi");
 					check_field(zeta, "zeta");
 					check_field(deltaR, "deltaR");
 					check_field(deltaR_prev, "deltaR_prev");
@@ -969,7 +992,8 @@ else
 #endif
 				// go back to position space: {scalarFT} --> {phidot}
 				plan_phidot.execute(FFT_BACKWARD);
-				update_phi_phidot(phi, phidot, dtau_old);
+				flip_fields(phi, phidot); // Now {phi} contains phi_new, {phidot} contains phi_old
+				add_fields(phi, phidot, phidot, 1./dtau_old, -1./dtau_old); // Computes phidot = (phi_new - phi_old)/dtau
 				// Update halos for phi and phidot
 				phi.updateHalo();
 				phidot.updateHalo();
@@ -1199,8 +1223,8 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 			}
 			if(sim.mg_flag == FOFR)
 			{
-				COUT << "), time step / Hubble time = " <<  Hubble * dtau;
-				if(!sim.lcdm_background) COUT << ", numsteps_bg = " << numsteps_bg << endl;
+				COUT << "), time step / Hubble time = " <<  Hubble * dtau << ", dx = " << dx;
+				if(!sim.lcdm_background) COUT << ", numsteps_bg = " << numsteps_bg;
 			}
 			else
 			{
@@ -1419,7 +1443,7 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 				if(numsteps_ncdm[i] == numsteps)
 				{
 					if(sim.gr_flag > 0)
-						pcls_ncdm[i].moveParticles(update_pos, dtau / numsteps_ncdm[i], update_ncdm_fields, (1. / a < ic.z_relax + 1. ? 3 : 2), f_params);
+															pcls_ncdm[i].moveParticles(update_pos, dtau / numsteps_ncdm[i], update_ncdm_fields, (1. / a < ic.z_relax + 1. ? 3 : 2), f_params);
 					else
 						pcls_ncdm[i].moveParticles(update_pos_Newton, dtau / numsteps_ncdm[i], NULL, 0, f_params);
 #ifdef BENCHMARK

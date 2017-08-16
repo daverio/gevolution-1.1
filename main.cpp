@@ -885,7 +885,7 @@ else
 						if(cycle) lp_update_dotR(deltaR, deltaT, dot_deltaR, dot_deltaR, Hubble, a * a / 6. / sim.fofR_params[0], dtau_old, dtau, dx * dx);
 					}
 				}
-				else
+				else // Generic f(R) model (not R + R^2)
 				{
 					if(sim.quasi_static)
 					{

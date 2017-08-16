@@ -331,23 +331,6 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
 }
 
 /////////////////////////////////////////////////
-// Update value of phidot from new and old values of phi
-/////////////////////////////////////////////////
-template <class FieldType>
-void update_phi_phidot(Field<FieldType> & phi, Field<FieldType> & phidot, double dtau)
-{
-  Site x(phi.lattice());
-  FieldType p;
-  for(x.first(); x.test(); x.next())
-  {
-    p = phidot(x);
-    phidot(x) = (p - phi(x))/dtau;
-    phi(x) = p;
-  }
-}
-
-
-/////////////////////////////////////////////////
 // Project source for 00 equation in f(R) gravity
 // TODO: Add comments here
 /////////////////////////////////////////////////
@@ -469,61 +452,6 @@ void check_xi_constraint(Field<FieldType> & xi,
        << endl;
   return;
 }
-
-
-/////////////////////////////////////////////////
-// Computes zeta and deltaR
-//
-// Returns maximum value of FRR over the entire lattice.
-// the typical oscillation frenquency will be of order a/(sqrt(3*FRR_max))
-/////////////////////////////////////////////////
-template <class FieldType>
-double computeDRzeta(Field<FieldType> & eightpiG_deltaT,
-                     Field<FieldType> & deltaR,
-									   Field<FieldType> & zeta,
-									   Field<FieldType> & xi,
-									   double Rbar,
-								 	   double FRbar,
-								 	   double * params,
-									   const int fofR_type,
-                     double prec)
-{
-  // Using Newton-Raphson Method
-  Site x(xi.lattice());
-  double R_temp, temp, max_FRR = 0., FRR_temp;
-  int count;
-  for(x.first(); x.test(); x.next())
-  {
-    R_temp = Rbar - eightpiG_deltaT(x);
-    count = 0;
-    while(true)
-    {
-      temp = fabs(xi(x)/(FR(R_temp, params, fofR_type, 56) - FRbar) - 1.);
-      if(temp < prec) break;
-      FRR_temp = FRR(R_temp, params, fofR_type, 159);
-      R_temp = FRR_temp > 0 ? R_temp + (xi(x) - FR(R_temp, params, fofR_type, 373) + FRbar) / FRR_temp : 1.1 * R_temp; // Displace R_temp slightly, if FRR(R_temp) is "bad"
-      count ++;
-      if(count > 10000)
-      {
-        cout << "Could only reach a precision of " << temp << endl;
-        break;
-      }
-    }
-    FRR_temp = fabs(FRR(R_temp, params, fofR_type, 157));
-    if(max_FRR < FRR_temp) max_FRR = FRR_temp;
-    deltaR(x) = R_temp - Rbar;
-    zeta(x) = deltaR(x) + eightpiG_deltaT(x);
-  }
-
-  parallel.max(max_FRR);
-  if(max_FRR and !std::isnan(max_FRR)) return max_FRR;
-  else
-  {
-    COUT << " Warning: returning FRRbar\n";
-    return FRR(Rbar, params, fofR_type, 45);
-  }
-}
-
 
 
 //////////////////////////

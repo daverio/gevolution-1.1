@@ -235,9 +235,10 @@ void fR_details(const cosmology cosmo, metadata * sim, const double fourpiG)
 {
 	if(sim->fofR_type == FOFR_TYPE_HU_SAWICKI)
 	{
-		COUT << " f(R) model: Hu-Sawicki    F(R) = - m2 * c1 * pow(R/m2, n) / (1. + c2 * pow(R/m2, n))" << endl
-				 << "  with m2 = " << sim->fofR_params[0] << " * 8piG * rho_{m0} / 3." << endl;
+		double temp = sim->fofR_params[0];
 		rescale_params_Hu_Sawicki(cosmo, fourpiG, sim);
+		COUT << " f(R) model: Hu-Sawicki    F(R) = - m2 * c1 * pow(R/m2, n) / (1. + c2 * pow(R/m2, n))" << endl
+				 << "  with m2 = " << temp << " * 8piG * rho_{m0} / 3. = " << sim->fofR_params[0] << endl;
 		COUT << "       c1 = " << sim->fofR_params[3] << endl
 				 << "       c2 = " << sim->fofR_params[1] << endl
 				 << "       n  = " << sim->fofR_params[2] << endl
@@ -367,37 +368,6 @@ double compute_max_FRR(Field<FieldType> &deltaR, double Rbar, double * params, i
 		return max;
 	}
 }
-
-
-template <class FieldType>
-void check_xi_deltaR_R2(Field<FieldType> &xi, Field<FieldType> &deltaR, double alpha, int n = 64)
-{
-	Site x(xi.lattice());
-	double max = 0., hom = 0., sum = 0., temp;
-  for(x.first(); x.test(); x.next())
-  {
-    temp = xi(x)/(2. * alpha * deltaR(x)) - 1.;
-    hom += temp;
-    sum += fabs(temp);
-    if(fabs(temp) >= max)
-    {
-      max = fabs(temp);
-    }
-  }
-  parallel.max(max);
-  parallel.sum(sum);
-  parallel.sum(hom);
-  sum /= n * n * n;
-  hom /= n * n * n;
-
-
-  COUT << " " << "xi(x)/(2. * alpha * deltaR(x)) - 1."
-       << ",  Max = " << max
-       << ",  hom = " << hom
-      //  << ",  |avg| = " << sum
-       << endl;
-}
-
 
 /////////////////////////////////////////////////
 // Flips (scalar) fields:
@@ -533,6 +503,30 @@ void lp_update_dotR(Field<FieldType> & deltaR, Field<FieldType> & deltaT, Field<
 
 
 /////////////////////////////////////////////////
+// TODO: Add comments here
+/////////////////////////////////////////////////
+template <class FieldType>
+void lp_update_dotxi(Field<FieldType> & xi, Field<FieldType> & zeta, Field<FieldType> & dot_xi_old, Field<FieldType> & dot_xi_new, double Hubble, double a2, double dtau_old, double dtau, double dx2)
+{
+	Site x(xi.lattice());
+	double temp, coeff1, coeff2, coeff3;
+	coeff1 = 1. + Hubble * dtau_old;
+	coeff2 = 1. - Hubble * dtau;
+	coeff3 = (dtau + dtau_old)/6.;
+	for(x.first(); x.test(); x.next())
+	{
+		temp = xi(x+0) + xi(x-0) + xi(x+1) + xi(x-1) + xi(x+2) + xi(x-2) - 6. * xi(x);
+		temp *= 3. / dx2;
+		temp -= a2 * zeta(x);
+		temp *= coeff3;
+		temp += coeff2 * dot_xi_old(x);
+		dot_xi_new(x) = temp / coeff1;
+	}
+	return;
+}
+
+
+/////////////////////////////////////////////////
 // Computes ddot_deltaR
 // TODO: Add comments here
 /////////////////////////////////////////////////
@@ -596,6 +590,62 @@ void xi_prev_initial_conditions(Field<FieldType> & xi_prev, Field<FieldType> & x
 		xi_prev(x) = xi(x); // TODO: first approximation, try different initial conditions
 	}
 }
+
+
+
+/////////////////////////////////////////////////
+// Computes zeta and deltaR
+//
+// Returns maximum value of FRR over the entire lattice.
+// the typical oscillation frenquency will be of order a/(sqrt(3*FRR_max))
+/////////////////////////////////////////////////
+template <class FieldType>
+double computeDRzeta(Field<FieldType> & eightpiG_deltaT,
+                     Field<FieldType> & deltaR,
+									   Field<FieldType> & zeta,
+									   Field<FieldType> & xi,
+									   double Rbar,
+								 	   double FRbar,
+								 	   double * params,
+									   const int fofR_type,
+                     double prec)
+{
+  // Using Newton-Raphson Method
+  Site x(xi.lattice());
+  double R_temp, temp, max_FRR = 0., FRR_temp;
+  int count, count_max = 10000;
+  for(x.first(); x.test(); x.next())
+  {
+    R_temp = Rbar - eightpiG_deltaT(x);
+    count = 0;
+    while(true)
+    {
+      temp = fabs(xi(x)/(FR(R_temp, params, fofR_type, 56) - FRbar) - 1.);
+      if(temp < prec) break;
+      FRR_temp = FRR(R_temp, params, fofR_type, 159);
+      R_temp = FRR_temp > 0 ? R_temp + (xi(x) - FR(R_temp, params, fofR_type, 373) + FRbar) / FRR_temp : 1.1 * R_temp; // Displace R_temp slightly, if FRR(R_temp) is "bad"
+      count ++;
+      if(count > count_max)
+      {
+        // cout << "Could only reach a precision of " << temp << " in " << count_max << " steps.\n";
+        break;
+      }
+    }
+    FRR_temp = fabs(FRR(R_temp, params, fofR_type, 157));
+    if(max_FRR < FRR_temp) max_FRR = FRR_temp;
+    deltaR(x) = R_temp - Rbar;
+    zeta(x) = deltaR(x) + eightpiG_deltaT(x);
+  }
+
+  parallel.max(max_FRR);
+  if(max_FRR and !std::isnan(max_FRR)) return max_FRR;
+  else
+  {
+    COUT << " Warning: returning FRRbar\n";
+    return FRR(Rbar, params, fofR_type, 45);
+  }
+}
+
 
 
 #endif

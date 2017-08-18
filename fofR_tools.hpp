@@ -267,7 +267,7 @@ template <class FieldType>
 Site check_field(Field<FieldType> & field, string field_name, string message = "", int n = 64) // TODO: correct lattice size
 {
   Site x(field.lattice());
-  Site y, z[4];
+  Site y(field.lattice());
   double max = 0., hom = 0., sum = 0., temp;
   for(x.first(); x.test(); x.next())
   {
@@ -277,7 +277,7 @@ Site check_field(Field<FieldType> & field, string field_name, string message = "
     if(fabs(temp) >= max)
     {
       max = fabs(temp);
-      z[parallel.rank()] = x;
+      y = x;
     }
   }
   parallel.max(max);
@@ -285,8 +285,6 @@ Site check_field(Field<FieldType> & field, string field_name, string message = "
   parallel.sum(hom);
   sum /= n * n * n;
   hom /= n * n * n;
-
-  y = z[parallel.rank()];
 
   COUT << message
   // MPI_Barrier(MPI_COMM_WORLD);

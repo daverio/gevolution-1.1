@@ -288,12 +288,14 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
         grad[i] *= grad[i];
       }
       laplace -= 6.*xi_new(x);
-      source(x) = (source(x) + 0.5 * laplace / dx2) * (1. - 4.*phi(x) + 0.5 * (xi_new(x) + FRbar)); //  F(R)
+      source(x) = (source(x) + 0.5 * laplace / dx2) * (1. - 4.*phi(x) + 0.5 * (xi_new(x) + FRbar));
       source(x) += threeH2 * (phi(x) - chi(x) - 0.5 * xi_new(x));
       source(x) -= 1.5 * Hubble * (2. * phi(x) + xi_new(x) - xi_old(x)) / dtau;//TODO: Do we want to keep this in the Quasi-static limit?
 
       // f(R) terms
       source(x) += 0.25 * a2 * (Rbar * xi_new(x) + Fbar - F(Rbar + deltaR(x), paramF, Ftype));
+
+      // Rescaling with dx^2 (Needed! To be done before adding gradient squared)
       source(x) *= dx2;
 
       // gradient squared
@@ -807,7 +809,7 @@ void projectFTtensor(Field<Cplx> & SijFT, Field<Cplx> & hijFT)
 //////////////////////////
 // Description:
 //   Modified Poisson solver using the standard Fourier method
-//   Solves: (Laplace - modif) f == sourceFT * coeff --> (k^2 + modif) f == - sourceFT * coeff       TODO: Write this better, check +- signs!
+//   Solves: (Laplace - modif) potFT == sourceFT * coeff --> (k^2 + modif) potFT == - sourceFT * coeff       TODO: Write this better, check +- signs!
 //
 // Arguments:
 //   sourceFT   reference to the Fourier image of the source field

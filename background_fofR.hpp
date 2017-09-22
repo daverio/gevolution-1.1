@@ -146,21 +146,19 @@ inline double func_RK_Hdot(const double a, const double H, const double R)
 	return a*a*R/6. - H*H;
 }
 
+// For background_only option -- T00_background is computed from cosmological parameters Omega_m, Omega_Lambda etc
 double func_RK_Rdot(const double a,
 										const double H,
 										const double R,
-										const cosmology cosmo,
+										const double rho, // Actually 8 pi G * rho_background * a**2 -- TODO: Should this be T00hom instead?
 										const double fourpiG,
 										double * params,
-										const int fofR_type)
+										const int fofR_type,
+										const double t00hom = 1.)
 {
 	double frr = FRR(R, params, fofR_type, 25);
 	double fr = FR(R, params, fofR_type);
-	double rho = Hconf(a, fourpiG, cosmo);
-	rho *= 3. * rho; // Actually computes 8 pi G * rho_background * a**2 -- TODO: Should this be T00hom instead?
 	double denom = 3. * frr * H;
-
-	// return - 6 * fourpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * H / a / a / a;
 
 	if(denom)
 	{
@@ -178,7 +176,12 @@ double func_RK_Rdot(const double a,
 }
 
 
+
+
+////////////////////////
 // Runge-Kutta (4) solver for f(R) background
+// background_only version TODO: combine it with the case in which we evolve fields too
+////////////////////////
 void rungekutta_fR(double & a,
 									 double & H,
 									 double & R,
@@ -186,41 +189,73 @@ void rungekutta_fR(double & a,
 									 const cosmology cosmo,
 									 const double dtau,
 									 double * params,
-									 const int fofR_type)
+									 const int fofR_type,
+								 	 const double t00hom = 0.)
 {
 	double a1, a2, a3, a4;
 	double H1, H2, H3, H4;
 	double R1, R2, R3, R4;
+	double rho0 = 3. * Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo);
 
-	a1 = func_RK_adot(a, H);
-	H1 = func_RK_Hdot(a, H, R);
-	R1 = func_RK_Rdot(a, H, R, cosmo, fourpiG, params, fofR_type);
+	if(t00hom)
+	{
+		a1 = func_RK_adot(a, H);
+		H1 = func_RK_Hdot(a, H, R);
+		R1 = func_RK_Rdot(a, H, R, t00hom, fourpiG, params, fofR_type);
 
-	// COUT << " a1 = " << a1 << "  H1 = " << H1 << "  R1 = " << R1 << endl;
+		// COUT << " a1 = " << a1 << "  H1 = " << H1 << "  R1 = " << R1 << endl;
 
-	a2 = func_RK_adot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau);
-	H2 = func_RK_Hdot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau);
-	R2 = func_RK_Rdot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau, cosmo, fourpiG, params, fofR_type);
+		a2 = func_RK_adot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau);
+		H2 = func_RK_Hdot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau);
+		R2 = func_RK_Rdot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau, t00hom * (3. * Hconf(a + 0.5 * a1 * dtau, fourpiG, cosmo) * Hconf(a + 0.5 * a1 * dtau, fourpiG, cosmo)) / rho0, fourpiG, params, fofR_type);
 
-	// COUT << " a2 = " << a2 << "  H2 = " << H2 << "  R2 = " << R2 << endl;
+		// COUT << " a2 = " << a2 << "  H2 = " << H2 << "  R2 = " << R2 << endl;
 
-	a3 = func_RK_adot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau);
-	H3 = func_RK_Hdot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau);
-	R3 = func_RK_Rdot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau, cosmo, fourpiG, params, fofR_type);
+		a3 = func_RK_adot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau);
+		H3 = func_RK_Hdot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau);
+		R3 = func_RK_Rdot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau, t00hom * (3. * Hconf(a + 0.5 * a2 * dtau, fourpiG, cosmo) * Hconf(a + 0.5 * a2 * dtau, fourpiG, cosmo)) / rho0, fourpiG, params, fofR_type);
 
-	// COUT << " a3 = " << a3 << "  H3 = " << H3 << "  R3 = " << R3 << endl;
+		// COUT << " a3 = " << a3 << "  H3 = " << H3 << "  R3 = " << R3 << endl;
 
-	a4 = func_RK_adot(a + a3 * dtau, H + H3 * dtau);
-	H4 = func_RK_Hdot(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau);
-	R4 = func_RK_Rdot(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau, cosmo, fourpiG, params, fofR_type);
+		a4 = func_RK_adot(a + a3 * dtau, H + H3 * dtau);
+		H4 = func_RK_Hdot(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau);
+		R4 = func_RK_Rdot(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau, t00hom * (3. * Hconf(a + a3 * dtau, fourpiG, cosmo) * Hconf(a + a3 * dtau, fourpiG, cosmo)) / rho0, fourpiG, params, fofR_type);
+	}
+	else
+	{
+		a1 = func_RK_adot(a, H);
+		H1 = func_RK_Hdot(a, H, R);
+		R1 = func_RK_Rdot(a, H, R, rho0, fourpiG, params, fofR_type);
+
+		// COUT << " a1 = " << a1 << "  H1 = " << H1 << "  R1 = " << R1 << endl;
+
+		a2 = func_RK_adot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau);
+		H2 = func_RK_Hdot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau);
+		R2 = func_RK_Rdot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau, 3. * Hconf(a + 0.5 * a1 * dtau, fourpiG, cosmo) * Hconf(a + 0.5 * a1 * dtau, fourpiG, cosmo), fourpiG, params, fofR_type);
+
+		// COUT << " a2 = " << a2 << "  H2 = " << H2 << "  R2 = " << R2 << endl;
+
+		a3 = func_RK_adot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau);
+		H3 = func_RK_Hdot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau);
+		R3 = func_RK_Rdot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau, 3. * Hconf(a + 0.5 * a2 * dtau, fourpiG, cosmo) * Hconf(a + 0.5 * a2 * dtau, fourpiG, cosmo), fourpiG, params, fofR_type);
+
+		// COUT << " a3 = " << a3 << "  H3 = " << H3 << "  R3 = " << R3 << endl;
+
+		a4 = func_RK_adot(a + a3 * dtau, H + H3 * dtau);
+		H4 = func_RK_Hdot(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau);
+		R4 = func_RK_Rdot(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau, 3. * Hconf(a + a3 * dtau, fourpiG, cosmo) * Hconf(a + a3 * dtau, fourpiG, cosmo), fourpiG, params, fofR_type);
+	}
 
 	// COUT << " a4 = " << a4 << "  H4 = " << H4 << "  R4 = " << R4 << endl;
 
 	a += dtau * (a1 + 2.*a2 + 2.*a3 + a4) / 6.;
 	H += dtau * (H1 + 2.*H2 + 2.*H3 + H4) / 6.;
 	R += dtau * (R1 + 2.*R2 + 2.*R3 + R4) / 6.;
-
 }
+
+
+
+
 
 
 #endif

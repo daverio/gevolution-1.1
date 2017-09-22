@@ -1377,8 +1377,8 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 					{
 						COUT << " The parameter m2 of Hu-Sawicki model should be strictly positive. Closing...\n";
 						parallel.abortForce();
+						// TODO: Check that parameter n of Hu-Sawicki is >= 1
 					}
-					// TODO: Check that parameter n of Hu-Sawicki is >= 1
 					sim.fofR_type = FOFR_TYPE_HU_SAWICKI;
 					if(sim.lcdm_background)
 					{
@@ -1390,6 +1390,25 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 						cosmo.Omega_Lambda = 0.;
 						COUT << " Hu-Sawicki model, Omega_Lambda automatically set to zero.\n";
 					}
+				}
+				else if(par_string[0] == 'D' || par_string[0] == 'd')
+				{
+					if(sim.num_fofR_params < 2)
+					{
+						COUT << " Not enough parameters for Hu-Sawicki model! Closing...\n";
+						parallel.abortForce();
+					}
+					else if(sim.fofR_params[0] <= 0)
+					{
+						COUT << " The parameter a of a * (R/a)^(1+delta) model must be positive. Closing...\n";
+						parallel.abortForce();
+					}
+					else if(fabs(sim.fofR_params[1]) > 0.1)
+					{
+						COUT << " The parameter delta of a * (R/a)^(1+delta) model must be small, at least < 0.1. Closing...\n";
+						parallel.abortForce();
+					}
+					sim.fofR_type = FOFR_TYPE_DELTA;
 				}
 
 				// Added parser for Omega_Lambda in f(R) gravity -- Lambda will typically be zero, but can be nonzero
@@ -1414,6 +1433,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 						else
 						{
 							cosmo.Omega_Lambda = 0.;
+							COUT << " 0." << endl;
 						}
 					}
 				}

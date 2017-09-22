@@ -127,6 +127,8 @@
 #define FOFR_TYPE_RN 0
 #define FOFR_TYPE_R2 1
 #define FOFR_TYPE_HU_SAWICKI 2
+#define FOFR_TYPE_DELTA 3
+
 
 // color escape sequences for terminal highlighting (enable with -DCOLORTERMINAL)
 #ifdef COLORTERMINAL

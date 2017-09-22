@@ -14,23 +14,6 @@
 #ifndef FOFR_TOOLS_HEADER
 #define FOFR_TOOLS_HEADER
 
-// Model: f(R) = R + F(R)
-// Hu-Sawicki Model: arXiv:0705.1158 -- See paper for details
-// m2 := m^2 (comparison between these values and the nomenclature of the original paper)
-// F(R) = -m2 * c1 * (R/M)^n / (1 + c2*(R/M)^n)
-// In settings.ini:
-// params[0] = m^2 is given in units of (matter energy density today) * 8piG / 3.
-// params[1] = c2 (normally >> 1)
-// params[2] = n
-// Constructed parameters:
-// params[3] = c1, calibrated to give c1*m2/c2 = 2 * 8piG * rho_Lambda [see 0705.1158 equations (25,26)]
-
-void rescale_params_Hu_Sawicki(const cosmology cosmo, const double fourpiG, metadata * sim)
-{
-	sim->fofR_params[3] = sim->fofR_params[1] * 6. * (1 - cosmo.Omega_m - cosmo.Omega_rad) / cosmo.Omega_m / sim->fofR_params[0]; //Omega_m > 0, checked in parseMetadata()
-	sim->fofR_params[0] *= fourpiG * cosmo.Omega_m / 1.5;
-}
-
 
 ///////////////////// F(R) FUNCTIONS /////////////////////
 
@@ -57,6 +40,11 @@ Real F(double R, double * params, const int fofR_type, int code = -1)
 		c1 = params[3];
 		Rpow = pow(R/m2, n);
 		output = - m2 * c1 * Rpow / (1. + c2 * Rpow);
+	}
+	else if(fofR_type == FOFR_TYPE_DELTA)
+	{
+		double a = params[0], delta = params[1];
+		output = R * (pow(R/a, delta) - 1.);
 	}
 	else
 	{
@@ -98,6 +86,11 @@ Real FR(double R, double * params, const int fofR_type, int code = -1)
 		c1 = params[3];
 		Rpow = pow(R/m2, n);
 		output = - c1 * n * pow(R/m2, n-1) / ( (1. + c2*Rpow) * (1. + c2*Rpow) );
+	}
+	else if(fofR_type == FOFR_TYPE_DELTA)
+	{
+		double a = params[0], delta = params[1];
+		output = (1. + delta) * pow(R/a, delta) - 1.;
 	}
 	else
 	{
@@ -147,6 +140,11 @@ Real FRR(double R, double * params, const int fofR_type, int code = -1)
 		{
 			output = c1 * n * Rpow * (1. - n + c2*(1. + n)*Rpow ) / ( Roverm2 * Roverm2 * m2 * (1. + c2*Rpow) * (1. + c2*Rpow) * (1. + c2*Rpow) );
 		}
+	}
+	else if(fofR_type == FOFR_TYPE_DELTA)
+	{
+		double a = params[0], delta = params[1];
+		output = delta * (delta + 1.) * pow(R/a, delta) / R;
 	}
 	else
 	{
@@ -210,6 +208,11 @@ Real FRRR(double R, double * params, const int fofR_type, int code = -1)
 			output = c1 * n * Rpow * ( -2. + 3. * n - n * n + 4. * c2 * (n * n - 1.) * Rpow - c2 * c2 * (1. + n) * (2. + n) * Rpow * Rpow ) / (Roverm2 * Roverm2 * Roverm2 * m2 * m2 * (1. + c2 * Rpow) * (1. + c2 * Rpow) * (1. + c2 * Rpow) * (1. + c2 * Rpow));
 		}
 	}
+	else if(fofR_type == FOFR_TYPE_DELTA)
+	{
+		double a = params[0], delta = params[1];
+		output = delta * (delta * delta - 1.) * pow(R/a, delta) / R / R;
+	}
 	else
 	{
 		COUT << " Something went wrong when computing FRRR (code " << code << "). Closing...\n";
@@ -235,8 +238,19 @@ void fR_details(const cosmology cosmo, metadata * sim, const double fourpiG)
 {
 	if(sim->fofR_type == FOFR_TYPE_HU_SAWICKI)
 	{
+		// Model: f(R) = R + F(R)
+		// Hu-Sawicki Model: arXiv:0705.1158 -- See paper for details
+		// m2 := m^2 (comparison between these values and the nomenclature of the original paper)
+		// F(R) = -m2 * c1 * (R/M)^n / (1 + c2*(R/M)^n)
+		// In settings.ini:
+		// params[0] = m^2 is given in units of (matter energy density today) * 8piG / 3.
+		// params[1] = c2 (normally >> 1)
+		// params[2] = n
+		// Constructed parameters:
+		// params[3] = c1, calibrated to give c1*m2/c2 = 2 * 8piG * rho_Lambda [see 0705.1158 equations (25,26)]
 		double temp = sim->fofR_params[0];
-		rescale_params_Hu_Sawicki(cosmo, fourpiG, sim);
+		sim->fofR_params[3] = sim->fofR_params[1] * 6. * (1 - cosmo.Omega_m - cosmo.Omega_rad) / cosmo.Omega_m / sim->fofR_params[0]; //Omega_m > 0, checked in parseMetadata()
+		sim->fofR_params[0] *= fourpiG * cosmo.Omega_m / 1.5;
 		COUT << " f(R) model: Hu-Sawicki    F(R) = - m2 * c1 * pow(R/m2, n) / (1. + c2 * pow(R/m2, n))" << endl
 				 << "  with m2 = " << temp << " * 8piG * rho_{m0} / 3. = " << sim->fofR_params[0] << endl;
 		COUT << "       c1 = " << sim->fofR_params[3] << endl
@@ -248,11 +262,13 @@ void fR_details(const cosmology cosmo, metadata * sim, const double fourpiG)
 	{
 		COUT << " f(R) model: a*R^n, with a = " << sim->fofR_params[0] << " and n = " << sim->fofR_params[1] << endl;
 	}
-}
-
-void compute_dtrace_eq(double a, double H, double R, double T, double fourpiG, cosmology * cosmo, metadata * sim)
-{
-	COUT << " T^mu_mu (hom.) = " << T << "  model = " << - cosmo->Omega_m/a/a/a << endl;
+	else if(sim->fofR_type == FOFR_TYPE_DELTA) //  TODO: Fix for delta < 0: FRR < 0, so everything blows up!
+	{
+		double temp = sim->fofR_params[0];
+		sim->fofR_params[0] *= 2 * fourpiG * cosmo.Omega_m;
+		COUT << " f(R) model: a * (R/a)^(1+delta), with a = " << temp << " * 8piG * rho_{m0} = " << sim->fofR_params[0] << endl
+				 << "                                   delta = " << sim->fofR_params[1] << endl;
+	}
 }
 
 
@@ -264,7 +280,7 @@ void compute_dtrace_eq(double a, double H, double R, double T, double fourpiG, c
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
-Site check_field(Field<FieldType> & field, string field_name, string message = "", int n = 64) // TODO: correct lattice size
+Site check_field(Field<FieldType> & field, string field_name, long n3, string message = "") // TODO: correct lattice size
 {
   Site x(field.lattice());
   Site y(field.lattice());
@@ -283,8 +299,8 @@ Site check_field(Field<FieldType> & field, string field_name, string message = "
   parallel.max(max);
   parallel.sum(sum);
   parallel.sum(hom);
-  sum /= n * n * n;
-  hom /= n * n * n;
+  sum /= n3;
+  hom /= n3;
 
   COUT << message
   // MPI_Barrier(MPI_COMM_WORLD);
@@ -305,7 +321,7 @@ Site check_field(Field<FieldType> & field, string field_name, string message = "
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
-Site check_vector_field(Field<FieldType> & field, string field_name, string message = "", int n = 64) // TODO: correct lattice size
+Site check_vector_field(Field<FieldType> & field, string field_name, long n3, string message = "") // TODO: correct lattice size
 {
   Site x(field.lattice()), y;
   double max[3] = {0.,0.,0.}, hom[3] = {0.,0.,0.}, sum[3] = {0.,0.,0.}, temp;
@@ -329,7 +345,8 @@ Site check_vector_field(Field<FieldType> & field, string field_name, string mess
   parallel.max(max[i]);
   parallel.sum(sum[i]);
   parallel.sum(hom[i]);
-  sum[i] = sum[i] / n / n / n;
+  sum[i] /= n3;
+	hom[i] /= n3;
   // MPI_Barrier(MPI_COMM_WORLD);
   COUT << "  Field: " << field_name << "[" << i << "]"
        << ",  Max = " << max[i]
@@ -420,10 +437,12 @@ template <class FieldType>
 void copy_field(Field<FieldType> & source, Field<FieldType> & destination, double coeff)
 {
 	Site x(source.lattice());
+	source.updateHalo();
 	for(x.first(); x.test(); x.next())
 	{
 		destination(x) = coeff * source(x);
 	}
+	destination.updateHalo();
 	return;
 }
 
@@ -484,17 +503,16 @@ template <class FieldType>
 void lp_update_dotR(Field<FieldType> & deltaR, Field<FieldType> & deltaT, Field<FieldType> & dot_deltaR_old, Field<FieldType> & dot_deltaR_new, double Hubble, double coeff, double dtau_old, double dtau, double dx2)
 {
 	Site x(deltaR.lattice());
-	double temp, coeff1, coeff2, coeff3;
-	coeff1 = 1. + Hubble * dtau_old;
-	coeff2 = 1. - Hubble * dtau;
-	coeff3 = (dtau + dtau_old) / 2.;
+	double temp, coeff1;
+	coeff1 = (dtau_old + dtau) / 2.;
+	coeff1 *= 1. - coeff1 * Hubble;
+
 	for(x.first(); x.test(); x.next())
 	{
 		temp = deltaR(x+0) + deltaR(x-0) + deltaR(x+1) + deltaR(x-1) + deltaR(x+2) + deltaR(x-2) - 6. * deltaR(x);
 		temp /= dx2;
-		temp -= coeff * (deltaR(x) + deltaT(x));
-		temp *= coeff3;
-		dot_deltaR_new(x) = (coeff2 * dot_deltaR_old(x) + temp) / coeff1;
+		temp -= coeff * (deltaR(x) + deltaT(x)) + 2. * Hubble * dot_deltaR_old(x);
+		dot_deltaR_new(x) = dot_deltaR_old(x) + temp * coeff1;
 	}
 	return;
 }
@@ -507,18 +525,16 @@ template <class FieldType>
 void lp_update_dotxi(Field<FieldType> & xi, Field<FieldType> & zeta, Field<FieldType> & dot_xi_old, Field<FieldType> & dot_xi_new, double Hubble, double a2, double dtau_old, double dtau, double dx2)
 {
 	Site x(xi.lattice());
-	double temp, coeff1, coeff2, coeff3;
-	coeff1 = 1. + Hubble * dtau_old;
-	coeff2 = 1. - Hubble * dtau;
-	coeff3 = (dtau + dtau_old)/6.;
+	double temp, coeff1;
+	coeff1 = (dtau_old + dtau) / 2.;
+	coeff1 *= 1. - coeff1 * Hubble;
+
 	for(x.first(); x.test(); x.next())
 	{
 		temp = xi(x+0) + xi(x-0) + xi(x+1) + xi(x-1) + xi(x+2) + xi(x-2) - 6. * xi(x);
-		temp *= 3. / dx2;
-		temp -= a2 * zeta(x);
-		temp *= coeff3;
-		temp += coeff2 * dot_xi_old(x);
-		dot_xi_new(x) = temp / coeff1;
+		temp /= dx2;
+		temp -= a2 * zeta(x) / 3. + 2. * Hubble + dot_xi_old(x);
+		dot_xi_new(x) = dot_xi_old(x) + temp * coeff1;
 	}
 	return;
 }
@@ -565,9 +581,19 @@ template <class FieldType>
 void xi_set(Field<FieldType> & xi, Field<FieldType> & deltaR, double Rbar, double FRbar, double * fofR_params, int fofR_type)
 {
 	Site x(xi.lattice());
-	for(x.first(); x.test(); x.next())
+	if(fofR_type == FOFR_TYPE_R2)
 	{
-		xi(x) = FR(Rbar + deltaR(x), fofR_params, fofR_type, 832) - FRbar;
+		for(x.first(); x.test(); x.next())
+		{
+			xi(x) = 2. * fofR_params[0] * deltaR(x);
+		}
+	}
+	else
+	{
+		for(x.first(); x.test(); x.next())
+		{
+			xi(x) = FR(Rbar + deltaR(x), fofR_params, fofR_type, 832) - FRbar;
+		}
 	}
 	xi.updateHalo();
 	return;
@@ -612,28 +638,29 @@ double computeDRzeta(Field<FieldType> & eightpiG_deltaT,
   Site x(xi.lattice());
   double R_temp, temp, max_FRR = 0., FRR_temp;
   int count, count_max = 10000;
-  for(x.first(); x.test(); x.next())
-  {
-    R_temp = Rbar - eightpiG_deltaT(x);
-    count = 0;
-    while(true)
-    {
-      temp = fabs(xi(x)/(FR(R_temp, params, fofR_type, 56) - FRbar) - 1.);
-      if(temp < prec) break;
-      FRR_temp = FRR(R_temp, params, fofR_type, 159);
-      R_temp = FRR_temp > 0 ? R_temp + (xi(x) - FR(R_temp, params, fofR_type, 373) + FRbar) / FRR_temp : 1.1 * R_temp; // Displace R_temp slightly, if FRR(R_temp) is "bad"
-      count ++;
-      if(count > count_max)
-      {
-        // cout << "Could only reach a precision of " << temp << " in " << count_max << " steps.\n";
-        break;
-      }
-    }
-    FRR_temp = fabs(FRR(R_temp, params, fofR_type, 157));
-    if(max_FRR < FRR_temp) max_FRR = FRR_temp;
-    deltaR(x) = R_temp - Rbar;
-    zeta(x) = deltaR(x) + eightpiG_deltaT(x);
-  }
+
+	for(x.first(); x.test(); x.next())
+	{
+		R_temp = Rbar - eightpiG_deltaT(x);
+		count = 0;
+		while(true)
+		{
+			temp = fabs(xi(x)/(FR(R_temp, params, fofR_type, 56) - FRbar) - 1.);
+			if(temp < prec) break;
+			FRR_temp = FRR(R_temp, params, fofR_type, 159);
+			R_temp = FRR_temp > 0 ? R_temp + (xi(x) - FR(R_temp, params, fofR_type, 373) + FRbar) / FRR_temp : 1.1 * R_temp; // Displace R_temp slightly, if FRR(R_temp) is "bad"
+			count ++;
+			if(count > count_max)
+			{
+				// cout << "Could only reach a precision of " << temp << " in " << count_max << " steps.\n";
+				break;
+			}
+		}
+		FRR_temp = fabs(FRR(R_temp, params, fofR_type, 157));
+		if(max_FRR < FRR_temp) max_FRR = FRR_temp;
+		deltaR(x) = R_temp - Rbar;
+		zeta(x) = deltaR(x) + eightpiG_deltaT(x);
+	}
 
   parallel.max(max_FRR);
   if(max_FRR and !std::isnan(max_FRR)) return max_FRR;
@@ -643,6 +670,47 @@ double computeDRzeta(Field<FieldType> & eightpiG_deltaT,
     return FRR(Rbar, params, fofR_type, 45);
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Checks equation: laplace(left_field) == coeff * right_field + coeff2 * left_field
+template <class FieldType>
+void compare_laplace(Field<FieldType> & left_field, Field<FieldType> & right_field, double coeff, double dx2, long n3, double coeff2 = 0.)
+{
+	Site x(left_field.lattice());
+	double lhs = 0., rhs = 0.;
+	left_field.updateHalo();
+	for(x.first(); x.test(); x.next())
+	{
+		lhs += (left_field(x+0) + left_field(x-0) + left_field(x+1) + left_field(x-1) + left_field(x+2) + left_field(x-2) - 6. * left_field(x)) / dx2 - coeff2 * left_field(x);
+		rhs += coeff * right_field(x);
+	}
+
+	parallel.sum(lhs);
+	parallel.sum(rhs);
+
+	lhs /= n3;
+	rhs /= n3;
+
+	COUT << " lhs = " << lhs << ",   rhs = " << rhs << "\n";
+	return;
+}
+
+
+
+
+
+
 
 
 

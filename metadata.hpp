@@ -193,6 +193,8 @@ struct metadata
 	int read_bg_from_file = 0;
 	int quasi_static = 0;
 	int background_only = 0;
+	double bg_initial_redshift = 100.;
+	double bg_final_redshift = 0.;
 	int lcdm_background = 0;
 	int follow_xi = 0;
 

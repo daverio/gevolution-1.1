@@ -1285,7 +1285,14 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	parseParameter(params, numparam, "background only", sim.background_only);
 	if(sim.background_only)
 	{
-		COUT << " Background only mode!\n";
+		if(parseParameter(params, numparam, "background initial redshift", sim.bg_initial_redshift))
+		{
+			COUT << " Background only mode! Initial redshift (on file!) = " << sim.bg_initial_redshift << "\n";
+		}
+		else sim.bg_initial_redshift = sim.z_in;
+		 
+		parseParameter(params, numparam, "background final redshift", sim.bg_final_redshift);
+		COUT << " Background only mode! Final redshift = " << sim.bg_final_redshift << "\n";
 	}
 
 	parseParameter(params, numparam, "lcdm background", sim.lcdm_background);

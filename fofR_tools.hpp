@@ -238,6 +238,7 @@ void fR_details(const cosmology cosmo, metadata * sim, const double fourpiG)
 {
 	if(sim->fofR_type == FOFR_TYPE_HU_SAWICKI)
 	{
+		//TODO: Check whether we need to rescale something by some power of the boxsize
 		// Model: f(R) = R + F(R)
 		// Hu-Sawicki Model: arXiv:0705.1158 -- See paper for details
 		// m2 := m^2 (comparison between these values and the nomenclature of the original paper)
@@ -260,6 +261,11 @@ void fR_details(const cosmology cosmo, metadata * sim, const double fourpiG)
 	}
 	else if(sim->fofR_type == FOFR_TYPE_RN || sim->fofR_type == FOFR_TYPE_R2)
 	{
+		if(sim->fofR_type == FOFR_TYPE_R2)
+		{
+			// In R + alpha * R^2, alpha is expressed in units of (inverse) 8piG * density today (= 1.)
+			sim->fofR_params[0] /= 2. * fourpiG;
+		}
 		COUT << " f(R) model: a*R^n, with a = " << sim->fofR_params[0] << " and n = " << sim->fofR_params[1] << endl;
 	}
 	else if(sim->fofR_type == FOFR_TYPE_DELTA) //  TODO: Fix for delta < 0: FRR < 0, so everything blows up!

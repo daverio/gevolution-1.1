@@ -327,9 +327,9 @@ Site check_field(Field<FieldType> & field, string field_name, long n3, string me
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
-Site check_vector_field(Field<FieldType> & field, string field_name, long n3, string message = "") // TODO: correct lattice size
+void check_vector_field(Field<FieldType> & field, string field_name, long n3, string message = "") // TODO: correct lattice size
 {
-  Site x(field.lattice()), y;
+  Site x(field.lattice());
   double max[3] = {0.,0.,0.}, hom[3] = {0.,0.,0.}, sum[3] = {0.,0.,0.}, temp;
   int i;
 
@@ -345,7 +345,6 @@ Site check_vector_field(Field<FieldType> & field, string field_name, long n3, st
       if(fabs(temp) > max[i])
       {
         max[i] = fabs(temp);
-        y = x;
       }
     }
   parallel.max(max[i]);
@@ -358,11 +357,9 @@ Site check_vector_field(Field<FieldType> & field, string field_name, long n3, st
        << ",  Max = " << max[i]
        << ",  hom = " << hom[i]
        << ",  |avg| = " << sum[i]
-       << ",  val(x_max) = " << field(y)
       //  << ", rank = " << parallel.rank()
        << endl;
   }
-  return y;
 }
 
 

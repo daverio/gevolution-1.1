@@ -312,7 +312,7 @@ if(sim.mg_flag == FOFR)
 	BiFT.initialize(latFT,3);
 	SiFT.initialize(latFT,3);
 	plan_Bi.initialize(&Bi, &BiFT);
-	plan_Si.initialize(&Si, &SiFT);
+	plan_Si.initialize(&Si, &BiFT);
 	Sij.initialize(lat,3,3,symmetric);
 	SijFT.initialize(latFT,3,3,symmetric);
 	plan_Sij.initialize(&Sij, &SijFT);
@@ -705,9 +705,27 @@ else
 			projection_T00_comm(&source);
 		}
 
-		if(sim.mg_flag == GENREL)
+		if(sim.vector_flag == VECTOR_ELLIPTIC)
 		{
-			if(sim.vector_flag == VECTOR_ELLIPTIC)
+			if(sim.mg_flag == FOFR) // Write a^4 T^0_i in {Si} // TODO: Why not Bi instead, as in GR?
+			{
+				projection_init(&Si);
+				projection_T0i_project(&pcls_cdm, &Si, &phi);
+				if(sim.baryon_flag)
+				{
+					projection_T0i_project(&pcls_b, &Si, &phi);
+				}
+				for(i = 0; i < cosmo.num_ncdm; i++)
+				{
+					if(a >= 1. / (sim.z_switch_Bncdm[i] + 1.))
+					projection_T0i_project(pcls_ncdm+i, &Si, &phi);
+				}
+				projection_T0i_comm(&Si);
+				phi.updateHalo(); // TODO: Necessary? Why here?
+				phidot.updateHalo();
+				Si.updateHalo();
+			}
+			else
 			{
 				projection_init(&Bi);
 				projection_T0i_project(&pcls_cdm, &Bi, &phi);
@@ -719,29 +737,10 @@ else
 					projection_T0i_project(pcls_ncdm+i, &Bi, &phi);
 				}
 				projection_T0i_comm(&Bi);
-
+				Bi.updateHalo();
 				phi.updateHalo();
 				phidot.updateHalo();
-				Bi.updateHalo();
 			}
-		}
-		else if(sim.mg_flag == FOFR) // Write a^4 T^0_i in {Si}
-		{
-			projection_init(&Si);
-			projection_T0i_project(&pcls_cdm, &Si, &phi);
-			if(sim.baryon_flag)
-			{
-				projection_T0i_project(&pcls_b, &Si, &phi);
-			}
-			for(i = 0; i < cosmo.num_ncdm; i++)
-			{
-				if(a >= 1. / (sim.z_switch_Bncdm[i] + 1.))
-				projection_T0i_project(pcls_ncdm+i, &Si, &phi);
-			}
-			projection_T0i_comm(&Si);
-			phi.updateHalo();
-			phidot.updateHalo();
-			Si.updateHalo();
 		}
 
 		projection_init(&Sij); // Write a^3 Tij in {Sij}
@@ -785,6 +784,9 @@ else
 			{
 				//TODO check bg_ncdm() in background.hpp.
 				COUT << " cycle " << cycle << ", background information:\tz = " << (1./a) - 1. << ", average T00 = " << T00hom << ", background model = " << cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo) << "\n                                   \tphihom = " << phihom << ", rescaled T00 = " << T00hom / (1. + 3.*phihom) << endl;
+				check_field(phi, "phi", numpts3d);
+				check_field(chi, "chi", numpts3d);
+				check_vector_field(Bi, "Bi", numpts3d);
 			}
 
 			// Computes 8piG*deltaT = 8piG( (T00 + T11 + T22 + T33) - (-rho_backg + 3P_backg) ), to be stored in {deltaT}
@@ -1093,20 +1095,38 @@ else
 		}
 		chi.updateHalo();  // communicate halo values
 
-		if(sim.vector_flag == VECTOR_ELLIPTIC)
+		if(sim.vector_flag == VECTOR_ELLIPTIC) // TODO: check for f(R)!
 		{
-			#ifdef BENCHMARK
-			ref2_time = MPI_Wtime();
-			#endif
-			plan_Bi.execute(FFT_FORWARD);
-			#ifdef BENCHMARK
-			fft_time += MPI_Wtime() - ref2_time;
-			fft_count++;
-			#endif
-			projectFTvector(BiFT, BiFT, fourpiG * dx * dx); // solve B using elliptic constraint (k-space)
-			#ifdef CHECK_B
-			evolveFTvector(SijFT, BiFT_check, a * a * dtau_old);
-			#endif
+			if(sim.mg_flag == FOFR)
+			{
+				#ifdef BENCHMARK
+				ref2_time = MPI_Wtime();
+				#endif
+				plan_Si.execute(FFT_FORWARD); // Si -> BiFT, not Bi -> BiFT
+				#ifdef BENCHMARK
+				fft_time += MPI_Wtime() - ref2_time;
+				fft_count++;
+				#endif
+				projectFTvector(BiFT, BiFT, fourpiG * dx * dx); // solve B using elliptic constraint (k-space)
+				#ifdef CHECK_B
+				evolveFTvector(SijFT, BiFT_check, a * a * dtau_old);
+				#endif
+			}
+			else
+			{
+				#ifdef BENCHMARK
+				ref2_time = MPI_Wtime();
+				#endif
+				plan_Bi.execute(FFT_FORWARD);
+				#ifdef BENCHMARK
+				fft_time += MPI_Wtime() - ref2_time;
+				fft_count++;
+				#endif
+				projectFTvector(BiFT, BiFT, fourpiG * dx * dx); // solve B using elliptic constraint (k-space)
+				#ifdef CHECK_B
+				evolveFTvector(SijFT, BiFT_check, a * a * dtau_old);
+				#endif
+			}
 		}
 		else
 		evolveFTvector(SijFT, BiFT, a * a * dtau_old);  // evolve B using vector projection (k-space)

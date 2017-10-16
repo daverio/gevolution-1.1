@@ -225,7 +225,6 @@ int main(int argc, char **argv)
 	Field<Real> chi;
 	Field<Real> Bi;
 	Field<Real> source;
-	Field<Real> Si;
 	Field<Real> Sij;
 	Field<Cplx> scalarFT;
 	Field<Cplx> SijFT;
@@ -240,14 +239,11 @@ int main(int argc, char **argv)
 	Field<Real> deltaT;
 	Field<Real> phidot;
 	Field<Real> xidot;
-	Field<Cplx> SiFT;
 
 	Field<Real> laplace_deltaR;
 	Field<Real> dot_deltaR;
 	Field<Real> ddot_deltaR;
 	Field<Real> m2_deltaR;
-	Field<Real> dot_xi;
-
 
 	double temp_val;// TODO Remove after debugging
 
@@ -261,7 +257,6 @@ PlanFFT<Cplx> plan_deltaR_prev;
 PlanFFT<Cplx> plan_deltaT;
 PlanFFT<Cplx> plan_xi;
 PlanFFT<Cplx> plan_Bi;
-PlanFFT<Cplx> plan_Si;
 PlanFFT<Cplx> plan_Sij;
 
 PlanFFT<Cplx> plan_laplace_deltaR;// TODO: needed only to output power spectra
@@ -283,8 +278,8 @@ if(sim.mg_flag == FOFR)
 	xi.initialize(lat,1);
 	xi_prev.initialize(lat,1);
 	xi_prev.alloc();
-	dot_xi.initialize(lat,1);
-	dot_xi.alloc();
+	xidot.initialize(lat,1);
+	xidot.alloc();
 	zeta.initialize(lat,1);
 	deltaR.initialize(lat,1);
 	deltaR_prev.initialize(lat,1);
@@ -308,11 +303,8 @@ if(sim.mg_flag == FOFR)
 	plan_ddot_deltaR.initialize(&ddot_deltaR, &scalarFT);
 	plan_m2_deltaR.initialize(&m2_deltaR, &scalarFT);
 	Bi.initialize(lat,3);
-	Si.initialize(lat,3);
 	BiFT.initialize(latFT,3);
-	SiFT.initialize(latFT,3);
 	plan_Bi.initialize(&Bi, &BiFT);
-	plan_Si.initialize(&Si, &BiFT);
 	Sij.initialize(lat,3,3,symmetric);
 	SijFT.initialize(latFT,3,3,symmetric);
 	plan_Sij.initialize(&Sij, &SijFT);
@@ -707,40 +699,16 @@ else
 
 		if(sim.vector_flag == VECTOR_ELLIPTIC)
 		{
-			if(sim.mg_flag == FOFR) // Write a^4 T^0_i in {Si} // TODO: Why not Bi instead, as in GR?
+			projection_init(&Bi);
+			projection_T0i_project(&pcls_cdm, &Bi, &phi);
+			if (sim.baryon_flag)
+			projection_T0i_project(&pcls_b, &Bi, &phi);
+			for (i = 0; i < cosmo.num_ncdm; i++)
 			{
-				projection_init(&Si);
-				projection_T0i_project(&pcls_cdm, &Si, &phi);
-				if(sim.baryon_flag)
-				{
-					projection_T0i_project(&pcls_b, &Si, &phi);
-				}
-				for(i = 0; i < cosmo.num_ncdm; i++)
-				{
-					if(a >= 1. / (sim.z_switch_Bncdm[i] + 1.))
-					projection_T0i_project(pcls_ncdm+i, &Si, &phi);
-				}
-				projection_T0i_comm(&Si);
-				phi.updateHalo(); // TODO: Necessary? Why here?
-				phidot.updateHalo();
-				Si.updateHalo();
+				if (a >= 1. / (sim.z_switch_Bncdm[i] + 1.))
+				projection_T0i_project(pcls_ncdm+i, &Bi, &phi);
 			}
-			else
-			{
-				projection_init(&Bi);
-				projection_T0i_project(&pcls_cdm, &Bi, &phi);
-				if(sim.baryon_flag)
-				projection_T0i_project(&pcls_b, &Bi, &phi);
-				for(i = 0; i < cosmo.num_ncdm; i++)
-				{
-					if(a >= 1. / (sim.z_switch_Bncdm[i] + 1.))
-					projection_T0i_project(pcls_ncdm+i, &Bi, &phi);
-				}
-				projection_T0i_comm(&Bi);
-				Bi.updateHalo();
-				phi.updateHalo();
-				phidot.updateHalo();
-			}
+			projection_T0i_comm(&Bi);
 		}
 
 		projection_init(&Sij); // Write a^3 Tij in {Sij}
@@ -893,20 +861,20 @@ else
 							xi_set(xi, deltaR, Rbar, FRbar, sim.fofR_params, sim.fofR_type);
 							deltaR.updateHalo();
 							deltaR_prev.updateHalo(); // TODO: Probably unnecessary
-							if(cycle == 1) // Builds dot_xi_{1/2} from xi_1 and xi_0
+							if(cycle == 1) // Builds xidot_{1/2} from xi_1 and xi_0
 							{
-								add_fields(xi, xi_prev, dot_xi, 1./dtau_old, -1./dtau_old);
+								add_fields(xi, xi_prev, xidot, 1./dtau_old, -1./dtau_old);
 							}
 						}
-						else // Else builds xi_i from xi_{i-1} and dot_xi_{i-1/2}, for i >= 2
+						else // Else builds xi_i from xi_{i-1} and xidot_{i-1/2}, for i >= 2
 						{
-							add_fields(xi, dot_xi, xi, 1., dtau_old);
+							add_fields(xi, xidot, xi, 1., dtau_old);
 							xi.updateHalo();
 						}
 						computeDRzeta(deltaT, deltaR, zeta, xi, Rbar, FRbar, sim.fofR_params, sim.fofR_type, sim.fofR_target_precision);
 						if(cycle)
 						{
-							lp_update_dotxi(xi, zeta, dot_xi, dot_xi, Hubble, a*a, dtau_old, dtau, dx*dx);
+							lp_update_dotxi(xi, zeta, xidot, xidot, Hubble, a*a, dtau_old, dtau, dx*dx);
 						}
 					}
 				}
@@ -924,7 +892,7 @@ else
 				if(sim.mg_flag == FOFR)
 				{
 					check_field(xi, "xi", numpts3d);
-					check_field(dot_xi, "dot_xi", numpts3d);
+					check_field(xidot, "xidot", numpts3d);
 					check_field(zeta, "zeta", numpts3d);
 					check_field(deltaR, "deltaR", numpts3d);
 					check_field(deltaR_prev, "deltaR_prev", numpts3d);
@@ -1097,36 +1065,18 @@ else
 
 		if(sim.vector_flag == VECTOR_ELLIPTIC) // TODO: check for f(R)!
 		{
-			if(sim.mg_flag == FOFR)
-			{
-				#ifdef BENCHMARK
-				ref2_time = MPI_Wtime();
-				#endif
-				plan_Si.execute(FFT_FORWARD); // Si -> BiFT, not Bi -> BiFT
-				#ifdef BENCHMARK
-				fft_time += MPI_Wtime() - ref2_time;
-				fft_count++;
-				#endif
-				projectFTvector(BiFT, BiFT, fourpiG * dx * dx); // solve B using elliptic constraint (k-space)
-				#ifdef CHECK_B
-				evolveFTvector(SijFT, BiFT_check, a * a * dtau_old);
-				#endif
-			}
-			else
-			{
-				#ifdef BENCHMARK
-				ref2_time = MPI_Wtime();
-				#endif
-				plan_Bi.execute(FFT_FORWARD);
-				#ifdef BENCHMARK
-				fft_time += MPI_Wtime() - ref2_time;
-				fft_count++;
-				#endif
-				projectFTvector(BiFT, BiFT, fourpiG * dx * dx); // solve B using elliptic constraint (k-space)
-				#ifdef CHECK_B
-				evolveFTvector(SijFT, BiFT_check, a * a * dtau_old);
-				#endif
-			}
+			#ifdef BENCHMARK
+			ref2_time = MPI_Wtime();
+			#endif
+			plan_Bi.execute(FFT_FORWARD);
+			#ifdef BENCHMARK
+			fft_time += MPI_Wtime() - ref2_time;
+			fft_count++;
+			#endif
+			projectFTvector(BiFT, BiFT, fourpiG * dx * dx); // solve B using elliptic constraint (k-space)
+			#ifdef CHECK_B
+			evolveFTvector(SijFT, BiFT_check, a * a * dtau_old);
+			#endif
 		}
 		else
 		evolveFTvector(SijFT, BiFT, a * a * dtau_old);  // evolve B using vector projection (k-space)

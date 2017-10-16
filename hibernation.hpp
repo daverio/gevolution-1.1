@@ -393,7 +393,20 @@ void writeRestartSettings(metadata & sim, icsettings & ic, cosmology & cosmo, co
 //
 //////////////////////////
 
-void hibernate(metadata & sim, icsettings & ic, cosmology & cosmo, Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm, Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_b, Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm, Field<Real> & phi, Field<Real> & chi, Field<Real> & Bi, const double a, const double tau, const double dtau, const int cycle, const int restartcount = -1)
+void hibernate(metadata & sim,
+	 						 icsettings & ic,
+							 cosmology & cosmo,
+							 Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm,
+							 Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_b,
+							 Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm,
+							 Field<Real> & phi,
+							 Field<Real> & chi,
+							 Field<Real> & Bi,
+							 const double a,
+							 const double tau,
+							 const double dtau,
+							 const int cycle,
+							 const int restartcount = -1)
 {
 	string h5filename;
 	char buffer[5];
@@ -488,5 +501,121 @@ void hibernate(metadata & sim, icsettings & ic, cosmology & cosmo, Particles<par
 #endif
 #endif
 }
+
+
+void hibernate(metadata & sim,
+	 						 icsettings & ic,
+							 cosmology & cosmo,
+							 Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm,
+							 Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_b,
+							 Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm,
+							 Field<Real> & phi,
+							 Field<Real> & chi,
+							 Field<Real> & Bi,
+							 Field<Real> & xi,
+							 Field<Real> & xi_prev,
+							 Field<Real> & zeta;
+						 	 Field<Real> & deltaR;
+						 	 Field<Real> & deltaR_prev;
+							 const double a,
+							 const double tau,
+							 const double dtau,
+							 const int cycle,
+							 const int restartcount = -1)
+{
+	string h5filename;
+	char buffer[5];
+	int i;
+	Site x(Bi.lattice());
+
+	h5filename.reserve(2*PARAM_MAX_LENGTH);
+	h5filename.assign(sim.restart_path);
+	h5filename += sim.basename_restart;
+	if (restartcount >= 0)
+	{
+		sprintf(buffer, "%03d", restartcount);
+		h5filename += buffer;
+	}
+
+	writeRestartSettings(sim, ic, cosmo, a, tau, dtau, cycle, restartcount);
+
+#ifndef CHECK_B
+	if (sim.vector_flag == VECTOR_PARABOLIC)
+#endif
+	for (x.first(); x.test(); x.next())
+	{
+		Bi(x,0) /= a * a * sim.numpts;
+		Bi(x,1) /= a * a * sim.numpts;
+		Bi(x,2) /= a * a * sim.numpts;
+	}
+
+#ifdef EXTERNAL_IO
+	while (ioserver.openOstream()== OSTREAM_FAIL);
+
+	pcls_cdm->saveHDF5_server_open(h5filename + "_cdm");
+	if (sim.baryon_flag)
+		pcls_b->saveHDF5_server_open(h5filename + "_b");
+	for (i = 0; i < cosmo.num_ncdm; i++)
+	{
+		sprintf(buffer, "%d", i);
+		pcls_ncdm[i].saveHDF5_server_open(h5filename + "_ncdm" + buffer);
+	}
+
+	if (sim.gr_flag > 0)
+	{
+		phi.saveHDF5_server_open(h5filename + "_phi");
+		chi.saveHDF5_server_open(h5filename + "_chi");
+	}
+
+	if (sim.vector_flag == VECTOR_PARABOLIC)
+		Bi.saveHDF5_server_open(h5filename + "_B");
+#ifdef CHECK_B
+	else
+		Bi.saveHDF5_server_open(h5filename + "_B_check");
+#endif
+
+	pcls_cdm->saveHDF5_server_write();
+	if (sim.baryon_flag)
+		pcls_b->saveHDF5_server_write();
+	for (i = 0; i < cosmo.num_ncdm; i++)
+		pcls_ncdm[i].saveHDF5_server_write();
+
+	if (sim.gr_flag > 0)
+	{
+		phi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
+		chi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
+	}
+
+#ifndef CHECK_B
+	if (sim.vector_flag == VECTOR_PARABOLIC)
+#endif
+		Bi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
+
+	ioserver.closeOstream();
+#else
+	pcls_cdm->saveHDF5(h5filename + "_cdm", 1);
+	if (sim.baryon_flag)
+		pcls_b->saveHDF5(h5filename + "_b", 1);
+	for (i = 0; i < cosmo.num_ncdm; i++)
+	{
+		sprintf(buffer, "%d", i);
+		pcls_ncdm[i].saveHDF5(h5filename + "_ncdm" + buffer, 1);
+	}
+
+	if (sim.gr_flag > 0)
+	{
+		phi.saveHDF5(h5filename + "_phi.h5");
+		chi.saveHDF5(h5filename + "_chi.h5");
+	}
+
+	if (sim.vector_flag == VECTOR_PARABOLIC)
+		Bi.saveHDF5(h5filename + "_B.h5");
+#ifdef CHECK_B
+	else
+		Bi.saveHDF5(h5filename + "_B_check.h5");
+#endif
+#endif
+}
+
 
 #endif

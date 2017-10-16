@@ -242,7 +242,7 @@ void fR_details(const cosmology cosmo, metadata * sim, const double fourpiG)
 		// Model: f(R) = R + F(R)
 		// Hu-Sawicki Model: arXiv:0705.1158 -- See paper for details
 		// m2 := m^2 (comparison between these values and the nomenclature of the original paper)
-		// F(R) = -m2 * c1 * (R/M)^n / (1 + c2*(R/M)^n)
+		// F(R) = -m2 * c1 * (R/m2)^n / (1 + c2*(R/m2)^n)
 		// In settings.ini:
 		// params[0] = m^2 is given in units of (matter energy density today) * 8piG / 3.
 		// params[1] = c2 (normally >> 1)

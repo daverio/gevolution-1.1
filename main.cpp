@@ -449,9 +449,25 @@ else
 	dtau_old_2 = 0.;
 
 	if(ic.generator == ICGEN_BASIC)
+	{
 		generateIC_basic(sim, ic, cosmo, fourpiG, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij); // generates ICs on the fly
+	}
 	else if(ic.generator == ICGEN_READ_FROM_DISK)
-		readIC(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount);
+	{
+		if(sim.mg_flag==FOFR)
+		{
+				readIC(sim, ic, cosmo, fourpiG,
+			 											 a, tau, dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, Hubble, Rbar,
+														 &pcls_cdm, &pcls_b, pcls_ncdm, maxvel,
+														 &phi, &chi, &Bi, &xi, &xi_prev, &zeta, &deltaR, &deltaR_prev, &phidot, &xidot, &source, &Sij, &scalarFT, &BiFT, &SijFT,
+														 &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij,
+														 cycle, snapcount, pkcount, restartcount);
+				Fbar = F(Rbar, sim.fofR_params, sim.fofR_type);
+				FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type);
+				FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type);
+		}
+		else readIC(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount);
+	}
 #ifdef ICGEN_PREVOLUTION
 	else if(ic.generator == ICGEN_PREVOLUTION)
 		generateIC_prevolution(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
@@ -1503,11 +1519,27 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 				if(sim.vector_flag == VECTOR_ELLIPTIC)
 				{
 					plan_Bi_check.execute(FFT_BACKWARD);
-					hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi_check, a, tau, dtau, cycle);
+					if(sim.mg_flag == FOFR)
+						hibernate(sim,ic,cosmo,&pcls_cdm,&pcls_b,pcls_ncdm,
+										phi,chi,Bi,xi,xi_prev,zeta,deltaR,deltaR_prev,phidot,xidot,
+										a,tau,dtau,dtau_old,dtau_old_2,dtau_osci,dtau_bg,Hubble,Rbar,
+										cycle);
+					else
+						hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi_check, a, tau, dtau, cycle);
 				}
 				else
+				{
 #endif
-				hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, a, tau, dtau, cycle);
+					if(sim.mg_flag == FOFR)
+						hibernate(sim,ic,cosmo,&pcls_cdm,&pcls_b,pcls_ncdm,
+											phi,chi,Bi,xi,xi_prev,zeta,deltaR,deltaR_prev,phidot,xidot,
+											a,tau,dtau,dtau_old,dtau_old_2,dtau_osci,dtau_bg,Hubble,Rbar,
+											cycle);
+					else
+						hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, a, tau, dtau, cycle);
+#ifdef CHECK_B
+				}
+#endif
 				break;
 			}
 		}
@@ -1517,15 +1549,32 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 			COUT << COLORTEXT_CYAN << " writing hibernation point" << COLORTEXT_RESET << " at z = " << ((1./a) - 1.) <<  " (cycle " << cycle << "), tau/boxsize = " << tau << endl;
 			if(sim.vector_flag == VECTOR_PARABOLIC && sim.gr_flag == 0)
 				plan_Bi.execute(FFT_BACKWARD);
+
 #ifdef CHECK_B
 			if(sim.vector_flag == VECTOR_ELLIPTIC)
 			{
 				plan_Bi_check.execute(FFT_BACKWARD);
-				hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi_check, a, tau, dtau, cycle, restartcount);
+				if(sim.mg_flag == FOFR)
+					hibernate(sim,ic,cosmo,&pcls_cdm,&pcls_b,pcls_ncdm,
+										phi,chi,Bi,xi,xi_prev,zeta,deltaR,deltaR_prev,phidot,xidot,
+										a,tau,dtau,dtau_old,dtau_old_2,dtau_osci,dtau_bg,Hubble,Rbar,
+										cycle,restartcount);
+				else
+					hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi_check, a, tau, dtau, cycle, restartcount);
 			}
 			else
+			{
 #endif
-			hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, a, tau, dtau, cycle, restartcount);
+				if(sim.mg_flag == FOFR)
+					hibernate(sim,ic,cosmo,&pcls_cdm,&pcls_b,pcls_ncdm,
+										phi,chi,Bi,xi,xi_prev,zeta,deltaR,deltaR_prev,phidot,xidot,
+										a,tau,dtau,dtau_old,dtau_old_2,dtau_osci,dtau_bg,Hubble,Rbar,
+										cycle,restartcount);
+				else
+					hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, a, tau, dtau, cycle, restartcount);
+#ifdef CHECK_B
+			}
+#endif
 			restartcount++;
 		}
 

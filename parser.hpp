@@ -741,7 +741,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 {
 	char par_string[PARAM_MAX_LENGTH];
 	char * ptr;
-	char * pptr[MAX_PCL_SPECIES];
+	char * pptr[MAX_PCL_SPECIES+10];
 	int usedparams = 0;
 	int i;
 
@@ -749,9 +749,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	ic.pkfile[0] = '\0';
 	ic.tkfile[0] = '\0';
-	ic.metricfile[0][0] = '\0';
-	ic.metricfile[1][0] = '\0';
-	ic.metricfile[2][0] = '\0';
+	for(i=0;i<10;i++)ic.metricfile[i][0] = '\0';
 	ic.seed = 0;
 	ic.flags = 0;
 	ic.z_ic = -2.;
@@ -975,7 +973,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		}
 		parseParameter(params, numparam, "tau", ic.restart_tau);
 		parseParameter(params, numparam, "dtau", ic.restart_dtau);
-		for (i = 0; i < 3; i++)
+		for (i = 0; i < 10; i++)
 			pptr[i] = ic.metricfile[i];
 		parseParameter(params, numparam, "metric file", pptr, i);
 		if(parseParameter(params, numparam, "gevolution version", ic.restart_version))
@@ -1290,7 +1288,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			COUT << " Background only mode! Initial redshift (on file!) = " << sim.bg_initial_redshift << "\n";
 		}
 		else sim.bg_initial_redshift = sim.z_in;
-		 
+
 		parseParameter(params, numparam, "background final redshift", sim.bg_final_redshift);
 		COUT << " Background only mode! Final redshift = " << sim.bg_final_redshift << "\n";
 	}
@@ -1448,6 +1446,17 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			else
 			{
 				//TODO: error if the number of param does not fit the type
+			}
+
+			if(ic.generator == ICGEN_READ_FROM_DISK)
+			{
+				parseParameter(params, numparam, "dtau_old", ic.restart_dtau_old);
+				parseParameter(params, numparam, "dtau_old_2", ic.restart_dtau_old_2);
+				parseParameter(params, numparam, "dtau_osci", ic.restart_dtau_osci);
+				parseParameter(params, numparam, "dtau_bg", ic.restart_dtau_bg);
+				parseParameter(params, numparam, "scale_factor", ic.restart_a);
+				parseParameter(params, numparam, "Hubble", ic.restart_Hubble);
+				parseParameter(params, numparam, "Rbar", ic.restart_Rbar);
 			}
 		}
 		else

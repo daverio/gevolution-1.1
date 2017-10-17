@@ -242,7 +242,7 @@ struct icsettings
 	char pclfile[MAX_PCL_SPECIES][PARAM_MAX_LENGTH];
 	char pkfile[PARAM_MAX_LENGTH];
 	char tkfile[PARAM_MAX_LENGTH];
-	char metricfile[3][PARAM_MAX_LENGTH];
+	char metricfile[10][PARAM_MAX_LENGTH];
 	double restart_tau;
 	double restart_dtau;
 	double restart_version;
@@ -252,6 +252,16 @@ struct icsettings
 	double A_s;
 	double n_s;
 	double k_pivot;
+
+	///fofR restart
+	double restart_dtau_old;
+	double restart_dtau_old_2;
+	double restart_dtau_osci;
+	double restart_dtau_bg;
+	double restart_a;
+	double restart_Hubble;
+	double restart_Rbar;
+
 };
 
 struct cosmology

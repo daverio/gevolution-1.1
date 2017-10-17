@@ -5,7 +5,7 @@
 // code components related to background evolution for the f(R) model
 //
 // Author: David Daverio (Cambridge University)
-//         Lorenzo Reverberi (Cape Town University)
+//         Lorenzo Reverberi (Cape Town University, Czech Academy of Sciences & CEICO, Prague)
 //
 // Last modified: February 2016
 //
@@ -115,16 +115,25 @@ inline double getBackground(gsl_spline * spline, double tau, gsl_interp_accel * 
 // TODO: At the moment, initial conditions are such that:
 //	R_in = R_in(GR) = 8piG(rho_m + 4*rho_Lambda)
 //	R'_in = R'_in(GR) = -24piG*H*rho_m
-//	This gives H = (16piG rho + FR*R - F) * a^2 / 6 / (1 + FR - 24piG rho_m FRR)  -- see RK4 equation for R'
+//	This gives H = (16piG rho + FR*R - F) * a^2 / 6 / (1 + FR - 24piG rho_m FRR)  -- see differential equation for R'
+//
+//  Alternatively, we can choose:
+//	R_in = R_in(GR) = 8piG(rho_m + 4*rho_Lambda)
+//	H = H(GR)
+//	R'_in = R'_in(R_GR, H_GR) -- see differential equation for R'
 inline double R_initial_fR(const double a, const double eightpiG, const cosmology cosmo)
 {
-	return eightpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a + 4.*cosmo.Omega_Lambda ); // TODO: Maybe not accurate enough at this stage, but let's try this first.
+	double R0 = eightpiG * ( cosmo.Omega_m / a / a / a + 4. * (1. - cosmo.Omega_m - cosmo.Omega_rad) ); // TODO: Maybe not accurate enough at this stage, but let's try this first.
+	COUT << " Initial condition for R: R0 = " << R0 << "\n";
+	return R0;
 }
 
 inline double H_initial_fR(const double a, const double H, const double R, const double f, const double fr, const double frr_term)
 {
-	return H;
-	// return sqrt( (H*H + a*a*(fr*R - f)/6.) / (1. + fr - frr_term) );
+	double H0 = H;
+	// double H0 = sqrt( (H*H + a*a*(fr*R - f)/6.) / (1. + fr - frr_term) );
+	COUT << " Initial condition for H: H0 = " << H0 << "\n";
+	return H0;
 }
 
 

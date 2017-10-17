@@ -250,7 +250,7 @@ void fR_details(const cosmology cosmo, metadata * sim, const double fourpiG)
 		// Constructed parameters:
 		// params[3] = c1, calibrated to give c1*m2/c2 = 2 * 8piG * rho_Lambda [see 0705.1158 equations (25,26)]
 		double temp = sim->fofR_params[0];
-		sim->fofR_params[3] = sim->fofR_params[1] * 6. * (1 - cosmo.Omega_m - cosmo.Omega_rad) / cosmo.Omega_m / sim->fofR_params[0]; //Omega_m > 0, checked in parseMetadata()
+		sim->fofR_params[3] = sim->fofR_params[1] * 6. * (1. - cosmo.Omega_m - cosmo.Omega_rad) / cosmo.Omega_m / sim->fofR_params[0]; //Omega_m > 0, checked in parseMetadata()
 		sim->fofR_params[0] *= fourpiG * cosmo.Omega_m / 1.5;
 		COUT << " f(R) model: Hu-Sawicki    F(R) = - m2 * c1 * pow(R/m2, n) / (1. + c2 * pow(R/m2, n))" << endl
 				 << "  with m2 = " << temp << " * 8piG * rho_{m0} / 3. = " << sim->fofR_params[0] << endl;

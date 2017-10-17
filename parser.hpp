@@ -1290,9 +1290,9 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			COUT << " Background only mode! Initial redshift (on file!) = " << sim.bg_initial_redshift << "\n";
 		}
 		else sim.bg_initial_redshift = sim.z_in;
-		 
+
 		parseParameter(params, numparam, "background final redshift", sim.bg_final_redshift);
-		COUT << " Background only mode! Final redshift = " << sim.bg_final_redshift << "\n";
+		COUT << "                       Final redshift = " << sim.bg_final_redshift << "\n";
 	}
 
 	parseParameter(params, numparam, "lcdm background", sim.lcdm_background);
@@ -1504,7 +1504,8 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	{
 		if(sim.mg_flag == FOFR)
 		{
-			if(sim.quasi_static) strcpy(sim.basename_generic, "fR_quasi-static");
+			if(sim.background_only) strcpy(sim.basename_generic, "fR");
+			else if(sim.quasi_static) strcpy(sim.basename_generic, "fR_quasi-static");
 			else if(sim.back_to_GR) strcpy(sim.basename_generic, "fR_back-to-GR");
 			else strcpy(sim.basename_generic, "fR");
 		}

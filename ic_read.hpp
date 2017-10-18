@@ -343,7 +343,7 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 				}
 				else
 				{
-					fprintf(bgfile, "# background statistics\n# cycle   tau/boxsize    a             conformal H     R              phi(k=0)       T00(k=0)\n");
+					fprintf(bgfile, "# background statistics\n# cycle   tau/boxsize    a              conformal H    R              phi(k=0)       T00(k=0)\n");
 					fclose(bgfile);
 				}
 			}
@@ -395,7 +395,7 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 				}
 				else
 				{
-					fprintf(bgfile, "# background statistics\n# cycle   tau/boxsize    a             conformal H/H0  phi(k=0)       T00(k=0)\n");
+					fprintf(bgfile, "# background statistics\n# cycle   tau/boxsize    a              conformal H    R              phi(k=0)       T00(k=0)\n");
 					fwrite((const void *) buf.data(), sizeof(char), buf.length(), bgfile);
 					fclose(bgfile);
 					buf.clear();
@@ -417,8 +417,7 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 
 		projection_init(Sij);
 		projection_Tij_project(pcls_cdm, Sij, a, phi);
-		if (sim.baryon_flag)
-			projection_Tij_project(pcls_b, Sij, a, phi);
+		if (sim.baryon_flag) projection_Tij_project(pcls_b, Sij, a, phi);
 		projection_Tij_comm(Sij);
 
 		prepareFTsource<Real>(*phi, *Sij, *Sij, 2. * fourpiG / a / (double) sim.numpts / (double) sim.numpts);
@@ -455,6 +454,15 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 }
 
 
+/////////////////////////////////////////////////
+/////////////////////////////////////////////////
+/////////////////////////////////////////////////
+/////////////////////////////////////////////////
+/////////////////////////////////////////////////
+/////////////////////////////////////////////////
+/////////////////////////////////////////////////
+/////////////////////////////////////////////////
+/////////////////////////////////////////////////
 void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 						const double fourpiG,
 						double & a,
@@ -493,7 +501,8 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 						int & cycle,
 						int & snapcount,
 						int & pkcount,
-						int & restartcount)
+						int & restartcount,
+						string filename_bin)
 {
 	part_simple_info pcls_cdm_info;
 	part_simple_dataType pcls_cdm_dataType;
@@ -520,22 +529,67 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 	hdr.npart[1] = 0;
 
 	projection_init(phi);
+	double dtemp;
+	int itemp;
 
-	if (ic.z_ic > -1.)
-		a = 1. / (1. + ic.z_ic);
+	ifstream file_bin;
+	file_bin.open(filename_bin,ios::in|ios::binary);
+	if(file_bin.is_open())
+	{
+		file_bin.read((char*) & dtemp, sizeof(double));
+		a = dtemp;
+		file_bin.read((char*) & dtemp, sizeof(double));
+		tau = dtemp;
+		file_bin.read((char*) & dtemp, sizeof(double));
+		dtau = dtemp;
+		file_bin.read((char*) & dtemp, sizeof(double));
+		dtau_old = dtemp;
+		file_bin.read((char*) & dtemp, sizeof(double));
+		dtau_old_2 = dtemp;
+		file_bin.read((char*) & dtemp, sizeof(double));
+		Hubble = dtemp;
+		file_bin.read((char*) & dtemp, sizeof(double));
+		Rbar = dtemp;
+		file_bin.read((char*) & dtemp, sizeof(double));
+		cosmo.Omega_cdm = dtemp;
+		file_bin.read((char*) & dtemp, sizeof(double));
+		cosmo.Omega_b = dtemp;
+		file_bin.read((char*) & dtemp, sizeof(double));
+		cosmo.Omega_m = dtemp;
+		file_bin.read((char*) & dtemp, sizeof(double));
+		cosmo.Omega_Lambda = dtemp;
+		file_bin.read((char*) & dtemp, sizeof(double));
+		cosmo.Omega_g = dtemp;
+		file_bin.read((char*) & dtemp, sizeof(double));
+		cosmo.Omega_ur = dtemp;
+		file_bin.read((char*) & dtemp, sizeof(double));
+		cosmo.Omega_rad = dtemp;
 
+		file_bin.read((char*) & itemp, sizeof(int));
+		sim.num_fofR_params = itemp;
+		for(int j=0; j<sim.num_fofR_params; j++)
+		{
+			file_bin.read((char*) & dtemp, sizeof(double));
+			sim.fofR_params[j] = dtemp;
+			j++;
+		}
 
-	a = ic.restart_a;
-
-
-
-
-
+		file_bin.read((char*) & dtemp, sizeof(double));
+		sim.fofR_epsilon_bg = dtemp;
+		file_bin.read((char*) & dtemp, sizeof(double));
+		sim.fofR_epsilon_fields = dtemp;
+		file_bin.read((char*) & dtemp, sizeof(double));
+		sim.fofR_target_precision = dtemp;
+		file_bin.close();
+	}
+	else
+	{
+		cout << "readIC: cant open file: " << filename_bin << endl;
+	}
 
 	strcpy(pcls_cdm_info.type_name, "part_simple");
 	pcls_cdm_info.mass = 0.;
 	pcls_cdm_info.relativistic = false;
-
 	pcls_cdm->initialize(pcls_cdm_info, pcls_cdm_dataType, &(phi->lattice()), boxSize);
 
 	if ((ext = strstr(ic.pclfile[0], ".h5")) != NULL)
@@ -591,7 +645,6 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 		strcpy(pcls_b_info.type_name, "part_simple");
 		pcls_b_info.mass = 0.;
 		pcls_b_info.relativistic = false;
-
 		pcls_b->initialize(pcls_b_info, pcls_b_dataType, &(phi->lattice()), boxSize);
 
 		if ((ext = strstr(ic.pclfile[1], ".h5")) != NULL)
@@ -705,8 +758,7 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 	{
 		projection_init(source);
 		scalarProjectionCIC_project(pcls_cdm, source);
-		if (sim.baryon_flag)
-			scalarProjectionCIC_project(pcls_b, source);
+		if (sim.baryon_flag) scalarProjectionCIC_project(pcls_b, source);
 		scalarProjectionCIC_comm(source);
 
 		plan_source->execute(FFT_FORWARD);
@@ -746,54 +798,53 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 			chi->updateHalo();
 		}
 
+		if(sim.mg_flag == FOFR)
+		{
+			filename.assign(ic.metricfile[3]);
+			xi->loadHDF5(filename);
+			xi->updateHalo();
 
-				if(sim.mg_flag == FOFR)
-				{
-					filename.assign(ic.metricfile[3]);
-					xi->loadHDF5(filename);
-					xi->updateHalo();
+			filename.assign(ic.metricfile[4]);
+			xi_prev->loadHDF5(filename);
+			xi_prev->updateHalo();
 
-					filename.assign(ic.metricfile[4]);
-					xi_prev->loadHDF5(filename);
-					xi_prev->updateHalo();
+			filename.assign(ic.metricfile[5]);
+			zeta->loadHDF5(filename);
+			zeta->updateHalo();
 
-					filename.assign(ic.metricfile[5]);
-					zeta->loadHDF5(filename);
-					zeta->updateHalo();
+			filename.assign(ic.metricfile[6]);
+			deltaR->loadHDF5(filename);
+			deltaR->updateHalo();
 
-					filename.assign(ic.metricfile[6]);
-					deltaR->loadHDF5(filename);
-					deltaR->updateHalo();
+			filename.assign(ic.metricfile[7]);
+			deltaR_prev->loadHDF5(filename);
+			deltaR_prev->updateHalo();
 
-					filename.assign(ic.metricfile[7]);
-					deltaR_prev->loadHDF5(filename);
-					deltaR_prev->updateHalo();
+			filename.assign(ic.metricfile[8]);
+			phidot->loadHDF5(filename);
+			phidot->updateHalo();
 
-					filename.assign(ic.metricfile[8]);
-					phidot->loadHDF5(filename);
-					phidot->updateHalo();
+			filename.assign(ic.metricfile[9]);
+			xidot->loadHDF5(filename);
+			xidot->updateHalo();
+		}
 
-					filename.assign(ic.metricfile[9]);
-					xidot->loadHDF5(filename);
-					xidot->updateHalo();
-				}
-
-		if (parallel.isRoot())
+		if(parallel.isRoot())
 		{
 			sprintf(line, "%s%s_background.dat", sim.output_path, sim.basename_generic);
 			bgfile = fopen(line, "r");
-			if (bgfile == NULL)
+			if(bgfile == NULL)
 			{
 				COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": unable to locate file for background output! A new file will be created" << endl;
 				bgfile = fopen(line, "w");
-				if (bgfile == NULL)
+				if(bgfile == NULL)
 				{
 					COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": unable to create file for background output!" << endl;
 					parallel.abortForce();
 				}
 				else
 				{
-					fprintf(bgfile, "# background statistics\n# cycle   tau/boxsize    a             conformal H/H0  phi(k=0)       T00(k=0)\n");
+					fprintf(bgfile, "# background statistics\n# cycle   tau/boxsize    a              conformal H    R              phi(k=0)       T00(k=0)\n");
 					fclose(bgfile);
 				}
 			}
@@ -838,14 +889,14 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 				sprintf(line, "%s%s_background.dat", sim.output_path, sim.basename_generic);
 				bgfile = fopen(line, "w");
 
-				if (bgfile == NULL)
+				if(bgfile == NULL)
 				{
 					COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": unable to create file for background output!" << endl;
 					parallel.abortForce();
 				}
 				else
 				{
-					fprintf(bgfile, "# background statistics\n# cycle   tau/boxsize    a             conformal H/H0  phi(k=0)       T00(k=0)\n");
+					fprintf(bgfile, "# background statistics\n# cycle   tau/boxsize    a              conformal H    R              phi(k=0)       T00(k=0)\n");
 					fwrite((const void *) buf.data(), sizeof(char), buf.length(), bgfile);
 					fclose(bgfile);
 					buf.clear();
@@ -878,21 +929,8 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 		chi->updateHalo();
 	}
 
-
-
-
-
 	if (ic.restart_cycle >= 0)
 	cycle = ic.restart_cycle + 1;
-
-	tau = ic.restart_tau;
-	dtau = ic.restart_dtau;
-	dtau_old = ic.restart_dtau_old;
-	dtau_old_2 = ic.restart_dtau_old_2;
-	dtau_osci = ic.restart_dtau_osci;
-	dtau_bg = ic.restart_dtau_bg;
-	Hubble = ic.restart_Hubble;
-	Rbar = ic.restart_Rbar;
 
 	while (snapcount < sim.num_snapshot && 1. / a < sim.z_snapshot[snapcount] + 1.)
 		snapcount++;

@@ -1,5 +1,5 @@
 # programming environment
-COMPILER     := CC
+COMPILER     := mpic++
 INCLUDE      := -I../LATfield2/
 LIB          := -lfftw3 -lm -lhdf5 -lgsl -lgslcblas
 
@@ -12,7 +12,7 @@ HEADERS      := $(wildcard *.hpp)
 DLATFIELD2   := -DFFT3D -DHDF5
 
 # optional compiler settings (LATfield2)
-DLATFIELD2   += -DH5_HAVE_PARALLEL
+#DLATFIELD2   += -DH5_HAVE_PARALLEL
 #DLATFIELD2   += -DEXTERNAL_IO
 
 # optional compiler settings (gevolution)

@@ -1,3 +1,5 @@
+#include <iostream>
+#include <fstream>
 //////////////////////////
 // hibernation.hpp
 //////////////////////////
@@ -502,6 +504,16 @@ void hibernate(metadata & sim,
 #endif
 }
 
+
+
+
+
+//////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
+// Restart settings for f(R) gravity
+// TODO: More details here
+//////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////
 void writeRestartSettings(metadata & sim,
 	 												icsettings & ic,
 													cosmology & cosmo,
@@ -510,23 +522,67 @@ void writeRestartSettings(metadata & sim,
 													const double dtau,
 													const double dtau_old,
 													const double dtau_old_2,
-													const double dtau_osci,
-													const double dtau_bg,
 													const double Hubble,
 													const double Rbar,
 													const int cycle,
 													const int restartcount = -1)
 {
 	char buffer[2*PARAM_MAX_LENGTH+24];
+	char buffer_bin[2*PARAM_MAX_LENGTH+24];
 	FILE * outfile;
+	ofstream outfile_bin;
+
 	int i;
 
 	if (!parallel.isRoot()) return;
 
 	if (restartcount >= 0)
+	{
 		sprintf(buffer, "%s%s%03d.ini", sim.restart_path, sim.basename_restart, restartcount);
+		sprintf(buffer_bin, "%s%s%03d.ini.bin", sim.restart_path, sim.basename_restart, restartcount);
+	}
 	else
+	{
 		sprintf(buffer, "%s%s.ini", sim.restart_path, sim.basename_restart);
+		sprintf(buffer_bin, "%s%s.ini.bin", sim.restart_path, sim.basename_restart);
+	}
+
+	outfile_bin.open(buffer_bin,ios::out|ios::trunc|ios::binary);
+	if(outfile_bin.is_open())
+	{
+		outfile_bin.write((char*) & a, sizeof(double));
+		outfile_bin.write((char*) & tau, sizeof(double));
+		outfile_bin.write((char*) & dtau, sizeof(double));
+		outfile_bin.write((char*) & dtau_old, sizeof(double));
+		outfile_bin.write((char*) & dtau_old_2, sizeof(double));
+		outfile_bin.write((char*) & Hubble, sizeof(double));
+		outfile_bin.write((char*) & Rbar, sizeof(double));
+		outfile_bin.write((char*) & cosmo.Omega_cdm, sizeof(double));
+		outfile_bin.write((char*) & cosmo.Omega_b, sizeof(double));
+		outfile_bin.write((char*) & cosmo.Omega_m, sizeof(double));
+		outfile_bin.write((char*) & cosmo.Omega_Lambda, sizeof(double));
+		outfile_bin.write((char*) & cosmo.Omega_g, sizeof(double));
+		outfile_bin.write((char*) & cosmo.Omega_ur, sizeof(double));
+		outfile_bin.write((char*) & cosmo.Omega_rad, sizeof(double));
+
+		outfile_bin.write((char*) & sim.num_fofR_params, sizeof(int));
+		for(int j=0; j<sim.num_fofR_params; j++)
+		{
+			outfile_bin.write((char*) & sim.fofR_params[j], sizeof(double));
+			j++;
+		}
+		outfile_bin.write((char*) & sim.fofR_epsilon_bg, sizeof(double));
+		outfile_bin.write((char*) & sim.fofR_epsilon_fields, sizeof(double));
+		outfile_bin.write((char*) & sim.fofR_target_precision, sizeof(double));
+		outfile_bin.close();
+	}
+	else
+	{
+		cout << "error opening binary restart file" << endl;
+	}
+
+
+
 	outfile = fopen(buffer, "w");
 	if (outfile == NULL)
 	{
@@ -579,8 +635,6 @@ void writeRestartSettings(metadata & sim,
 				fprintf(outfile, ", %s%s%s_xidot.h5", sim.restart_path, sim.basename_restart, buffer);
 			}
 			fprintf(outfile, "\n");
-
-
 		}
 		else if (sim.vector_flag == VECTOR_PARABOLIC)
 			fprintf(outfile, "metric file        = %s%s%s_B.h5\n", sim.restart_path, sim.basename_restart, buffer);
@@ -589,19 +643,15 @@ void writeRestartSettings(metadata & sim,
 			fprintf(outfile, "metric file        = %s%s%s_B_check.h5\n", sim.restart_path, sim.basename_restart, buffer);
 #endif
 
-		fprintf(outfile, "restart redshift   = %.15lf\n", (1./a) - 1.);
+		fprintf(outfile, "restart redshift   = %f\n", (1./a) - 1.);
 		fprintf(outfile, "cycle              = %d\n", cycle);
-		fprintf(outfile, "tau                = %.15le\n", tau);
-		fprintf(outfile, "dtau               = %.15le\n", dtau);
-		fprintf(outfile, "dtau_old           = %.15le\n", dtau_old);
-		fprintf(outfile, "dtau_old_2         = %.15le\n", dtau_old_2);
-		fprintf(outfile, "dtau_osci          = %.15le\n", dtau_osci);
-		fprintf(outfile, "dtau_bg         	 = %.15le\n", dtau_bg);
-		fprintf(outfile, "scale_factor     	 = %.15le\n", a);
-		fprintf(outfile, "Hubble           	 = %.15le\n", Hubble);
-		fprintf(outfile, "Rbar               = %.15le\n", Rbar);
-
-
+		fprintf(outfile, "tau                = %e\n", tau);
+		fprintf(outfile, "dtau               = %e\n", dtau);
+		fprintf(outfile, "dtau_old           = %e\n", dtau_old);
+		fprintf(outfile, "dtau_old_2         = %e\n", dtau_old_2);
+		fprintf(outfile, "scale_factor     	 = %e\n", a);
+		fprintf(outfile, "Hubble           	 = %e\n", Hubble);
+		fprintf(outfile, "Rbar               = %e\n", Rbar);
 
 		fprintf(outfile, "gevolution version = %g\n\n", GEVOLUTION_VERSION);
 		fprintf(outfile, "seed               = %d\n", ic.seed);
@@ -625,12 +675,12 @@ void writeRestartSettings(metadata & sim,
 			fprintf(outfile, "m_cdm     = ");
 			for (i = 0; i < cosmo.num_ncdm - 1; i++)
 				fprintf(outfile, "%9lf, ", cosmo.m_ncdm[i]);
-			fprintf(outfile, "%9lf\n", cosmo.m_ncdm[i]);
-			fprintf(outfile, "T_cdm     = ");
+				fprintf(outfile, "%9lf\n", cosmo.m_ncdm[i]);
+				fprintf(outfile, "T_cdm     = ");
 			for (i = 0; i < cosmo.num_ncdm - 1; i++)
 				fprintf(outfile, "%9lf, ", cosmo.T_ncdm[i]);
-			fprintf(outfile, "%9lf\n", cosmo.T_ncdm[i]);
-			fprintf(outfile, "deg_cdm   = ");
+				fprintf(outfile, "%9lf\n", cosmo.T_ncdm[i]);
+				fprintf(outfile, "deg_cdm   = ");
 			for (i = 0; i < cosmo.num_ncdm - 1; i++)
 				fprintf(outfile, "%lf, ", cosmo.deg_ncdm[i]);
 			fprintf(outfile, "%lg\n", cosmo.deg_ncdm[i]);
@@ -647,7 +697,7 @@ void writeRestartSettings(metadata & sim,
 				fprintf(outfile, "switch delta_ncdm   = ");
 				for (i = 0; i < cosmo.num_ncdm - 1; i++)
 					fprintf(outfile, "%lf, ", sim.z_switch_deltancdm[i]);
-				fprintf(outfile, "%lf\n", sim.z_switch_deltancdm[i]);
+					fprintf(outfile, "%lf\n", sim.z_switch_deltancdm[i]);
 			}
 			fprintf(outfile, "switch linear chi   = %lf\n", sim.z_switch_linearchi);
 		}
@@ -659,37 +709,29 @@ void writeRestartSettings(metadata & sim,
 			}
 			else if(sim.mg_flag == FOFR)
 			{
-
-				fprintf(outfile, "gravity theory      = f(R)\n");
-
-
+				fprintf(outfile, "gravity theory      = fr\n");
 				fprintf(outfile, "\n\n# f(R) settings\n\n");
-
 				fprintf(outfile, "background file             = %s\n",sim.background_filename);
 
-				if(sim.fofR_type == FOFR_TYPE_RN)
+				if(sim.fofR_type == FOFR_TYPE_RN || sim.fofR_type == FOFR_TYPE_R2)
 				{
+					if(sim.fofR_type == FOFR_TYPE_R2) fprintf(outfile, "# WARNING: f(R) parameters for R + R^2 model hav already been rescaled. See fofR_tools.hpp for additional information.\n");
 					fprintf(outfile, "f(R) type                   = RN\n");
-					fprintf(outfile, "f(R) parameters             = %e, %f\n",sim.fofR_params[0],sim.fofR_params[1]);
-				}
-				else if(sim.fofR_type == FOFR_TYPE_R2)
-				{
-				fprintf(outfile, "f(R) type                   = RN\n");
-					fprintf(outfile, "f(R) parameters             = %e, %f\n",sim.fofR_params[0],sim.fofR_params[1]);
+					fprintf(outfile, "f(R) parameters             = %e, %f\n", sim.fofR_params[0], sim.fofR_params[1]);
 				}
 				else if(sim.fofR_type == FOFR_TYPE_DELTA)
 				{
-				fprintf(outfile, "f(R) type                   = DE\n");
-					fprintf(outfile, "f(R) parameters             = %e, %f\n",sim.fofR_params[0],sim.fofR_params[1]);
+					fprintf(outfile, "f(R) type                   = DE\n");
+					fprintf(outfile, "f(R) parameters             = %e, %f\n", sim.fofR_params[0], sim.fofR_params[1]);
 					}
 				else if(sim.fofR_type == FOFR_TYPE_HU_SAWICKI)
 				{
-				fprintf(outfile, "f(R) type                   = HS\n");
-					fprintf(outfile, "f(R) parameters             = %f, %f, %f\n",sim.fofR_params[0],sim.fofR_params[1],sim.fofR_params[2]);
+					fprintf(outfile, "# WARNING: f(R) parameters for Hu-Sawicki model have already been rescaled. See fofR_tools.hpp for additional information.\n");
+					fprintf(outfile, "f(R) type                   = HS\n");
+					fprintf(outfile, "f(R) parameters             = %f, %f, %f, %f\n",sim.fofR_params[0], sim.fofR_params[1], sim.fofR_params[2], sim.fofR_params[3]);
 				}
 				else
 					COUT<< " error f(R) type not recognized!" << endl;
-
 
 				fprintf(outfile, "f(R) epsilon background     = %f\n",sim.fofR_epsilon_bg);
 				fprintf(outfile, "f(R) epsilon fields         = %f\n",sim.fofR_epsilon_fields);
@@ -704,7 +746,6 @@ void writeRestartSettings(metadata & sim,
 				fprintf(outfile, "lcdm background             = %d\n",sim.lcdm_background);
 				fprintf(outfile, "switch to f(R) redshift     = %f\n",sim.z_switch_fR_background);
 				fprintf(outfile, "quasi-static                = %d\n",sim.quasi_static);
-				fprintf(outfile, "read background from file   = %d\n",sim.read_bg_from_file);
 				fprintf(outfile, "follow xi                   = %d\n",sim.follow_xi);
 				fprintf(outfile, "check redshift              = %f\n",sim.z_check);
 			}
@@ -712,32 +753,28 @@ void writeRestartSettings(metadata & sim,
 		else
 			fprintf(outfile, "gravity theory      = N\n");
 
-
-
-
-
 		if (sim.vector_flag == VECTOR_ELLIPTIC)
 			fprintf(outfile, "vector method       = elliptic\n");
 		else
 			fprintf(outfile, "vector method       = parabolic\n");
-		fprintf(outfile, "\ninitial redshift    = %lg\n", sim.z_in);
-		fprintf(outfile, "boxsize             = %lg\n", sim.boxsize);
-		fprintf(outfile, "Ngrid               = %d\n", sim.numpts);
-		fprintf(outfile, "Courant factor      = %lg\n", sim.Cf);
-		fprintf(outfile, "time step limit     = %lg\n", sim.steplimit);
+			fprintf(outfile, "\ninitial redshift  = %lg\n", sim.z_in);
+			fprintf(outfile, "boxsize             = %lg\n", sim.boxsize);
+			fprintf(outfile, "Ngrid               = %d\n", sim.numpts);
+			fprintf(outfile, "Courant factor      = %lg\n", sim.Cf);
+			fprintf(outfile, "time step limit     = %lg\n", sim.steplimit);
 		if (cosmo.num_ncdm > 0)
 			fprintf(outfile, "move limit          = %lg\n", sim.movelimit);
-		fprintf(outfile, "\n\n# output\n\n");
-		fprintf(outfile, "output path        = %s\n", sim.output_path);
-		fprintf(outfile, "generic file base  = %s\n", sim.basename_generic);
-		fprintf(outfile, "snapshot file base = %s\n", sim.basename_snapshot);
-		fprintf(outfile, "Pk file base       = %s\n", sim.basename_pk);
+			fprintf(outfile, "\n\n# output\n\n");
+			fprintf(outfile, "output path        = %s\n", sim.output_path);
+			fprintf(outfile, "generic file base  = %s\n", sim.basename_generic);
+			fprintf(outfile, "snapshot file base = %s\n", sim.basename_snapshot);
+			fprintf(outfile, "Pk file base       = %s\n", sim.basename_pk);
 		if (sim.num_snapshot > 0)
 		{
 			fprintf(outfile, "snapshot redshifts = ");
 			for (i = 0; i < sim.num_snapshot - 1; i++)
 				fprintf(outfile, "%lg, ", sim.z_snapshot[i]);
-			fprintf(outfile, "%lg\n", sim.z_snapshot[i]);
+				fprintf(outfile, "%lg\n", sim.z_snapshot[i]);
 		}
 		if (sim.out_snapshot)
 		{
@@ -993,6 +1030,18 @@ void writeRestartSettings(metadata & sim,
 }
 
 
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////
+// Hibernate for f(R) gravity
+// TODO: More details here
+//////////////////////////////////////////////////////////
 void hibernate(metadata & sim,
 	 						 icsettings & ic,
 							 cosmology & cosmo,
@@ -1014,8 +1063,6 @@ void hibernate(metadata & sim,
 							 const double dtau,
 							 const double dtau_old,
 							 const double dtau_old_2,
-							 const double dtau_osci,
-							 const double dtau_bg,
 							 const double Hubble,
 						 	 const double Rbar,
 							 const int cycle,
@@ -1036,7 +1083,7 @@ void hibernate(metadata & sim,
 	}
 
 	//writeRestartSettings(sim, ic, cosmo, a, tau, dtau, cycle, restartcount);
-	writeRestartSettings(sim,ic,cosmo,a,tau,dtau,dtau_old,dtau_old_2,dtau_osci,dtau_bg,Hubble,Rbar,cycle,restartcount);
+	writeRestartSettings(sim,ic,cosmo,a,tau,dtau,dtau_old,dtau_old_2,Hubble,Rbar,cycle,restartcount);
 
 #ifndef CHECK_B
 	if (sim.vector_flag == VECTOR_PARABOLIC)
@@ -1146,9 +1193,6 @@ if (sim.mg_flag == FOFR)
 	phidot.saveHDF5(h5filename + "_phidot.h5");
 	xidot.saveHDF5(h5filename + "_xidot.h5");
 }
-
-
-
 
 
 #endif

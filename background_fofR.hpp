@@ -258,7 +258,6 @@ double rungekutta_fR_45(double & a,
 	double H1, H2, H3, H4, H5, H6;
 	double R1, R2, R3, R4, R5, R6;
 	double s, dtau_temp = dtau;
-	double tol = 1.E-2;
 	double rho0 = 3. * Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo);
 
 	a1 = dtau * func_RK_adot(a, H);
@@ -293,38 +292,7 @@ double rungekutta_fR_45(double & a,
 	H = Hf = H + 16./135. * H1 + 6656./12825. * H3 + 28561./56430. * H4 - 9./50. * H5 + 2./55. * H6;
 	R = Rf = R + 16./135. * R1 + 6656./12825. * R3 + 28561./56430. * R4 - 9./50. * R5 + 2./55. * R6;
 
-	if(Rf - Rc)
-	{
-		s = 0.84 * sqrt(
-			sqrt(
-				tol * dtau / (fabs(Rf - Rc))
-			)
-		);
-		dtau_temp = s*dtau;
-	}
-
-	if(Hf - Hc)
-	{
-		s = 0.84 * sqrt(
-			sqrt(
-				tol * dtau / (fabs(Hf - Hc))
-			)
-		);
-		if(s*dtau < dtau_temp) dtau_temp = s*dtau;
-	}
-
-	if(af - ac)
-	{
-		s = 0.84 * sqrt(
-			sqrt(
-				tol * dtau / (fabs(af - ac))
-			)
-		);
-		if(s*dtau < dtau_temp) dtau_temp = s*dtau;
-	}
-
 	return dtau;
-
 }
 
 

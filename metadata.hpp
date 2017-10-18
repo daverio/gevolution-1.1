@@ -190,7 +190,6 @@ struct metadata
 	int num_snapshot;
 	int num_restart;
 	int num_fofR_params;
-	int read_bg_from_file = 0;
 	int quasi_static = 0;
 	int background_only = 0;
 	double bg_initial_redshift = 100.;
@@ -204,6 +203,7 @@ struct metadata
 	int check_pause = 1;
 
 	double Cf;
+	double fofR_params[MAX_FOFR_PARAMS];
 	double fofR_epsilon_bg;
 	double fofR_epsilon_fields;
 	double fofR_target_precision;
@@ -221,7 +221,6 @@ struct metadata
 	double z_switch_linearchi;
 	double z_switch_deltancdm[MAX_PCL_SPECIES-2];
 	double z_switch_Bncdm[MAX_PCL_SPECIES-2];
-	double fofR_params[MAX_FOFR_PARAMS];
 
 	char basename_snapshot[PARAM_MAX_LENGTH];
 	char basename_pk[PARAM_MAX_LENGTH];
@@ -261,7 +260,6 @@ struct icsettings
 	double restart_a;
 	double restart_Hubble;
 	double restart_Rbar;
-
 };
 
 struct cosmology

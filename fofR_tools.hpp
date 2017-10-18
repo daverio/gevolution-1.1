@@ -369,6 +369,10 @@ void check_vector_field(Field<FieldType> & field, string field_name, long n3, st
 template <class FieldType>
 double compute_max_FRR(Field<FieldType> &deltaR, double Rbar, double * params, int type)
 {
+	if(type == FOFR_TYPE_R2)// In R + R^2 gravity, FRR is a constant
+	{
+		return 2. * params[0];
+	}
 	Site x(deltaR.lattice());
 	double temp, max = 0.;
 	for(x.first(); x.test(); x.next())

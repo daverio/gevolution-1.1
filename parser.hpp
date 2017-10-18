@@ -763,6 +763,14 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	ic.restart_dtau = 0.;
 	ic.restart_version = -1.;
 
+	ic.restart_dtau_old = -1.;
+	ic.restart_dtau_old_2 = -1.;
+	ic.restart_dtau_osci = -1.;
+	ic.restart_dtau_bg = -1.;
+	ic.restart_a = -1.;
+	ic.restart_Hubble = -1.;
+	ic.restart_Rbar = -1.;
+
 	parseParameter(params, numparam, "seed", ic.seed);
 
 	if(parseParameter(params, numparam, "IC generator", par_string))
@@ -973,6 +981,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		}
 		parseParameter(params, numparam, "tau", ic.restart_tau);
 		parseParameter(params, numparam, "dtau", ic.restart_dtau);
+
 		for (i = 0; i < 10; i++)
 			pptr[i] = ic.metricfile[i];
 		parseParameter(params, numparam, "metric file", pptr, i);
@@ -1041,7 +1050,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	sim.vector_flag = VECTOR_PARABOLIC;
 	sim.gr_flag = 0;
 	sim.mg_flag = GENREL;
-	sim.read_bg_from_file = 0; //TODO: Check if this is correct. 0 -> compute bg with RK4
 	sim.out_pk = 0;
 	sim.out_snapshot = 0;
 	sim.num_pk = MAX_OUTPUTS;
@@ -1342,13 +1350,21 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		else if(par_string[0] == 'F' || par_string[0] == 'f')
 		{
 			COUT << " Gravity theory set to: " << COLORTEXT_CYAN << "f(R)" << COLORTEXT_RESET << endl;
+
+			if(ic.generator == ICGEN_READ_FROM_DISK)
+			{
+				parseParameter(params, numparam, "dtau_old", ic.restart_dtau_old);
+				parseParameter(params, numparam, "dtau_old_2", ic.restart_dtau_old_2);
+				parseParameter(params, numparam, "dtau_osci", ic.restart_dtau_osci);
+				parseParameter(params, numparam, "dtau_bg", ic.restart_dtau_bg);
+				parseParameter(params, numparam, "scale_factor", ic.restart_a);
+				parseParameter(params, numparam, "Hubble", ic.restart_Hubble);
+				parseParameter(params, numparam, "Rbar", ic.restart_Rbar);
+			}
+
 			sim.gr_flag = 1;
 			sim.mg_flag = FOFR;
-			if(sim.read_bg_from_file == 1 && sim.background_filename[0] == '\0')
-			{
-				COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": No background file has been specified! Closing...\n" << endl;
-				parallel.abortForce();
-			}
+
 			//TODO: read F(R) params and type
 			parseParameter(params, numparam, "f(R) parameters", sim.fofR_params, sim.num_fofR_params);
 			if(parseParameter(params, numparam, "f(R) type", par_string))
@@ -1448,16 +1464,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 				//TODO: error if the number of param does not fit the type
 			}
 
-			if(ic.generator == ICGEN_READ_FROM_DISK)
-			{
-				parseParameter(params, numparam, "dtau_old", ic.restart_dtau_old);
-				parseParameter(params, numparam, "dtau_old_2", ic.restart_dtau_old_2);
-				parseParameter(params, numparam, "dtau_osci", ic.restart_dtau_osci);
-				parseParameter(params, numparam, "dtau_bg", ic.restart_dtau_bg);
-				parseParameter(params, numparam, "scale_factor", ic.restart_a);
-				parseParameter(params, numparam, "Hubble", ic.restart_Hubble);
-				parseParameter(params, numparam, "Rbar", ic.restart_Rbar);
-			}
 		}
 		else
 		{
@@ -1473,7 +1479,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	if(sim.mg_flag == FOFR)
 	{
-		parseParameter(params, numparam, "read background from file", sim.read_bg_from_file);
 		parseParameter(params, numparam, "back to GR", sim.back_to_GR);
 		parseParameter(params, numparam, "quasi-static", sim.quasi_static);
 		if(sim.back_to_GR)

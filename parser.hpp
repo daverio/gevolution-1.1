@@ -1067,6 +1067,8 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	sim.num_fofR_params = MAX_FOFR_PARAMS;
 	sim.S0i_mode = 2;
 
+	parseParameter(params, numparam, "CYCLE_INFO_INTERVAL", sim.CYCLE_INFO_INTERVAL); // Defaults to 10
+
 	if(parseParameter(params, numparam, "vector method", par_string))
 	{
 		if(par_string[0] == 'p' || par_string[0] == 'P')
@@ -1498,7 +1500,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 				COUT << " Quasi-static mode active (modified Newtonian).\n";
 			}
 			parseParameter(params, numparam, "f(R) epsilon fields", sim.fofR_epsilon_fields);
-			parseParameter(params, numparam, "Follow xi", sim.follow_xi);
 		}
 		parseParameter(params, numparam, "f(R) epsilon background", sim.fofR_epsilon_bg);// TODO: put some of these only for f(R)
 	}

@@ -450,7 +450,7 @@ else
 				readIC(sim, ic, cosmo, fourpiG,
 			 											 a, tau, dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, Hubble, Rbar,
 														 &pcls_cdm, &pcls_b, pcls_ncdm, maxvel,
-														 &phi, &chi, &Bi, &xi, &xi_prev, &zeta, &deltaR, &deltaR_prev, &phidot, &xidot, &source, &Sij, &scalarFT, &BiFT, &SijFT,
+														 &phi, &chi, &Bi, &xi, &xi_prev, &zeta, &deltaR, &deltaR_prev, &dot_deltaR, &phidot, &xidot, &source, &Sij, &scalarFT, &BiFT, &SijFT,
 														 &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij,
 														 cycle, snapcount, pkcount, restartcount, settingsfile_bin);
 				Fbar = F(Rbar, sim.fofR_params, sim.fofR_type);

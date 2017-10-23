@@ -486,6 +486,7 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 						Field<Real> * zeta,
 						Field<Real> * deltaR,
 						Field<Real> * deltaR_prev,
+						Field<Real> * dot_deltaR,
 						Field<Real> * phidot,
 						Field<Real> * xidot,
 						Field<Real> * source,
@@ -752,6 +753,7 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 	if (sim.gr_flag > 0 && ic.metricfile[0][0] != '\0')
 	{
 		filename.assign(ic.metricfile[0]);
+		cout<< "Loading phi from: "<<filename<<endl;
 		phi->loadHDF5(filename);
 	}
 	else
@@ -780,6 +782,7 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 #endif
 		{
 			filename.assign(ic.metricfile[2*sim.gr_flag]);
+			cout<< "Loading Bi from: "<<filename<<endl;
 			Bi->loadHDF5(filename);
 
 			for (x.first(); x.test(); x.next())
@@ -794,6 +797,7 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 		if (sim.gr_flag > 0)
 		{
 			filename.assign(ic.metricfile[1]);
+			cout<< "Loading chi from: "<<filename<<endl;
 			chi->loadHDF5(filename);
 			chi->updateHalo();
 		}
@@ -801,30 +805,42 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 		if(sim.mg_flag == FOFR)
 		{
 			filename.assign(ic.metricfile[3]);
+			cout<< "Loading xi from: "<<filename<<endl;
 			xi->loadHDF5(filename);
 			xi->updateHalo();
 
 			filename.assign(ic.metricfile[4]);
+			cout<< "Loading xi_prev from: "<<filename<<endl;
 			xi_prev->loadHDF5(filename);
 			xi_prev->updateHalo();
 
 			filename.assign(ic.metricfile[5]);
+			cout<< "Loading zeta from: "<<filename<<endl;
 			zeta->loadHDF5(filename);
 			zeta->updateHalo();
 
 			filename.assign(ic.metricfile[6]);
+			cout<< "Loading deltaR from: "<<filename<<endl;
 			deltaR->loadHDF5(filename);
 			deltaR->updateHalo();
 
 			filename.assign(ic.metricfile[7]);
+			cout<< "Loading deltaR_prev from: "<<filename<<endl;
 			deltaR_prev->loadHDF5(filename);
 			deltaR_prev->updateHalo();
 
 			filename.assign(ic.metricfile[8]);
+			cout<< "Loading dot_deltaR from: "<<filename<<endl;
+			dot_deltaR->loadHDF5(filename);
+			dot_deltaR->updateHalo();
+
+			filename.assign(ic.metricfile[9]);
+			cout<< "Loading phidot from: "<<filename<<endl;
 			phidot->loadHDF5(filename);
 			phidot->updateHalo();
 
-			filename.assign(ic.metricfile[9]);
+			filename.assign(ic.metricfile[10]);
+			cout<< "Loading xidot from: "<<filename<<endl;
 			xidot->loadHDF5(filename);
 			xidot->updateHalo();
 		}

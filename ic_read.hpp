@@ -755,6 +755,7 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 	if (sim.gr_flag > 0 && ic.metricfile[0][0] != '\0')
 	{
 		filename.assign(ic.metricfile[0]);
+		cout<< "Loading phi from: "<<filename<<endl;
 		phi->loadHDF5(filename);
 	}
 	else
@@ -783,6 +784,7 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 #endif
 		{
 			filename.assign(ic.metricfile[2*sim.gr_flag]);
+			cout<< "Loading Bi from: "<<filename<<endl;
 			Bi->loadHDF5(filename);
 
 			for (x.first(); x.test(); x.next())
@@ -797,6 +799,7 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 		if (sim.gr_flag > 0)
 		{
 			filename.assign(ic.metricfile[1]);
+			cout<< "Loading chi from: "<<filename<<endl;
 			chi->loadHDF5(filename);
 			chi->updateHalo();
 		}

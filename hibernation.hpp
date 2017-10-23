@@ -586,6 +586,7 @@ void writeRestartSettings(metadata & sim,
 				fprintf(outfile, ", %s%s%s_zeta.h5", sim.restart_path, sim.basename_restart, buffer);
 				fprintf(outfile, ", %s%s%s_deltaR.h5", sim.restart_path, sim.basename_restart, buffer);
 				fprintf(outfile, ", %s%s%s_deltaR_prev.h5", sim.restart_path, sim.basename_restart, buffer);
+				fprintf(outfile, ", %s%s%s_dot_deltaR.h5", sim.restart_path, sim.basename_restart, buffer);
 				fprintf(outfile, ", %s%s%s_deltaT.h5", sim.restart_path, sim.basename_restart, buffer);
 				fprintf(outfile, ", %s%s%s_phidot.h5", sim.restart_path, sim.basename_restart, buffer);
 				fprintf(outfile, ", %s%s%s_xidot.h5", sim.restart_path, sim.basename_restart, buffer);
@@ -1001,6 +1002,7 @@ void hibernate(metadata & sim,
 							 Field<Real> & zeta,
 						 	 Field<Real> & deltaR,
 						 	 Field<Real> & deltaR_prev,
+						 	 Field<Real> & dot_deltaR,
 						 	 Field<Real> & deltaT,
 							 Field<Real> & phidot,
 							 Field<Real> & xidot,
@@ -1073,6 +1075,7 @@ if(sim.mg_flag == FOFR)
 	zeta.saveHDF5_server_open(h5filename + "_zeta.h5");
 	deltaR.saveHDF5_server_open(h5filename + "_deltaR.h5");
 	deltaR_prev.saveHDF5_server_open(h5filename + "_deltaR_prev.h5");
+	deltaR_prev.saveHDF5_server_open(h5filename + "_dot_deltaR.h5");
 	deltaT.saveHDF5_server_open(h5filename + "_deltaT.h5");
 	phidot.saveHDF5_server_open(h5filename + "_phidot.h5");
 	xidot.saveHDF5_server_open(h5filename + "_xidot.h5");
@@ -1102,6 +1105,7 @@ if(sim.mg_flag == FOFR)
 			zeta.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 			deltaR.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 			deltaR_prev.saveHDF5_server_write(NUMBER_OF_IO_FILES);
+			dot_deltaR.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 			deltaT.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 			phidot.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 			xidot.saveHDF5_server_write(NUMBER_OF_IO_FILES);
@@ -1138,6 +1142,7 @@ if(sim.mg_flag == FOFR)
 	zeta.saveHDF5(h5filename + "_zeta.h5");
 	deltaR.saveHDF5(h5filename + "_deltaR.h5");
 	deltaR_prev.saveHDF5(h5filename + "_deltaR_prev.h5");
+	dot_deltaR.saveHDF5(h5filename + "_dot_deltaR.h5");
 	deltaT.saveHDF5(h5filename + "_deltaT.h5");
 	phidot.saveHDF5(h5filename + "_phidot.h5");
 	xidot.saveHDF5(h5filename + "_xidot.h5");

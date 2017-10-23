@@ -38,10 +38,6 @@
 #define MAX_PCL_SPECIES 6
 #endif
 
-#ifndef CYCLE_INFO_INTERVAL
-#define CYCLE_INFO_INTERVAL 10
-#endif
-
 #define MASK_PHI       1
 #define MASK_CHI       2
 #define MASK_POT       4
@@ -173,6 +169,7 @@ struct gadget2_header
 
 struct metadata
 {
+	int CYCLE_INFO_INTERVAL = 10; // Previously fixed. #define CYCLE_INFO_INTERVAL = 10
 	int numpts;
 	int downgrade_factor;
 	long numpcl[MAX_PCL_SPECIES];

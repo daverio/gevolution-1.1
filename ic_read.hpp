@@ -388,7 +388,7 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 				sprintf(line, "%s%s_background.dat", sim.output_path, sim.basename_generic);
 				bgfile = fopen(line, "w");
 
-				if (bgfile == NULL)
+				if(bgfile == NULL)
 				{
 					COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": unable to create file for background output!" << endl;
 					parallel.abortForce();
@@ -486,7 +486,7 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 						Field<Real> * zeta,
 						Field<Real> * deltaR,
 						Field<Real> * deltaR_prev,
-						Field<Real> * dot_deltaR,
+						Field<Real> * deltaT,
 						Field<Real> * phidot,
 						Field<Real> * xidot,
 						Field<Real> * source,
@@ -804,45 +804,47 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 
 		if(sim.mg_flag == FOFR)
 		{
-			filename.assign(ic.metricfile[3]);
-			cout<< "Loading xi from: "<<filename<<endl;
+			int j = 3;
+			filename.assign(ic.metricfile[j]);
 			xi->loadHDF5(filename);
 			xi->updateHalo();
+			j++;
 
-			filename.assign(ic.metricfile[4]);
-			cout<< "Loading xi_prev from: "<<filename<<endl;
+			filename.assign(ic.metricfile[j]);
 			xi_prev->loadHDF5(filename);
 			xi_prev->updateHalo();
+			j++;
 
-			filename.assign(ic.metricfile[5]);
-			cout<< "Loading zeta from: "<<filename<<endl;
+			filename.assign(ic.metricfile[j]);
 			zeta->loadHDF5(filename);
 			zeta->updateHalo();
+			j++;
 
-			filename.assign(ic.metricfile[6]);
-			cout<< "Loading deltaR from: "<<filename<<endl;
+			filename.assign(ic.metricfile[j]);
 			deltaR->loadHDF5(filename);
 			deltaR->updateHalo();
+			j++;
 
-			filename.assign(ic.metricfile[7]);
-			cout<< "Loading deltaR_prev from: "<<filename<<endl;
+			filename.assign(ic.metricfile[j]);
 			deltaR_prev->loadHDF5(filename);
 			deltaR_prev->updateHalo();
+			j++;
 
-			filename.assign(ic.metricfile[8]);
-			cout<< "Loading dot_deltaR from: "<<filename<<endl;
-			dot_deltaR->loadHDF5(filename);
-			dot_deltaR->updateHalo();
+			filename.assign(ic.metricfile[j]);
+			deltaT->loadHDF5(filename);
+			deltaT->updateHalo();
+			j++;
 
-			filename.assign(ic.metricfile[9]);
-			cout<< "Loading phidot from: "<<filename<<endl;
+			filename.assign(ic.metricfile[j]);
 			phidot->loadHDF5(filename);
 			phidot->updateHalo();
+			j++;
 
-			filename.assign(ic.metricfile[10]);
-			cout<< "Loading xidot from: "<<filename<<endl;
+			filename.assign(ic.metricfile[j]);
 			xidot->loadHDF5(filename);
 			xidot->updateHalo();
+			j++;
+
 		}
 
 		if(parallel.isRoot())

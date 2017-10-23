@@ -532,8 +532,9 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 	hdr.npart[1] = 0;
 
 	projection_init(phi);
+	metadata mdtemp;
+	cosmology cosmotemp;
 	double dtemp;
-	int itemp;
 
 	ifstream file_bin;
 	file_bin.open(filename_bin,ios::in|ios::binary);
@@ -553,37 +554,17 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 		Hubble = dtemp;
 		file_bin.read((char*) & dtemp, sizeof(double));
 		Rbar = dtemp;
-		file_bin.read((char*) & dtemp, sizeof(double));
-		cosmo.Omega_cdm = dtemp;
-		file_bin.read((char*) & dtemp, sizeof(double));
-		cosmo.Omega_b = dtemp;
-		file_bin.read((char*) & dtemp, sizeof(double));
-		cosmo.Omega_m = dtemp;
-		file_bin.read((char*) & dtemp, sizeof(double));
-		cosmo.Omega_Lambda = dtemp;
-		file_bin.read((char*) & dtemp, sizeof(double));
-		cosmo.Omega_g = dtemp;
-		file_bin.read((char*) & dtemp, sizeof(double));
-		cosmo.Omega_ur = dtemp;
-		file_bin.read((char*) & dtemp, sizeof(double));
-		cosmo.Omega_rad = dtemp;
-
-		file_bin.read((char*) & itemp, sizeof(int));
-		sim.num_fofR_params = itemp;
-		for(int j=0; j<sim.num_fofR_params; j++)
-		{
-			file_bin.read((char*) & dtemp, sizeof(double));
-			sim.fofR_params[j] = dtemp;
-			j++;
-		}
-
-		file_bin.read((char*) & dtemp, sizeof(double));
-		sim.fofR_epsilon_bg = dtemp;
-		file_bin.read((char*) & dtemp, sizeof(double));
-		sim.fofR_epsilon_fields = dtemp;
-		file_bin.read((char*) & dtemp, sizeof(double));
-		sim.fofR_target_precision = dtemp;
+		file_bin.read((char*) & mdtemp, sizeof(metadata));
+		sim = mdtemp;
+		file_bin.read((char*) & cosmotemp, sizeof(cosmology));
+		cosmo = cosmotemp;
 		file_bin.close();
+
+		COUT<< "Hybernation metadata and cosmology loaded:"<<endl;
+		COUT<< sim <<endl;
+		COUT<< cosmo <<endl;
+
+
 	}
 	else
 	{

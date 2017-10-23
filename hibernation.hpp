@@ -513,23 +513,14 @@ void writeRestartSettings(metadata & sim,
 		outfile_bin.write((char*) & dtau_old_2, sizeof(double));
 		outfile_bin.write((char*) & Hubble, sizeof(double));
 		outfile_bin.write((char*) & Rbar, sizeof(double));
-		outfile_bin.write((char*) & cosmo.Omega_cdm, sizeof(double));
-		outfile_bin.write((char*) & cosmo.Omega_b, sizeof(double));
-		outfile_bin.write((char*) & cosmo.Omega_m, sizeof(double));
-		outfile_bin.write((char*) & cosmo.Omega_Lambda, sizeof(double));
-		outfile_bin.write((char*) & cosmo.Omega_g, sizeof(double));
-		outfile_bin.write((char*) & cosmo.Omega_ur, sizeof(double));
-		outfile_bin.write((char*) & cosmo.Omega_rad, sizeof(double));
-		outfile_bin.write((char*) & sim.num_fofR_params, sizeof(int));
-		for(int j=0; j<sim.num_fofR_params; j++)
-		{
-			outfile_bin.write((char*) & sim.fofR_params[j], sizeof(double));
-			j++;
-		}
-		outfile_bin.write((char*) & sim.fofR_epsilon_bg, sizeof(double));
-		outfile_bin.write((char*) & sim.fofR_epsilon_fields, sizeof(double));
-		outfile_bin.write((char*) & sim.fofR_target_precision, sizeof(double));
+		outfile_bin.write((char*) & sim, sizeof(metadata));
+		outfile_bin.write((char*) & cosmo, sizeof(cosmology));
 		outfile_bin.close();
+
+		COUT<< "Hybernation metadata and cosmology:"<<endl;
+		COUT<< sim <<endl;
+		COUT<< cosmo <<endl;
+
 	}
 	else
 	{

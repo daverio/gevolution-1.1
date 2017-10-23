@@ -1,5 +1,5 @@
 # programming environment
-COMPILER     := mpic++
+COMPILER     := CC
 INCLUDE      := -I../LATfield2/
 LIB          := -lfftw3 -lm -lhdf5 -lgsl -lgslcblas
 

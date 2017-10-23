@@ -430,12 +430,8 @@ else
 	{
 		if(sim.mg_flag == FOFR)
 		{
-				readIC(sim, ic, cosmo, fourpiG,
-					 		 a, tau, dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, Hubble, Rbar,
-							 &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &xi, &xi_prev, &zeta, &deltaR, &deltaR_prev, &deltaT, &phidot, &xidot, &source, &Sij, &scalarFT, &BiFT, &SijFT,
-							 &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij,
-							 cycle, snapcount, pkcount, restartcount, settingsfile_bin);
-							 
+				readIC(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, Hubble, Rbar, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &xi, &xi_prev, &zeta, &deltaR, &deltaR_prev, &dot_deltaR, &deltaT, &phidot, &xidot, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount, settingsfile_bin);
+
 				Fbar = F(Rbar, sim.fofR_params, sim.fofR_type);
 				FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type);
 				FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type);
@@ -448,6 +444,7 @@ else
 		}
 
 		// TODO REMOVE after fixing hibernation
+		COUT << " max |v| = " << maxvel[0] << "\n";
 		check_field(phi, "phi", numpts3d);
 		check_field(xi, "xi", numpts3d);
 		check_field(chi, "chi", numpts3d);
@@ -456,6 +453,7 @@ else
 		check_field(deltaR, "deltaR", numpts3d);
 		check_field(deltaT, "deltaT", numpts3d);
 		check_field(zeta, "zeta", numpts3d);
+		check_field(dot_deltaR, "dot_deltaR", numpts3d);
 		// TODO: End REMOVE
 	}
 #ifdef ICGEN_PREVOLUTION
@@ -1183,6 +1181,7 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 			check_field(deltaR, "deltaR", numpts3d);
 			check_field(deltaT, "deltaT", numpts3d);
 			check_field(zeta, "zeta", numpts3d);
+			check_field(dot_deltaR, "dot_deltaR", numpts3d);
 			// TODO: End REMOVE
 		}
 
@@ -1207,6 +1206,8 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 					if(sim.baryon_flag)
 						maxvel[1] = pcls_b.updateVel(update_q_Newton, (dtau + dtau_old) / 2., update_b_fields, ((sim.radiation_flag > 0 && a < 1. / (sim.z_switch_linearchi + 1.)) ? 2 : 1), f_params);
 				}
+
+				COUT << "max |v| = " << maxvel[0] << "\n";
 
 #ifdef BENCHMARK
 				update_q_count++;
@@ -1430,7 +1431,7 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 				{
 					plan_Bi_check.execute(FFT_BACKWARD);
 					if(sim.mg_flag == FOFR)
-						hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, deltaT, phidot, xidot, a, tau, dtau, dtau_old, dtau_old_2, Hubble, Rbar, cycle);
+						hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, dot_deltaR, deltaT, phidot, xidot, a, tau, dtau, dtau_old, dtau_old_2, Hubble, Rbar, cycle);
 					else
 						hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi_check, a, tau, dtau, cycle);
 				}
@@ -1438,7 +1439,7 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 				{
 #endif
 					if(sim.mg_flag == FOFR)
-						hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, deltaT, phidot, xidot,	a, tau, dtau, dtau_old, dtau_old_2, Hubble, Rbar,	cycle);
+						hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, dot_deltaR, deltaT, phidot, xidot,	a, tau, dtau, dtau_old, dtau_old_2, Hubble, Rbar,	cycle);
 					else
 						hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, a, tau, dtau, cycle);
 #ifdef CHECK_B
@@ -1459,7 +1460,7 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 			{
 				plan_Bi_check.execute(FFT_BACKWARD);
 				if(sim.mg_flag == FOFR)
-					hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, deltaT, phidot, xidot, a, tau, dtau, dtau_old, dtau_old_2, Hubble, Rbar, cycle, restartcount);
+					hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, dot_deltaR, deltaT, phidot, xidot, a, tau, dtau, dtau_old, dtau_old_2, Hubble, Rbar, cycle, restartcount);
 				else
 					hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi_check, a, tau, dtau, cycle, restartcount);
 			}
@@ -1467,7 +1468,7 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 			{
 #endif
 				if(sim.mg_flag == FOFR)
-					hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, deltaT, phidot, xidot, a, tau, dtau, dtau_old, dtau_old_2, Hubble, Rbar, cycle, restartcount);
+					hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, dot_deltaR, deltaT, phidot, xidot, a, tau, dtau, dtau_old, dtau_old_2, Hubble, Rbar, cycle, restartcount);
 				else
 					hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, a, tau, dtau, cycle, restartcount);
 #ifdef CHECK_B

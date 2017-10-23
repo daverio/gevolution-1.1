@@ -488,6 +488,7 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 						Field<Real> * zeta,
 						Field<Real> * deltaR,
 						Field<Real> * deltaR_prev,
+						Field<Real> * dot_deltaR,
 						Field<Real> * deltaT,
 						Field<Real> * phidot,
 						Field<Real> * xidot,
@@ -816,6 +817,12 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 			COUT << " Reading file: " << filename << "\n";
 			deltaR_prev->loadHDF5(filename);
 			deltaR_prev->updateHalo();
+			j++;
+
+			filename.assign(ic.metricfile[j]);
+			COUT << " Reading file: " << filename << "\n";
+			dot_deltaR->loadHDF5(filename);
+			dot_deltaR->updateHalo();
 			j++;
 
 			filename.assign(ic.metricfile[j]);

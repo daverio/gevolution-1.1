@@ -124,7 +124,6 @@ inline double getBackground(gsl_spline * spline, double tau, gsl_interp_accel * 
 inline double R_initial_fR(const double a, const double eightpiG, const cosmology cosmo)
 {
 	double R0 = eightpiG * ( cosmo.Omega_m / a / a / a + 4. * (1. - cosmo.Omega_m - cosmo.Omega_rad) ); // TODO: Maybe not accurate enough at this stage, but let's try this first.
-	COUT << " Initial condition for R: R0 = " << R0 << "\n";
 	return R0;
 }
 
@@ -132,7 +131,6 @@ inline double H_initial_fR(const double a, const double H, const double R, const
 {
 	double H0 = H;
 	// double H0 = sqrt( (H*H + a*a*(fr*R - f)/6.) / (1. + fr - frr_term) );
-	COUT << " Initial condition for H: H0 = " << H0 << "\n";
 	return H0;
 }
 

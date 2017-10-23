@@ -239,15 +239,11 @@ int main(int argc, char **argv)
 	Field<Real> xi_prev;
 	Field<Real> zeta;
 	Field<Real> deltaR;
+	Field<Real> dot_deltaR;
 	Field<Real> deltaR_prev;
 	Field<Real> deltaT;
 	Field<Real> phidot;
 	Field<Real> xidot;
-
-	Field<Real> laplace_deltaR;
-	Field<Real> dot_deltaR;
-	Field<Real> ddot_deltaR;
-	Field<Real> m2_deltaR;
 
   PlanFFT<Cplx> plan_source;
   PlanFFT<Cplx> plan_phi;
@@ -260,11 +256,6 @@ int main(int argc, char **argv)
   PlanFFT<Cplx> plan_xi;
   PlanFFT<Cplx> plan_Bi;
   PlanFFT<Cplx> plan_Sij;
-
-  PlanFFT<Cplx> plan_laplace_deltaR;// TODO: needed only to output power spectra
-  PlanFFT<Cplx> plan_dot_deltaR;// TODO: needed only to output power spectra
-  PlanFFT<Cplx> plan_ddot_deltaR;// TODO: needed only to output power spectra
-  PlanFFT<Cplx> plan_m2_deltaR;// TODO: needed only to output power spectra
 
 #ifdef CHECK_B
   PlanFFT<Cplx> plan_Bi_check;
@@ -284,13 +275,11 @@ if(sim.mg_flag == FOFR)
 	xidot.alloc();
 	zeta.initialize(lat,1);
 	deltaR.initialize(lat,1);
+	dot_deltaR.initialize(lat, 1);
+	dot_deltaR.alloc();
 	deltaR_prev.initialize(lat,1);
 	deltaT.initialize(lat,1);
 	phidot.initialize(lat,1);
-	laplace_deltaR.initialize(lat,1);
-	dot_deltaR.initialize(lat,1);
-	ddot_deltaR.initialize(lat,1);
-	m2_deltaR.initialize(lat,1);
 	plan_source.initialize(&source, &scalarFT);
 	plan_phi.initialize(&phi, &scalarFT);
 	plan_phidot.initialize(&phidot, &scalarFT);
@@ -300,10 +289,6 @@ if(sim.mg_flag == FOFR)
 	plan_deltaR_prev.initialize(&deltaR_prev, &scalarFT);
 	plan_deltaT.initialize(&deltaT, &scalarFT);
 	plan_zeta.initialize(&zeta, &scalarFT);
-	plan_laplace_deltaR.initialize(&laplace_deltaR, &scalarFT);
-	plan_dot_deltaR.initialize(&dot_deltaR, &scalarFT);
-	plan_ddot_deltaR.initialize(&ddot_deltaR, &scalarFT);
-	plan_m2_deltaR.initialize(&m2_deltaR, &scalarFT);
 	Bi.initialize(lat,3);
 	BiFT.initialize(latFT,3);
 	plan_Bi.initialize(&Bi, &BiFT);
@@ -760,6 +745,7 @@ else
 						 << "           phihom = " << phihom << "\n";
 			}
 
+
 			// Computes 8piG*deltaT = 8piG( (T00 + T11 + T22 + T33) - (-rho_backg + 3P_backg) ), to be stored in {deltaT}
 			// At the moment: {source} = -a^3*T00, {Sij} = a^3*Tij
 			// TODO: Should we use (T00hom + Tiihom) / (a*a*a) or the predicted value (i.e. Omega_m/a^3 + ...)
@@ -774,14 +760,12 @@ else
 					copy_field(deltaT, deltaR, -1.);
 					if(cycle) add_fields(deltaR, deltaR_prev, dot_deltaR, 1./dtau_old, -1./dtau_old); // Computes dot_deltaR at time (t-1/2)
 					flip_fields(xi, xi_prev);
-					laplace_ddot_deltaR_set(zeta, deltaR_prev, deltaR, laplace_deltaR, ddot_deltaR, dtau_old_2, dtau_old, dx*dx); // ddot_deltaR is always computed at t-1 with respect to deltaR
 					copy_field(xi, xi, 0.); // Sets xi = 0.
 					copy_field(zeta, zeta, 0.); // Sets zeta = 0.
  // TODO: Are these necessary?
 					deltaR.updateHalo();
 					deltaR_prev.updateHalo();
 					zeta.updateHalo();
-					ddot_deltaR.updateHalo();
 					dot_deltaR.updateHalo();
 				}
 				else if(sim.fofR_type == FOFR_TYPE_R2)
@@ -794,11 +778,9 @@ else
 						// Solve wave-like equation transformed into Poisson-like
 						solveModifiedPoissonFT(scalarFT, scalarFT, 1., coeffm2); // TODO CHECK
 						plan_zeta.execute(FFT_BACKWARD); // Back to real space, {scalarFT} -> {zeta}
-						laplace_ddot_deltaR_set(deltaR_prev, deltaR, zeta, laplace_deltaR, ddot_deltaR, dtau_old, dtau, dx*dx);
 						flip_fields(deltaR, deltaR_prev, zeta);
 						deltaR.updateHalo();
 						deltaR_prev.updateHalo(); // TODO: Probably unnecessary
-						copy_field(deltaR, m2_deltaR, coeffm2);
 						add_fields(deltaR, deltaT, zeta);
 						copy_field(xi, xi_prev);
 						xi_set(xi, deltaR, Rbar, FRbar, sim.fofR_params, sim.fofR_type); // Needs value of deltaR
@@ -819,7 +801,6 @@ else
 							// Solve wave-like equation transformed into Poisson-like
 							solveModifiedPoissonFT(scalarFT, scalarFT, 1., coeffm2); // TODO CHECK
 							plan_zeta.execute(FFT_BACKWARD); // Back to real space, {scalarFT} -> {zeta}
-							// laplace_ddot_deltaR_set(deltaR_prev, deltaR, zeta, laplace_deltaR, ddot_deltaR, dtau_old, dtau, dx*dx); // TODO: ddot_deltaR at PREVIOUS TIME STEP
 							flip_fields(deltaR, deltaR_prev);
 							add_fields(zeta, deltaT, deltaR, 1., -1.);
 							zeta.updateHalo();
@@ -833,7 +814,6 @@ else
 							zeta.updateHalo();
 						}
 						// Done at each step:
-						// copy_field(deltaR, m2_deltaR, coeffm2);
 						copy_field(xi, xi_prev);// TODO: is this needed?
 						xi_set(xi, deltaR, Rbar, FRbar, sim.fofR_params, sim.fofR_type); // Needs value of deltaR
 						if(cycle == 1) // Builds dot_deltaR_{1/2} from deltaR_1 and deltaR_0
@@ -850,7 +830,7 @@ else
 				{
 					if(sim.quasi_static)
 					{
-						COUT << "Only f(R) = R + R^2 is implemented so far, sorry! :)\n";
+						COUT << "Only f(R) = R + R^2 is implemented in quasi-static so far, sorry! :)\n";
 						exit(0);
 					}
 					else
@@ -943,7 +923,6 @@ else
 				// Update halos for phi and phidot
 				phi.updateHalo();
 				phidot.updateHalo();
-				copy_field(phidot, xidot, -1.); // TODO: REMOVE after debugging
 
 #ifdef BENCHMARK
 				fft_time += MPI_Wtime() - ref2_time;
@@ -1112,9 +1091,9 @@ else
 			COUT << COLORTEXT_CYAN << " writing power spectra" << COLORTEXT_RESET << " at z = " << ((1./a) - 1.) <<  " (cycle " << cycle << "), tau/boxsize = " << tau << endl;
 
 #ifdef CHECK_B
-			writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &deltaT, &laplace_deltaR, &ddot_deltaR, &m2_deltaR, &xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_deltaT, &plan_laplace_deltaR, &plan_ddot_deltaR, &plan_m2_deltaR, &plan_xi, &plan_zeta, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, &Bi_check, &BiFT_check, &plan_Bi_check);
+			writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &deltaT, &xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_deltaT, &plan_xi, &plan_zeta, &plan_phidot, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, &Bi_check, &BiFT_check, &plan_Bi_check);
 #else
-			writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &deltaT, &laplace_deltaR, &ddot_deltaR, &m2_deltaR, &xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_deltaT, &plan_laplace_deltaR, &plan_ddot_deltaR, &plan_m2_deltaR, &plan_xi, &plan_zeta, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
+			writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &deltaT, &xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_deltaT, &plan_xi, &plan_zeta, &plan_phidot, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
 #endif
 			pkcount++;
 		}

@@ -548,39 +548,6 @@ void lp_update_dotxi(Field<FieldType> & xi, Field<FieldType> & zeta, Field<Field
 
 
 /////////////////////////////////////////////////
-// Computes ddot_deltaR
-// TODO: Add comments here
-/////////////////////////////////////////////////
-template <class FieldType>
-void laplace_ddot_deltaR_set(Field<FieldType> & R_old, Field<FieldType> & R, Field<FieldType> & R_new, Field<FieldType> & laplace_deltaR, Field<FieldType> & ddot_R, double dt_old, double dt_new, double dx2)
-{
-	Site x(R.lattice());
-	for(x.first(); x.test(); x.next())
-	{
-		laplace_deltaR(x) = (R_new(x+0) + R_new(x-0) + R_new(x+1) + R_new(x-1) + R_new(x+2) + R_new(x-2) - 6. * R_new(x)) / dx2;
-	}
-	if(dt_old * dt_new)
-		for(x.first(); x.test(); x.next())
-		{
-			ddot_R(x) = 2./(dt_old + dt_new) * (R_new(x)/dt_new + R_old(x)/dt_old) - 2. * R(x)/(dt_old*dt_new);
-		}
-	return;
-}
-
-
-template <class FieldType>
-void laplace_ddot_deltaR_set(Field<FieldType> & R, Field<FieldType> & laplace_deltaR, double dx2)
-{
-	Site x(R.lattice());
-	for(x.first(); x.test(); x.next())
-	{
-		laplace_deltaR(x) = (R(x+0) + R(x-0) + R(x+1) + R(x-1) + R(x+2) + R(x-2) - 6. * R(x)) / dx2;
-	}
-	return;
-}
-
-
-/////////////////////////////////////////////////
 // Initial conditions for xi
 // TODO: Add comments here
 /////////////////////////////////////////////////

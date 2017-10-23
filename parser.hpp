@@ -638,8 +638,6 @@ bool parseFieldSpecifiers(parameter * & params, const int numparam, const char *
 					pvalue |= MASK_DELTAR;
 				else if( (strcmp(item, "deltaT") == 0 || strcmp(item, "DeltaT") == 0 || strcmp(item, "delta_T") == 0 || strcmp(item, "Delta_T") == 0) )
 					pvalue |= MASK_DELTAT;
-				else if( (strcmp(item, "laplace") == 0 || strcmp(item, "Laplace") == 0) && fofR_flag)
-					pvalue |= MASK_LAPLACE;
 				else if(strcmp(item, "Chi") == 0 || strcmp(item, "chi") == 0)
 					pvalue |= MASK_CHI;
 				else if(strcmp(item, "Pot") == 0 || strcmp(item, "pot") == 0 || strcmp(item, "Psi_N") == 0 || strcmp(item, "psi_N") == 0 || strcmp(item, "PsiN") == 0 || strcmp(item, "psiN") == 0)
@@ -681,8 +679,6 @@ bool parseFieldSpecifiers(parameter * & params, const int numparam, const char *
 				pvalue |= MASK_DELTAR;
 			else if( (strcmp(start, "deltaT") == 0 || strcmp(start, "DeltaT") == 0 || strcmp(start, "delta_T") == 0 || strcmp(start, "Delta_T") == 0) )
 				pvalue |= MASK_DELTAT;
-			else if( (strcmp(start, "laplace") == 0 || strcmp(start, "Laplace") == 0) && fofR_flag)
-					pvalue |= MASK_LAPLACE;
 			else if(strcmp(start, "Chi") == 0 || strcmp(start, "chi") == 0)
 				pvalue |= MASK_CHI;
 			else if(strcmp(start, "Pot") == 0 || strcmp(start, "pot") == 0 || strcmp(start, "Psi_N") == 0 || strcmp(start, "psi_N") == 0 || strcmp(start, "PsiN") == 0 || strcmp(start, "psiN") == 0)
@@ -741,7 +737,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 {
 	char par_string[PARAM_MAX_LENGTH];
 	char * ptr;
-	char * pptr[MAX_PCL_SPECIES+10];
+	char * pptr[MAX_PCL_SPECIES + METRICFILE_LENGTH];
 	int usedparams = 0;
 	int i;
 
@@ -749,7 +745,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	ic.pkfile[0] = '\0';
 	ic.tkfile[0] = '\0';
-	for(i=0;i<10;i++)ic.metricfile[i][0] = '\0';
+	for(i=0; i < METRICFILE_LENGTH; i++) ic.metricfile[i][0] = '\0';
 	ic.seed = 0;
 	ic.flags = 0;
 	ic.z_ic = -2.;
@@ -803,8 +799,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		ic.generator = ICGEN_BASIC;
 	}
 
-	for (i = 0; i < MAX_PCL_SPECIES; i++)
-		pptr[i] = ic.pclfile[i];
+	for (i = 0; i < MAX_PCL_SPECIES; i++)	pptr[i] = ic.pclfile[i];
 	if(ic.generator == ICGEN_READ_FROM_DISK)
 	{
 		if(!parseParameter(params, numparam, "particle file", pptr, i))
@@ -982,8 +977,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		parseParameter(params, numparam, "tau", ic.restart_tau);
 		parseParameter(params, numparam, "dtau", ic.restart_dtau);
 
-		for (i = 0; i < 10; i++)
-			pptr[i] = ic.metricfile[i];
+		for (i = 0; i < METRICFILE_LENGTH; i++) pptr[i] = ic.metricfile[i];
 		parseParameter(params, numparam, "metric file", pptr, i);
 		if(parseParameter(params, numparam, "gevolution version", ic.restart_version))
 		{

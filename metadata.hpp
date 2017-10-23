@@ -38,6 +38,10 @@
 #define MAX_PCL_SPECIES 6
 #endif
 
+#ifndef METRICFILE_LENGTH
+#define METRICFILE_LENGTH 20
+#endif
+
 #define MASK_PHI       1
 #define MASK_CHI       2
 #define MASK_POT       4
@@ -55,8 +59,7 @@
 #define MASK_XI  		   16384
 #define MASK_ZETA      32768
 #define MASK_DELTAR	   65536
-#define MASK_LAPLACE   131072
-#define MASK_DELTAT		 262144
+#define MASK_DELTAT		 131072
 
 #define ICFLAG_CORRECT_DISPLACEMENT 1
 #define ICFLAG_KSPHERE              2
@@ -238,7 +241,7 @@ struct icsettings
 	char pclfile[MAX_PCL_SPECIES][PARAM_MAX_LENGTH];
 	char pkfile[PARAM_MAX_LENGTH];
 	char tkfile[PARAM_MAX_LENGTH];
-	char metricfile[10][PARAM_MAX_LENGTH];
+	char metricfile[METRICFILE_LENGTH][PARAM_MAX_LENGTH];
 	double restart_tau;
 	double restart_dtau;
 	double restart_version;

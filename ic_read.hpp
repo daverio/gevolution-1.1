@@ -55,7 +55,9 @@
 //
 //////////////////////////
 
-void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
+void readIC(metadata & sim,
+						icsettings & ic,
+						cosmology & cosmo,
 						const double fourpiG,
 						double & a,
 						double & tau,
@@ -803,41 +805,49 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 		{
 			int j = 3;
 			filename.assign(ic.metricfile[j]);
+			COUT << " Reading file: " << filename << "\n";
 			xi->loadHDF5(filename);
 			xi->updateHalo();
 			j++;
 
 			filename.assign(ic.metricfile[j]);
+			COUT << " Reading file: " << filename << "\n";
 			xi_prev->loadHDF5(filename);
 			xi_prev->updateHalo();
 			j++;
 
 			filename.assign(ic.metricfile[j]);
+			COUT << " Reading file: " << filename << "\n";
 			zeta->loadHDF5(filename);
 			zeta->updateHalo();
 			j++;
 
 			filename.assign(ic.metricfile[j]);
+			COUT << " Reading file: " << filename << "\n";
 			deltaR->loadHDF5(filename);
 			deltaR->updateHalo();
 			j++;
 
 			filename.assign(ic.metricfile[j]);
+			COUT << " Reading file: " << filename << "\n";
 			deltaR_prev->loadHDF5(filename);
 			deltaR_prev->updateHalo();
 			j++;
 
 			filename.assign(ic.metricfile[j]);
+			COUT << " Reading file: " << filename << "\n";
 			deltaT->loadHDF5(filename);
 			deltaT->updateHalo();
 			j++;
 
 			filename.assign(ic.metricfile[j]);
+			COUT << " Reading file: " << filename << "\n";
 			phidot->loadHDF5(filename);
 			phidot->updateHalo();
 			j++;
 
 			filename.assign(ic.metricfile[j]);
+			COUT << " Reading file: " << filename << "\n";
 			xidot->loadHDF5(filename);
 			xidot->updateHalo();
 			j++;

@@ -517,9 +517,9 @@ void writeRestartSettings(metadata & sim,
 		outfile_bin.write((char*) & cosmo, sizeof(cosmology));
 		outfile_bin.close();
 
-		COUT<< "Hybernation metadata and cosmology:"<<endl;
-		COUT<< sim <<endl;
-		COUT<< cosmo <<endl;
+		// COUT << "Hybernation metadata and cosmology:" << endl;
+		// COUT << sim << endl;
+		// COUT << cosmo << endl;
 
 	}
 	else

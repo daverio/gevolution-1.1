@@ -195,7 +195,6 @@ struct metadata
 	double bg_initial_redshift = 100.;
 	double bg_final_redshift = 0.;
 	int lcdm_background = 0;
-	int follow_xi = 0;
 
 	int S0i_mode;// TODO remove after FULL debugging
 	int back_to_GR = 0;
@@ -233,92 +232,91 @@ struct metadata
 
 std::ostream& operator<< (std::ostream& os, const metadata& sim)
 {
-	os<< "===== Metadata structure: =====\n";
-	os<< "CYCLE_INFO_INTERVAL: " << sim.CYCLE_INFO_INTERVAL << "\n";
-	os<< "numpts: " << sim.numpts << "\n";
-	os<< "downgrade_factor: " << sim.downgrade_factor << "\n";
+	os << "===== Metadata structure: =====\n";
+	os << "CYCLE_INFO_INTERVAL: " << sim.CYCLE_INFO_INTERVAL << "\n";
+	os << "numpts: " << sim.numpts << "\n";
+	os << "downgrade_factor: " << sim.downgrade_factor << "\n";
 
-	os<< "numpcl: " << sim.numpcl[0];
-	for(int i = 1;i<MAX_PCL_SPECIES;i++) os<< " , " <<  sim.numpcl[i];
-	os<< "\n";
+	os << "numpcl: " << sim.numpcl[0];
+	for(int i = 1; i<MAX_PCL_SPECIES; i++) os << " , " << sim.numpcl[i];
+	os << "\n";
 
-	os<< "tracer_factor: " << sim.tracer_factor[0];
-	for(int i = 1;i<MAX_PCL_SPECIES;i++) os<< " , " <<  sim.tracer_factor[i];
-	os<< "\n";
+	os << "tracer_factor: " << sim.tracer_factor[0];
+	for(int i = 1; i<MAX_PCL_SPECIES; i++) os << " , " << sim.tracer_factor[i];
+	os << "\n";
 
-	os<< "baryon_flag: " << sim.baryon_flag << "\n";
-	os<< "gr_flag: " << sim.gr_flag << "\n";
-	os<< "mg_flag: " << sim.mg_flag << "\n";
-	os<< "fofR_type: " << sim.fofR_type << "\n";
-	os<< "vector_flag: " << sim.vector_flag << "\n";
-	os<< "radiation_flag: " << sim.radiation_flag << "\n";
-	os<< "out_pk: " << sim.out_pk << "\n";
-	os<< "out_snapshot: " << sim.out_snapshot << "\n";
-	os<< "num_pk: " << sim.num_pk << "\n";
-	os<< "numbins: " << sim.numbins << "\n";
-	os<< "num_snapshot: " << sim.num_snapshot << "\n";
-	os<< "num_restart: " << sim.num_restart << "\n";
-	os<< "num_fofR_params: " << sim.num_fofR_params << "\n";
-	os<< "quasi_static: " << sim.quasi_static << "\n";
-	os<< "background_only: " << sim.background_only << "\n";
-	os<< "bg_initial_redshift: " << sim.bg_initial_redshift << "\n";
-	os<< "bg_final_redshift: " << sim.bg_final_redshift << "\n";
-	os<< "lcdm_background: " << sim.lcdm_background << "\n";
-	os<< "follow_xi: " << sim.follow_xi << "\n";
+	os << "baryon_flag: " << sim.baryon_flag << "\n";
+	os << "gr_flag: " << sim.gr_flag << "\n";
+	os << "mg_flag: " << sim.mg_flag << "\n";
+	os << "fofR_type: " << sim.fofR_type << "\n";
+	os << "vector_flag: " << sim.vector_flag << "\n";
+	os << "radiation_flag: " << sim.radiation_flag << "\n";
+	os << "out_pk: " << sim.out_pk << "\n";
+	os << "out_snapshot: " << sim.out_snapshot << "\n";
+	os << "num_pk: " << sim.num_pk << "\n";
+	os << "numbins: " << sim.numbins << "\n";
+	os << "num_snapshot: " << sim.num_snapshot << "\n";
+	os << "num_restart: " << sim.num_restart << "\n";
+	os << "num_fofR_params: " << sim.num_fofR_params << "\n";
+	os << "quasi_static: " << sim.quasi_static << "\n";
+	os << "background_only: " << sim.background_only << "\n";
+	os << "bg_initial_redshift: " << sim.bg_initial_redshift << "\n";
+	os << "bg_final_redshift: " << sim.bg_final_redshift << "\n";
+	os << "lcdm_background: " << sim.lcdm_background << "\n";
 
-	os<< "S0i_mode: " << sim.S0i_mode << "\n";
-	os<< "back_to_GR: " << sim.back_to_GR << "\n";
-	os<< "check_fields: " << sim.check_fields << "\n";
-	os<< "check_pause: " << sim.check_pause << "\n";
+	os << "S0i_mode: " << sim.S0i_mode << "\n";
+	os << "back_to_GR: " << sim.back_to_GR << "\n";
+	os << "check_fields: " << sim.check_fields << "\n";
+	os << "check_pause: " << sim.check_pause << "\n";
 
-	os<< "Cf: " << sim.Cf << "\n";
+	os << "Cf: " << sim.Cf << "\n";
 
-	os<< "fofR_params: " << sim.fofR_params[0];
-	for(int i = 1;i<MAX_FOFR_PARAMS;i++) os<< " , " <<  sim.fofR_params[i];
-	os<< "\n";
+	os << "fofR_params: " << sim.fofR_params[0];
+	for(int i = 1; i<MAX_FOFR_PARAMS; i++) os << " , " << sim.fofR_params[i];
+	os << "\n";
 
-	os<< "fofR_epsilon_bg: " << sim.fofR_epsilon_bg << "\n";
-	os<< "fofR_epsilon_fields: " << sim.fofR_epsilon_fields << "\n";
-	os<< "fofR_target_precision: " << sim.fofR_target_precision << "\n";
-	os<< "movelimit: " << sim.movelimit << "\n";
-	os<< "steplimit: " << sim.steplimit << "\n";
-	os<< "boxsize: " << sim.boxsize << "\n";
-	os<< "wallclocklimit: " << sim.wallclocklimit << "\n";
-	os<< "z_in: " << sim.z_in << "\n";
-	os<< "z_check: " << sim.z_check << "\n";
+	os << "fofR_epsilon_bg: " << sim.fofR_epsilon_bg << "\n";
+	os << "fofR_epsilon_fields: " << sim.fofR_epsilon_fields << "\n";
+	os << "fofR_target_precision: " << sim.fofR_target_precision << "\n";
+	os << "movelimit: " << sim.movelimit << "\n";
+	os << "steplimit: " << sim.steplimit << "\n";
+	os << "boxsize: " << sim.boxsize << "\n";
+	os << "wallclocklimit: " << sim.wallclocklimit << "\n";
+	os << "z_in: " << sim.z_in << "\n";
+	os << "z_check: " << sim.z_check << "\n";
 
-	os<< "z_snapshot: " << sim.z_snapshot[0];
-	for(int i = 1;i<MAX_OUTPUTS;i++) os<< " , " <<  sim.z_snapshot[i];
-	os<< "\n";
+	os << "z_snapshot: " << sim.z_snapshot[0];
+	for(int i = 1; i<MAX_OUTPUTS; i++) os << " , " << sim.z_snapshot[i];
+	os << "\n";
 
-	os<< "z_pk: " << sim.z_pk[0];
-	for(int i = 1;i<MAX_OUTPUTS;i++) os<< " , " <<  sim.z_pk[i];
-	os<< "\n";
+	os << "z_pk: " << sim.z_pk[0];
+	for(int i = 1; i<MAX_OUTPUTS; i++) os << " , " << sim.z_pk[i];
+	os << "\n";
 
-	os<< "z_restart: " << sim.z_restart[0];
-	for(int i = 1;i<MAX_OUTPUTS;i++) os<< " , " <<  sim.z_restart[i];
-	os<< "\n";
+	os << "z_restart: " << sim.z_restart[0];
+	for(int i = 1; i<MAX_OUTPUTS; i++) os << " , " << sim.z_restart[i];
+	os << "\n";
 
-	os<< "z_switch_fR_background: " << sim.z_switch_fR_background << "\n";
-	os<< "z_switch_deltarad: " << sim.z_switch_deltarad << "\n";
-	os<< "z_switch_linearchi: " << sim.z_switch_linearchi << "\n";
+	os << "z_switch_fR_background: " << sim.z_switch_fR_background << "\n";
+	os << "z_switch_deltarad: " << sim.z_switch_deltarad << "\n";
+	os << "z_switch_linearchi: " << sim.z_switch_linearchi << "\n";
 
-	os<< "z_switch_deltancdm: " << sim.z_switch_deltancdm[0];
-	for(int i = 1;i<MAX_PCL_SPECIES-2;i++) os<< " , " <<  sim.z_switch_deltancdm[i];
-	os<< "\n";
+	os << "z_switch_deltancdm: " << sim.z_switch_deltancdm[0];
+	for(int i = 1; i<MAX_PCL_SPECIES-2; i++) os << " , " << sim.z_switch_deltancdm[i];
+	os << "\n";
 
-	os<< "z_switch_Bncdm: " << sim.z_switch_Bncdm[0];
-	for(int i = 1;i<MAX_PCL_SPECIES-2;i++) os<< " , " <<  sim.z_switch_Bncdm[i];
-	os<< "\n";
+	os << "z_switch_Bncdm: " << sim.z_switch_Bncdm[0];
+	for(int i = 1; i<MAX_PCL_SPECIES-2; i++) os << " , " << sim.z_switch_Bncdm[i];
+	os << "\n";
 
-	os<< "basename_snapshot: " << sim.basename_snapshot << "\n";
-	os<< "basename_pk: " << sim.basename_pk << "\n";
-	os<< "basename_generic: " << sim.basename_generic << "\n";
-	os<< "output_path: " << sim.output_path << "\n";
-	os<< "restart_path: " << sim.restart_path << "\n";
-	os<< "basename_restart: " << sim.basename_restart << "\n";
-	os<< "background_filename: " << sim.background_filename << "\n";
-	os<< "---------------------------------\n";
+	os << "basename_snapshot: " << sim.basename_snapshot << "\n";
+	os << "basename_pk: " << sim.basename_pk << "\n";
+	os << "basename_generic: " << sim.basename_generic << "\n";
+	os << "output_path: " << sim.output_path << "\n";
+	os << "restart_path: " << sim.restart_path << "\n";
+	os << "basename_restart: " << sim.basename_restart << "\n";
+	os << "background_filename: " << sim.background_filename << "\n";
+	os << "---------------------------------\n";
 
 	return os;
 }
@@ -373,35 +371,35 @@ struct cosmology
 
 std::ostream& operator<< (std::ostream& os, const cosmology& cosmo)
 {
-	os<< "===== Cosmology structure: =====\n";
-	os<< "Omega_cdm: " << cosmo.Omega_cdm << "\n";
-	os<< "Omega_b: " << cosmo.Omega_b << "\n";
-	os<< "Omega_m: " << cosmo.Omega_m << "\n";
-	os<< "Omega_Lambda: " << cosmo.Omega_Lambda << "\n";
-	os<< "Omega_g: " << cosmo.Omega_g << "\n";
-	os<< "Omega_ur: " << cosmo.Omega_ur << "\n";
-	os<< "Omega_rad: " << cosmo.Omega_rad << "\n";
+	os << "===== Cosmology structure: =====\n";
+	os << "Omega_cdm: " << cosmo.Omega_cdm << "\n";
+	os << "Omega_b: " << cosmo.Omega_b << "\n";
+	os << "Omega_m: " << cosmo.Omega_m << "\n";
+	os << "Omega_Lambda: " << cosmo.Omega_Lambda << "\n";
+	os << "Omega_g: " << cosmo.Omega_g << "\n";
+	os << "Omega_ur: " << cosmo.Omega_ur << "\n";
+	os << "Omega_rad: " << cosmo.Omega_rad << "\n";
 
-	os<< "Omega_ncdm: " << cosmo.Omega_ncdm[0];
-	for(int i = 1;i<MAX_PCL_SPECIES-2;i++) os<< " , " <<  cosmo.Omega_ncdm[i];
-	os<< "\n";
+	os << "Omega_ncdm: " << cosmo.Omega_ncdm[0];
+	for(int i = 1; i<MAX_PCL_SPECIES-2; i++) os << " , " << cosmo.Omega_ncdm[i];
+	os << "\n";
 
-	os<< "h: " << cosmo.h << "\n";
+	os << "h: " << cosmo.h << "\n";
 
-	os<< "m_ncdm: " << cosmo.m_ncdm[0];
-	for(int i = 1;i<MAX_PCL_SPECIES-2;i++) os<< " , " <<  cosmo.m_ncdm[i];
-	os<< "\n";
+	os << "m_ncdm: " << cosmo.m_ncdm[0];
+	for(int i = 1; i<MAX_PCL_SPECIES-2; i++) os << " , " << cosmo.m_ncdm[i];
+	os << "\n";
 
-	os<< "T_ncdm: " << cosmo.T_ncdm[0];
-	for(int i = 1;i<MAX_PCL_SPECIES-2;i++) os<< " , " <<  cosmo.T_ncdm[i];
-	os<< "\n";
+	os << "T_ncdm: " << cosmo.T_ncdm[0];
+	for(int i = 1; i<MAX_PCL_SPECIES-2; i++) os << " , " << cosmo.T_ncdm[i];
+	os << "\n";
 
-	os<< "deg_ncdm: " << cosmo.deg_ncdm[0];
-	for(int i = 1;i<MAX_PCL_SPECIES-2;i++) os<< " , " <<  cosmo.deg_ncdm[i];
-	os<< "\n";
+	os << "deg_ncdm: " << cosmo.deg_ncdm[0];
+	for(int i = 1; i<MAX_PCL_SPECIES-2; i++) os << " , " << cosmo.deg_ncdm[i];
+	os << "\n";
 
-	os<< "num_ncdm: " << cosmo.num_ncdm << "\n";
-	os<< "---------------------------------\n";
+	os << "num_ncdm: " << cosmo.num_ncdm << "\n";
+	os << "---------------------------------\n";
 
 	return os;
 }

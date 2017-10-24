@@ -444,16 +444,16 @@ else
 		}
 
 		// TODO REMOVE after fixing hibernation
-		COUT << " max |v| = " << maxvel[0] << "\n";
-		check_field(phi, "phi", numpts3d);
-		check_field(xi, "xi", numpts3d);
-		check_field(chi, "chi", numpts3d);
-		check_field(phidot, "phidot", numpts3d);
-		check_field(xidot, "xidot", numpts3d);
-		check_field(deltaR, "deltaR", numpts3d);
-		check_field(deltaT, "deltaT", numpts3d);
-		check_field(zeta, "zeta", numpts3d);
-		check_field(dot_deltaR, "dot_deltaR", numpts3d);
+		// COUT << " max |v| = " << maxvel[0] << "\n";
+		// check_field(phi, "phi", numpts3d);
+		// check_field(xi, "xi", numpts3d);
+		// check_field(chi, "chi", numpts3d);
+		// check_field(phidot, "phidot", numpts3d);
+		// check_field(xidot, "xidot", numpts3d);
+		// check_field(deltaR, "deltaR", numpts3d);
+		// check_field(deltaT, "deltaT", numpts3d);
+		// check_field(zeta, "zeta", numpts3d);
+		// check_field(dot_deltaR, "dot_deltaR", numpts3d);
 		// TODO: End REMOVE
 	}
 #ifdef ICGEN_PREVOLUTION
@@ -1173,15 +1173,15 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 			}
 			COUT << endl;
 			// TODO REMOVE after fixing hibernation
-			check_field(phi, "phi", numpts3d);
-			check_field(xi, "xi", numpts3d);
-			check_field(chi, "chi", numpts3d);
-			check_field(phidot, "phidot", numpts3d);
-			check_field(xidot, "xidot", numpts3d);
-			check_field(deltaR, "deltaR", numpts3d);
-			check_field(deltaT, "deltaT", numpts3d);
-			check_field(zeta, "zeta", numpts3d);
-			check_field(dot_deltaR, "dot_deltaR", numpts3d);
+			// check_field(phi, "phi", numpts3d);
+			// check_field(xi, "xi", numpts3d);
+			// check_field(chi, "chi", numpts3d);
+			// check_field(phidot, "phidot", numpts3d);
+			// check_field(xidot, "xidot", numpts3d);
+			// check_field(deltaR, "deltaR", numpts3d);
+			// check_field(deltaT, "deltaT", numpts3d);
+			// check_field(zeta, "zeta", numpts3d);
+			// check_field(dot_deltaR, "dot_deltaR", numpts3d);
 			// TODO: End REMOVE
 		}
 
@@ -1206,8 +1206,6 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 					if(sim.baryon_flag)
 						maxvel[1] = pcls_b.updateVel(update_q_Newton, (dtau + dtau_old) / 2., update_b_fields, ((sim.radiation_flag > 0 && a < 1. / (sim.z_switch_linearchi + 1.)) ? 2 : 1), f_params);
 				}
-
-				COUT << "max |v| = " << maxvel[0] << "\n";
 
 #ifdef BENCHMARK
 				update_q_count++;

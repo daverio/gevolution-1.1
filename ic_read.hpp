@@ -287,8 +287,7 @@ void readIC(metadata & sim,
 	{
 		projection_init(source);
 		scalarProjectionCIC_project(pcls_cdm, source);
-		if (sim.baryon_flag)
-			scalarProjectionCIC_project(pcls_b, source);
+		if (sim.baryon_flag) scalarProjectionCIC_project(pcls_b, source);
 		scalarProjectionCIC_comm(source);
 
 		plan_source->execute(FFT_FORWARD);

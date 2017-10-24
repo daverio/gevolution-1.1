@@ -287,8 +287,7 @@ void readIC(metadata & sim,
 	{
 		projection_init(source);
 		scalarProjectionCIC_project(pcls_cdm, source);
-		if (sim.baryon_flag)
-			scalarProjectionCIC_project(pcls_b, source);
+		if (sim.baryon_flag) scalarProjectionCIC_project(pcls_b, source);
 		scalarProjectionCIC_comm(source);
 
 		plan_source->execute(FFT_FORWARD);
@@ -561,9 +560,9 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 		cosmo = cosmotemp;
 		file_bin.close();
 
-		COUT<< "Hybernation metadata and cosmology loaded:"<<endl;
-		COUT<< sim <<endl;
-		COUT<< cosmo <<endl;
+		// COUT << "Hybernation metadata and cosmology loaded:" << endl;
+		// COUT << sim << endl;
+		// COUT << cosmo << endl;
 
 
 	}
@@ -737,7 +736,6 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 	if (sim.gr_flag > 0 && ic.metricfile[0][0] != '\0')
 	{
 		filename.assign(ic.metricfile[0]);
-		cout<< "Loading phi from: "<<filename<<endl;
 		phi->loadHDF5(filename);
 	}
 	else
@@ -766,7 +764,6 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 #endif
 		{
 			filename.assign(ic.metricfile[2*sim.gr_flag]);
-			cout<< "Loading Bi from: "<<filename<<endl;
 			Bi->loadHDF5(filename);
 
 			for (x.first(); x.test(); x.next())
@@ -781,7 +778,6 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 		if (sim.gr_flag > 0)
 		{
 			filename.assign(ic.metricfile[1]);
-			cout<< "Loading chi from: "<<filename<<endl;
 			chi->loadHDF5(filename);
 			chi->updateHalo();
 		}

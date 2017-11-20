@@ -230,7 +230,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
                          Field<FieldType> & xi_old,
                          Field<FieldType> & deltaR,
 												 Field<FieldType> & source, //
-												 const double a3bg, //  -a^3 * (background T00)
+												 const double T00hom, //  background T00
 												 const double dx2,
 												 const double dtau,
 												 const double Hubble,
@@ -250,6 +250,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
   Site y(phi.lattice());
 	double laplace = 0.;
   double a2 = a*a;
+  double a3_T00hom = a*a*a*T00hom;
   double threeH2 = 3. * Hubble * Hubble;
 	double grad[3];
   int i = 0;
@@ -258,7 +259,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
   {
     for (x.first(); x.test(); x.next())
     {
-      source(x) = fourpiG_over_a * (a3T00(x) - a3bg);// 4piG(-a3 T00 - (-a3 Tbar00)) = -4piG a3 dT00
+      source(x) = fourpiG_over_a * (a3T00(x) + a3_T00hom);// 4piG * (-a^3*T00 + a^3*Tbar00) = -4piG * a^3 * dT00
       for(i=0; i<3; i++)
       {
         xn = x+i;
@@ -278,7 +279,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
   {
     for (x.first(); x.test(); x.next())
     {
-      source(x) = fourpiG_over_a * (a3T00(x) - a3bg);// 4piG/a(-a^3 T00 - (-a^3 Tbar00)) = -4piG a^2 dT00
+      source(x) = fourpiG_over_a * (a3T00(x) + a3_T00hom);// 4piG * (-a^3*T00 + a^3*Tbar00) = -4piG * a^3 * dT00
       for(i=0; i<3; i++)
       {
         xn = x+i;
@@ -306,7 +307,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
   {
     for (x.first(); x.test(); x.next())
     {
-      source(x) = fourpiG_over_a * (a3T00(x) - a3bg);// 4piG(-a3 T00 - (-a3 Tbar00)) = -4piG a3 dT00
+      source(x) = fourpiG_over_a * (a3T00(x) + a3_T00hom);// 4piG * (-a^3*T00 + a^3*Tbar00) = -4piG * a^3 * dT00
       for(i=0; i<3; i++)
       {
         xn = x+i;
@@ -393,18 +394,17 @@ void projectFTsource_S0i(Field<FieldType> & S0iFT,
 /////////////////////////////////////////////////
 template <class FieldType>
 void computeTtrace(Field<FieldType> & dT,
-							     Field<FieldType> & t00,
-							     Field<FieldType> & tij,
-                   double a,
+							     Field<FieldType> & minus_a3_t00,
+							     Field<FieldType> & a3_tij,
+                   double a3,
                    double Tbar,
                    double eightpiG)
 {
 	Site x(dT.lattice());
-  double a3 = a*a*a;
 	for(x.first(); x.test(); x.next())
 	{
-		dT(x) = -t00(x);
-    dT(x) += tij(x,0,0) + tij(x,1,1) + tij(x,2,2);
+		dT(x) = -minus_a3_t00(x);
+    dT(x) += a3_tij(x,0,0) + a3_tij(x,1,1) + a3_tij(x,2,2);
     dT(x) /= a3;
     dT(x) -= Tbar;
     dT(x) *= eightpiG;

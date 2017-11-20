@@ -139,6 +139,13 @@ double Hconf(const double a, const double fourpiG, const cosmology cosmo)
 {
 	return sqrt((2. * fourpiG / 3.) * (((cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) / a) + (cosmo.Omega_Lambda * a * a) + (cosmo.Omega_rad / a / a)));
 }
+////////////////////////////////////////////
+// With explicit T00hom instead of theoretical value
+////////////////////////////////////////////
+double Hconf(const double a, const double fourpiG, const cosmology cosmo, const double T00hom)
+{
+	return sqrt((2. * fourpiG / 3.) * (-T00hom * a * a + bg_ncdm(a, cosmo) / a + (cosmo.Omega_Lambda * a * a) + (cosmo.Omega_rad / a / a)));
+}
 
 
 double Omega_m(const double a, const cosmology cosmo) { return cosmo.Omega_m / (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo) + cosmo.Omega_Lambda * a * a * a + cosmo.Omega_rad / a); }

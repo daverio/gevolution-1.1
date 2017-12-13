@@ -173,6 +173,7 @@ struct gadget2_header
 struct metadata
 {
 	int CYCLE_INFO_INTERVAL = 10; // Previously fixed. #define CYCLE_INFO_INTERVAL = 10
+	int BACKGROUND_NUMPTS = 10;
 	int numpts;
 	int downgrade_factor;
 	long numpcl[MAX_PCL_SPECIES];
@@ -192,6 +193,8 @@ struct metadata
 	int num_fofR_params;
 	int quasi_static = 0;
 	int background_only = 0;
+	int background_trace = 0;
+	int background_T00hom = 0;
 	double bg_initial_redshift = 100.;
 	double bg_final_redshift = 0.;
 	int lcdm_background = 0;
@@ -234,6 +237,7 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 {
 	os << "===== Metadata structure: =====\n";
 	os << "CYCLE_INFO_INTERVAL: " << sim.CYCLE_INFO_INTERVAL << "\n";
+	os << "BACKGROUND_NUMPTS: " << sim.BACKGROUND_NUMPTS << "\n";
 	os << "numpts: " << sim.numpts << "\n";
 	os << "downgrade_factor: " << sim.downgrade_factor << "\n";
 
@@ -260,6 +264,8 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "num_fofR_params: " << sim.num_fofR_params << "\n";
 	os << "quasi_static: " << sim.quasi_static << "\n";
 	os << "background_only: " << sim.background_only << "\n";
+	os << "background_trace: " << sim.background_trace << "\n";
+	os << "background_T00hom: " << sim.background_T00hom << "\n";
 	os << "bg_initial_redshift: " << sim.bg_initial_redshift << "\n";
 	os << "bg_final_redshift: " << sim.bg_final_redshift << "\n";
 	os << "lcdm_background: " << sim.lcdm_background << "\n";

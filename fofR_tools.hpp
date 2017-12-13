@@ -18,7 +18,7 @@
 ///////////////////// F(R) FUNCTIONS /////////////////////
 
 // F(R) = f(R) - R
-Real F(double R, double * params, const int fofR_type, int code = -1)
+Real F(const double R, const double * params, const int fofR_type, int code = -1)
 {
 	double output, Rpow;
 
@@ -64,7 +64,7 @@ Real F(double R, double * params, const int fofR_type, int code = -1)
 
 
 // F_R(R) -- First derivative with respect to R
-Real FR(double R, double * params, const int fofR_type, int code = -1)
+Real FR(const double R, const double * params, const int fofR_type, int code = -1)
 {
 	double output, Rpow;
 
@@ -113,7 +113,7 @@ Real FR(double R, double * params, const int fofR_type, int code = -1)
 
 
 // F_{RR}(R) -- Second derivative with respect to R
-Real FRR(double R, double * params, const int fofR_type, int code = -1)
+Real FRR(const double R, const double * params, const int fofR_type, int code = -1)
 {
 	double output, Roverm2, Rpow;
 
@@ -173,7 +173,7 @@ Real FRR(double R, double * params, const int fofR_type, int code = -1)
 
 
 // F_{RRR}(R) -- Third derivative with respect to R
-Real FRRR(double R, double * params, const int fofR_type, int code = -1)
+Real FRRR(const double R, const double * params, const int fofR_type, int code = -1)
 {
 	double output, Roverm2, Rpow;
 

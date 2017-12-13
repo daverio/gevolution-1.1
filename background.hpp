@@ -140,11 +140,12 @@ double Hconf(const double a, const double fourpiG, const cosmology cosmo)
 	return sqrt((2. * fourpiG / 3.) * (((cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) / a) + (cosmo.Omega_Lambda * a * a) + (cosmo.Omega_rad / a / a)));
 }
 ////////////////////////////////////////////
-// With explicit T00hom instead of theoretical value
+// With explicit T00_hom instead of theoretical value
+// TODO: Check that the correct 4piG is taken into account in T00hom
 ////////////////////////////////////////////
-double Hconf(const double a, const double fourpiG, const cosmology cosmo, const double T00hom)
+double Hconf(const double a, const double fourpiG, const cosmology cosmo, const double T00_hom_a3)
 {
-	return sqrt((2. * fourpiG / 3.) * (-T00hom * a * a + bg_ncdm(a, cosmo) / a + (cosmo.Omega_Lambda * a * a) + (cosmo.Omega_rad / a / a)));
+	return sqrt((2. * fourpiG / 3.) * ((-T00_hom_a3 + bg_ncdm(a, cosmo)) / a + (cosmo.Omega_Lambda * a * a) + (cosmo.Omega_rad / a / a)));
 }
 
 

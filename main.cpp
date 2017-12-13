@@ -92,7 +92,7 @@ int main(int argc, char **argv)
 	double update_q_time = 0;
 	int update_q_count = 0;
 	double moveParts_time = 0;
-	int  moveParts_count = 0;
+	int moveParts_count = 0;
 
 #endif  //BENCHMARK
 
@@ -105,9 +105,11 @@ int main(int argc, char **argv)
 	long numpts3d;
 	int box[3];
 	double dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, dx, tau, tau_temp, a, fourpiG, tau_Lambda, tmp, start_time;
+	double dtau_print, tau_print;
 	double maxvel[MAX_PCL_SPECIES];
-	FILE * outfile;
 	char filename[2*PARAM_MAX_LENGTH+24];
+	string bgfilename;
+	int wid;
 	string h5filename;
 	char * settingsfile = NULL;
 	parameter * params = NULL;
@@ -116,6 +118,7 @@ int main(int argc, char **argv)
 	icsettings ic;
 	gadget2_header hdr;
 	Real T00_hom;
+	Real T00_hom_a3;
 	Real T00_hom_rescaled;
 	Real Tii_hom;
 	Real Trace_hom;
@@ -200,15 +203,22 @@ int main(int argc, char **argv)
 
 #ifdef HAVE_CLASS
 	background class_background;
-  	perturbs class_perturbs;
-  	spectra class_spectra;
+  perturbs class_perturbs;
+  spectra class_spectra;
 #endif
 
 	h5filename.reserve(2*PARAM_MAX_LENGTH);
 	h5filename.assign(sim.output_path);
 	h5filename += sim.basename_generic;
-	h5filename += '_';
+	h5filename += "_";
 	h5filename += sim.basename_snapshot;
+
+	bgfilename.reserve(2*PARAM_MAX_LENGTH + 24);
+	bgfilename.assign(sim.output_path);
+	bgfilename += sim.basename_generic;
+	bgfilename += "_background.dat";
+
+	std::ofstream bgoutfile;
 
 	box[0] = sim.numpts;
 	box[1] = sim.numpts;
@@ -245,6 +255,7 @@ int main(int argc, char **argv)
 	Field<Real> deltaT;
 	Field<Real> phidot;
 	Field<Real> xidot;
+	Field<Real> laplace_xi;
 
   PlanFFT<Cplx> plan_source;
   PlanFFT<Cplx> plan_phi;
@@ -255,68 +266,56 @@ int main(int argc, char **argv)
   PlanFFT<Cplx> plan_deltaR_prev;
   PlanFFT<Cplx> plan_deltaT;
   PlanFFT<Cplx> plan_xi;
-  PlanFFT<Cplx> plan_Bi;
+
+  PlanFFT<Cplx> plan_laplace_xi;
+
+	PlanFFT<Cplx> plan_Bi;
   PlanFFT<Cplx> plan_Sij;
 
 #ifdef CHECK_B
   PlanFFT<Cplx> plan_Bi_check;
 #endif
 
-if(sim.mg_flag == FOFR)
-{
-	phi.initialize(lat,1);
-	phi.alloc();
-	chi.initialize(lat,1);
-	source.initialize(lat,1);
-	scalarFT.initialize(latFT,1);
-	xi.initialize(lat,1);
-	xi_prev.initialize(lat,1);
-	xi_prev.alloc();
-	xidot.initialize(lat,1);
-	xidot.alloc();
-	zeta.initialize(lat,1);
-	deltaR.initialize(lat,1);
-	dot_deltaR.initialize(lat, 1);
-	dot_deltaR.alloc();
-	deltaR_prev.initialize(lat,1);
-	deltaT.initialize(lat,1);
-	phidot.initialize(lat,1);
-	plan_source.initialize(&source, &scalarFT);
-	plan_phi.initialize(&phi, &scalarFT);
-	plan_phidot.initialize(&phidot, &scalarFT);
-	plan_chi.initialize(&chi, &scalarFT);
-	plan_xi.initialize(&xi, &scalarFT);
-	plan_deltaR.initialize(&deltaR, &scalarFT);
-	plan_deltaR_prev.initialize(&deltaR_prev, &scalarFT);
-	plan_deltaT.initialize(&deltaT, &scalarFT);
-	plan_zeta.initialize(&zeta, &scalarFT);
-	Bi.initialize(lat,3);
-	BiFT.initialize(latFT,3);
-	plan_Bi.initialize(&Bi, &BiFT);
-	Sij.initialize(lat,3,3,symmetric);
-	SijFT.initialize(latFT,3,3,symmetric);
-	plan_Sij.initialize(&Sij, &SijFT);
-}
-else
-{
-	source.initialize(lat,1);
-	phi.initialize(lat,1);
-	phidot.initialize(lat,1);
-	chi.initialize(lat,1);
-	scalarFT.initialize(latFT,1);
-	deltaT.initialize(lat,1);
-	plan_source.initialize(&source, &scalarFT);
-	plan_phidot.initialize(&phidot, &scalarFT);
-	plan_deltaT.initialize(&deltaT, &scalarFT);
-	plan_phi.initialize(&phi, &scalarFT);
-	plan_chi.initialize(&chi, &scalarFT);
-	Sij.initialize(lat,3,3,symmetric);
-	SijFT.initialize(latFT,3,3,symmetric);
-	plan_Sij.initialize(&Sij, &SijFT);
-	Bi.initialize(lat,3);
-	BiFT.initialize(latFT,3);
-	plan_Bi.initialize(&Bi, &BiFT);
-}
+
+// TODO: For the moment, initialize and alloc everything. After debugging, only stuff that's needed
+phi.initialize(lat,1);
+phi.alloc();
+chi.initialize(lat,1);
+source.initialize(lat,1);
+scalarFT.initialize(latFT,1);
+xi.initialize(lat,1);
+xi_prev.initialize(lat,1);
+xi_prev.alloc();
+xidot.initialize(lat,1);
+xidot.alloc();
+
+laplace_xi.initialize(lat,1);
+
+zeta.initialize(lat,1);
+deltaR.initialize(lat,1);
+dot_deltaR.initialize(lat, 1);
+dot_deltaR.alloc();
+deltaR_prev.initialize(lat,1);
+deltaT.initialize(lat,1);
+phidot.initialize(lat,1);
+plan_source.initialize(&source, &scalarFT);
+plan_phi.initialize(&phi, &scalarFT);
+plan_phidot.initialize(&phidot, &scalarFT);
+plan_chi.initialize(&chi, &scalarFT);
+plan_xi.initialize(&xi, &scalarFT);
+
+plan_laplace_xi.initialize(&laplace_xi, &scalarFT);
+
+plan_deltaR.initialize(&deltaR, &scalarFT);
+plan_deltaR_prev.initialize(&deltaR_prev, &scalarFT);
+plan_deltaT.initialize(&deltaT, &scalarFT);
+plan_zeta.initialize(&zeta, &scalarFT);
+Bi.initialize(lat,3);
+BiFT.initialize(latFT,3);
+plan_Bi.initialize(&Bi, &BiFT);
+Sij.initialize(lat,3,3,symmetric);
+SijFT.initialize(latFT,3,3,symmetric);
+plan_Sij.initialize(&Sij, &SijFT);
 
 #ifdef CHECK_B
 	Field<Real> Bi_check;
@@ -341,9 +340,13 @@ else
 	//f(R) background description and gsl spline
 	double Hubble;
 	double Rbar;
+	double dot_Rbar;
 	double Fbar;
 	double FRbar;
 	double FRRbar;
+	double dot_FRbar;
+	double ddot_FRbar;
+	double temp1, temp2;
 	double coeffm2;
 
 	gsl_spline * a_spline;
@@ -371,9 +374,9 @@ else
 	a = 1. / (1. + sim.z_in);
 	//TODO check particleHorizon
 	tau = particleHorizon(a, fourpiG, cosmo);
-	COUT << setprecision(20) << " initial tau/boxsize = " << tau << "\n";
-	COUT << setprecision(8);
-	
+	COUT << " initial tau/boxsize = " << tau << "\n";
+	COUT << " fourpiG = " << fourpiG << "\n";
+
 	tau_Lambda = -1.0;
 
 	if(sim.mg_flag == FOFR && ic.generator != ICGEN_READ_FROM_DISK)
@@ -382,12 +385,17 @@ else
 
 		if(!sim.lcdm_background)
 		{
-			Rbar = R_initial_fR(a, 2. * fourpiG, cosmo);
+			Rbar = R_initial_fR(a, fourpiG, cosmo);
+			if(sim.background_trace)
+			{
+				dot_Rbar = dot_R_initial_fR(a, Hubble, Rbar, fourpiG, cosmo);
+			}
+			COUT << "\tInitial Rbar = " << Rbar << "\n";
 			Fbar = F(Rbar, sim.fofR_params, sim.fofR_type);
 			FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type);
 			FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type);
 			Hubble = H_initial_fR(a, Hconf(a, fourpiG, cosmo), Rbar, Fbar, FRbar,	6. * fourpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * FRRbar / a / a / a); // TODO: Check Omega_m term
-			
+
 			if(sim.Cf * dx < sim.steplimit / Hubble)
 			{
 				dtau = sim.Cf * dx;
@@ -424,8 +432,116 @@ else
 	dtau_old = 0.;
 	dtau_old_2 = 0.;
 
+	//////////////////////////////////////////////////////// Background Only
+	if(sim.background_only)
+	{
+		if(sim.mg_flag == FOFR)
+		{
+			dtau_print = tau * sqrt(sim.bg_initial_redshift + 1.) / sqrt(sim.bg_final_redshift + 1.) / sim.BACKGROUND_NUMPTS;
+			tau_print = tau;
+		}
+
+		if(parallel.rank() == 0)
+		{
+			bgoutfile.open(bgfilename);
+			if(bgoutfile == NULL)
+			{
+				cout << " error opening file for background output!" << endl;
+				return -1;
+			}
+
+			wid = 6;
+			bgoutfile << scientific << setprecision(wid);
+			wid += 9;
+
+			bgoutfile << "# background statistics\n#" << setw(8)
+				    		<< "cycle" << setw(wid)
+								<< "tau/boxsize" << setw(wid)
+								<< "a" << setw(wid)
+								<< "conformal H" << setw(wid)
+								<< "R" << "\n";
+		}
+
+		while(a < 1./(1. + sim.bg_final_redshift))
+		{
+			if(sim.mg_flag == FOFR && !sim.lcdm_background)
+			{
+				dtau_old = dtau;
+				dtau = sim.fofR_epsilon_bg * sqrt(3. * fabs(FRRbar)) / a;
+				if(sim.background_trace)
+				{
+					dtau = rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, dtau, sim.fofR_params, sim.fofR_type);
+				}
+				else
+				{
+					dtau = rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, dtau, sim.fofR_params, sim.fofR_type);
+				}
+				Fbar = F(Rbar, sim.fofR_params, sim.fofR_type);
+				temp1 = FRbar;
+				temp2 = dot_FRbar;
+				FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type);
+				dot_FRbar = (FRbar - temp1) / dtau;
+				ddot_FRbar = (dot_FRbar - temp2) / dtau;
+				FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type);
+				tau += dtau; // TODO: CHECK
+			}
+			else
+			{
+				if(sim.Cf * dx < sim.steplimit / Hubble)
+				{
+					dtau = sim.Cf * dx;
+				}
+				else
+				{
+					dtau = sim.steplimit / Hubble;
+				}
+
+				rungekutta4bg(a, fourpiG, cosmo, dtau);  // GR -- evolve background
+				Hubble = Hconf(a, fourpiG, cosmo);
+				Rbar = 2. * fourpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a + 4. * cosmo.Omega_Lambda);
+				tau += dtau;
+			}
+
+			// Write background data on file
+			if(parallel.rank() == 0)
+			{
+				if(sim.mg_flag != FOFR || tau >= tau_print)
+				{
+					cout << " cycle " << cycle << "\tz = " << 1./a - 1. << "\ttau = " << tau << "\tdtau = " << dtau << endl;
+					bgoutfile << setw(9) << cycle << setw(wid) << tau	<< setw(wid) << a	<< setw(wid) << Hubble << setw(wid) << Rbar	<< "\n";
+					if(sim.mg_flag == FOFR)
+					{
+						tau_print += dtau_print;
+					}
+				}
+			}
+			cycle++;
+		}
+
+		// Write last step for f(R)
+		if(parallel.rank() == 0)
+		{
+			if(sim.mg_flag == FOFR)
+			{
+				cout << " FINAL STEP:\n";
+				cout << " cycle " << cycle << "\tz = " << 1./a - 1. << "\ttau = " << tau << "\tdtau = " << dtau << endl;
+				bgoutfile << setw(9) << cycle	<< setw(wid) << tau	<< setw(wid) << a	<< setw(wid) << Hubble << setw(wid) << Rbar	<< "\n";
+			}
+
+			bgoutfile.close();
+			cout << "\n Background evolution complete.\n";
+		}
+
+		return 0;
+	}
+
+
+		//////////////////////////////////////////////////////// Full evolution -- Background + Perturbations
+
+		// Generate Initial Conditions
 	if(ic.generator == ICGEN_BASIC)
 	{
+		COUT << " Using flag ICGEN_BASIC\n";
 		generateIC_basic(sim, ic, cosmo, fourpiG, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij); // generates ICs on the fly
 	}
 	else if(ic.generator == ICGEN_READ_FROM_DISK)
@@ -444,19 +560,6 @@ else
 			Hubble = Hconf(a, fourpiG, cosmo);
 			Rbar = 2. * fourpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a + 4.*cosmo.Omega_Lambda );
 		}
-
-		// TODO REMOVE after fixing hibernation
-		// COUT << " max |v| = " << maxvel[0] << "\n";
-		// check_field(phi, "phi", numpts3d);
-		// check_field(xi, "xi", numpts3d);
-		// check_field(chi, "chi", numpts3d);
-		// check_field(phidot, "phidot", numpts3d);
-		// check_field(xidot, "xidot", numpts3d);
-		// check_field(deltaR, "deltaR", numpts3d);
-		// check_field(deltaT, "deltaT", numpts3d);
-		// check_field(zeta, "zeta", numpts3d);
-		// check_field(dot_deltaR, "dot_deltaR", numpts3d);
-		// TODO: End REMOVE
 	}
 #ifdef ICGEN_PREVOLUTION
 	else if(ic.generator == ICGEN_PREVOLUTION)
@@ -477,6 +580,7 @@ else
 		COUT << " error: baryon_flag > 1 after IC generation, something went wrong in IC generator!" << endl;
 		parallel.abortForce();
 	}
+
 
 	numspecies = 1 + sim.baryon_flag + cosmo.num_ncdm;
 	parallel.max<double>(maxvel, numspecies);
@@ -517,85 +621,6 @@ else
 		hdr.fill[i] = 0;
 
 
-	//////////////////////////////////////////////////////// Background Only
-	if(sim.background_only)
-	{
-		if(parallel.isRoot())
-		{
-			sprintf(filename, "%s%s_background.dat", sim.output_path, sim.basename_generic);
-			outfile = fopen(filename, "w");
-			if(outfile == NULL)
-			{
-				cout << " error opening file for background output!" << endl;
-			}
-		}
-
-		while(a < 1./(1. + sim.bg_final_redshift))
-		{
-			if(kFT.setCoord(0, 0, 0))
-			{
-				// else outfile = fopen(filename, "a");
-				if(!cycle)
-				{
-					fprintf(outfile, "# background statistics\n# cycle   tau/boxsize    a              conformal H    R\n");
-				}
-				if(sim.mg_flag != FOFR)
-				{
-					fprintf(outfile, " %6d   %e   %e   %e   %e\n", cycle, tau, a, Hconf(a, fourpiG, cosmo), 2. * fourpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a + 4.*cosmo.Omega_Lambda));
-				}
-				else if(a >= sim.bg_initial_redshift)
-				{
-					fprintf(outfile, " %6d   %e   %e   %e   %e\n", cycle, tau, a, Hubble, Rbar);
-				}
-			}
-
-			if(sim.mg_flag == FOFR && !sim.lcdm_background)
-			{
-				dtau = sim.fofR_epsilon_bg * sqrt(3. * fabs(FRRbar)) / a;
-				dtau = rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, 0., dtau, sim.fofR_params, sim.fofR_type);
-				Fbar = F(Rbar, sim.fofR_params, sim.fofR_type);
-				FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type);
-				FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type);
-				tau += dtau; // TODO: CHECK
-				if(parallel.isRoot() && a >= 1./(sim.bg_initial_redshift + 1.)) fprintf(outfile, " %6d   %.15g   %.15g   %.15g   %.15g\n", cycle, tau, a, Hubble, Rbar);
-				if(cycle%100000 == 0)
-				{
-					COUT << " cycle " << cycle << ", z = " << 1./a - 1. << ", dtau = " << dtau << endl;
-				}
-				cycle++;
-			}
-			else
-			{
-				if(sim.Cf * dx < sim.steplimit / Hubble)
-				{
-					dtau = sim.Cf * dx;
-				}
-				else
-				{
-					dtau = sim.steplimit / Hubble;
-				}
-
-				COUT << " cycle " << cycle << ", z = " << 1./a - 1. << endl;
-
-				rungekutta4bg(a, fourpiG, cosmo, dtau);  // GR -- evolve background by half a time step
-				Hubble = Hconf(a, fourpiG, cosmo);
-				Rbar = 2. * fourpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a + 4.*cosmo.Omega_Lambda);
-				tau += dtau;
-				cycle++;
-			}
-		}
-
-		COUT << "\n Background evolution complete.\n\n";
-		if(parallel.isRoot())
-		{
-			fclose(outfile);
-		}
-		return 0;
-	}
-
-
-	//////////////////////////////////////////////////////// Full evolution -- Background + Perturbations
-
 #ifdef BENCHMARK
 	initialization_time = MPI_Wtime() - start_time;
 	parallel.sum(initialization_time);
@@ -619,6 +644,37 @@ else
 	}
 #endif
 
+	// Open background file
+	if(parallel.rank() == 0)
+	{
+		bgoutfile.open(bgfilename);
+		if(bgoutfile == NULL)
+		{
+			cout << " error opening file for background output!" << endl;
+			return -1;
+		}
+
+		wid = 6;
+		bgoutfile << scientific << setprecision(wid);
+		wid += 9;
+
+		bgoutfile << "# background statistics\n#"
+							<< setw(8) 	 << "cycle"
+							<< setw(wid) << "tau/boxsize"
+							<< setw(wid) << "a"
+							<< setw(wid) << "conformal H"
+							<< setw(wid) << "R"
+					 		<< setw(wid) << "phi(k=0)"
+							<< setw(wid) << "T00(k=0)"
+							<< "\n";
+	}
+
+	if(sim.mg_flag == FOFR)
+	{
+		dtau_print = tau / sqrt(a * (sim.bg_final_redshift + 1.)) / sim.BACKGROUND_NUMPTS;
+		tau_print = tau;
+	}
+
 	//////////////////////////////////////////////////////// Main loop
 	while(true)
 	{
@@ -632,19 +688,6 @@ else
 			COUT << "\n                              ----- Beginning full f(R) background evolution at z = " << 1./a - 1. << " -----\n";
 			cosmo.Omega_Lambda = 0.;
 			sim.lcdm_background = 0;
-		}
-
-		if(sim.check_fields)
-		{
-			if(sim.check_pause)
-			{
-				COUT << "\n   Press key to continue...";
-				cin.get();
-			}
-			COUT << "\n---------- CYCLE " << cycle << " ----------\n";
-			COUT << " Scale factor = " << a << "  Hubble = " << Hubble << "   Rbar = " << Rbar << "   1 + 8piG Tbar / Rbar = " << 1 + 2. * fourpiG * Tbar(a, cosmo) / Rbar << "\n dtau_old = " << dtau_old << "   dtau = " << dtau << "  T00_hom = " << T00_hom << "  bg_model = " << cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo) << "  phi_hom = " << phi_hom;
-			if(sim.mg_flag == FOFR) COUT << "   numsteps_bg = " << numsteps_bg;
-			COUT << endl;
 		}
 
 #ifdef BENCHMARK
@@ -744,6 +787,8 @@ else
 
 			T00_hom_rescaled = T00_hom / (1. + 3. * phi_hom);
 
+			T00_hom_a3 = T00_hom * a * a * a;
+
 			if(cycle % sim.CYCLE_INFO_INTERVAL == 0)
 			{
 				COUT << "\n cycle " << cycle << ", background information:\n"
@@ -751,13 +796,27 @@ else
 						 << "           background model = " << cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo) << "\n"
 						 << "           average/rescaled T00 = " << T00_hom*a*a*a << " / " << T00_hom_rescaled*a*a*a << "\n"
 						 << "           phi_hom = " << phi_hom << "\n";
+				if(sim.check_fields)
+				{
+					check_field(phi, "phi", numpts3d);
+					if(sim.mg_flag == FOFR)
+					{
+						check_field(deltaR, "deltaR", numpts3d);
+						check_field(zeta, "zeta", numpts3d);
+					}
+				}
 			}
 
 
 			// Computes 8piG*deltaT = 8piG( (T00 + T11 + T22 + T33) - (-rho_backg + 3P_backg) ), to be stored in {deltaT}
 			// At the moment: {source} = -a^3*T00, {Sij} = a^3*Tij
 			// TODO: Should we use (-T00_hom + Tii_hom) or the predicted value (i.e. Omega_m/a^3 + ...)
-			computeTtrace(deltaT, source, Sij, a*a*a, Trace_hom, 2. * fourpiG); // TODO: Should this include the explicit Lambda term?
+			computeTtrace(deltaT, source, Sij, a*a*a, Trace_hom, fourpiG); // TODO: Should this include the explicit Lambda term?
+
+			if(sim.mg_flag != FOFR && sim.gr_flag)
+			{
+				copy_field(deltaT, deltaR, -1.);
+			}
 
 			if(sim.mg_flag == FOFR)
 			{
@@ -769,7 +828,8 @@ else
 					flip_fields(xi, xi_prev);
 					copy_field(xi, xi, 0.); // Sets xi = 0.
 					copy_field(zeta, zeta, 0.); // Sets zeta = 0.
- // TODO: Are these necessary?
+
+					// TODO: Are these necessary?
 					deltaR.updateHalo();
 					deltaR_prev.updateHalo();
 					zeta.updateHalo();
@@ -869,21 +929,6 @@ else
 				}
 			}
 
-			if(sim.check_fields)
-			{
-				check_field(source, "source", numpts3d, "    Before prepareFTsource_S00\n");
-				check_field(phi, "phi", numpts3d);
-				if(sim.mg_flag == FOFR)
-				{
-					check_field(xi, "xi", numpts3d);
-					check_field(xidot, "xidot", numpts3d);
-					check_field(zeta, "zeta", numpts3d);
-					check_field(deltaR, "deltaR", numpts3d);
-					check_field(deltaR_prev, "deltaR_prev", numpts3d);
-					check_field(deltaT, "deltaT", numpts3d);
-				}
-			}
-
 			if(cycle) // Only after the 0th cycle
 			{
 				if(sim.mg_flag == FOFR)
@@ -895,12 +940,6 @@ else
 				else if(sim.gr_flag)
 				{
 					prepareFTsource<Real>(phi, chi, source, cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo), source, 3. * Hconf(a, fourpiG, cosmo) * dx * dx / dtau_old, fourpiG * dx * dx / a, 3. * Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) * dx * dx);  // prepare nonlinear source for phi update
-				}
-
-				if(sim.check_fields)
-				{
-					check_field(source, "source", numpts3d, "    Before solving S00\n");
-					check_field(phi, "phi", numpts3d);
 				}
 
 #ifdef BENCHMARK
@@ -937,21 +976,6 @@ else
 				fft_count++;
 #endif
 
-				if(sim.check_fields)
-				{
-					check_field(source, "source", numpts3d, "    After solving S00\n");
-					check_field(phi, "phi", numpts3d);
-					if(sim.mg_flag == FOFR)
-					{
-						check_field(phidot, "phidot", numpts3d);
-						check_field(xi_prev, "xi_prev", numpts3d);
-						check_field(xi, "xi", numpts3d);
-						check_field(deltaR, "deltaR", numpts3d);
-						check_field(deltaR_prev, "deltaR_prev", numpts3d);
-						check_field(deltaT, "deltaT", numpts3d);
-						check_field(zeta, "zeta", numpts3d);
-					}
-				}
 			}
 		}
 		else // Newtonian Evolution
@@ -982,23 +1006,7 @@ else
 		// record some background data
 		if(kFT.setCoord(0, 0, 0))
 		{
-			sprintf(filename, "%s%s_background.dat", sim.output_path, sim.basename_generic);
-			if(!cycle) outfile = fopen(filename, "w");
-			else outfile = fopen(filename, "a");
-			if(outfile == NULL)
-			{
-				cout << " error opening file for background output!" << endl;
-			}
-			else
-			{
-				if(cycle == 0)
-				{
-					fprintf(outfile, "# background statistics\n# cycle   tau/boxsize    a              conformal H    R              phi(k=0)       T00(k=0)\n");
-				}
-
-				fprintf(outfile, " %6d   %e   %e   %e   %e   %e  %e\n", cycle, tau, a, Hubble, Rbar, phi_hom, -T00_hom);
-				fclose(outfile);
-			}
+			bgoutfile << setw(9) << cycle << setw(wid) << tau	<< setw(wid) << a	<< setw(wid) << Hubble << setw(wid) << Rbar	<< setw(wid) << phi_hom << setw(wid) << -T00_hom_rescaled*a*a*a << "\n";
 		}
 
 		// done recording background data
@@ -1096,12 +1104,19 @@ else
 		if(pkcount < sim.num_pk && 1. / a < sim.z_pk[pkcount] + 1.)
 		// if(cycle < 6)
 		{
+
+			for(x.first(); x.test(); x.next())
+			{
+				laplace_xi(x) = xi(x+0) + xi(x-0) + xi(x+1) + xi(x-1) + xi(x+2) + xi(x-2) - 6.*xi(x);
+				laplace_xi(x) /= dx*dx;
+			}
+
 			COUT << COLORTEXT_CYAN << " writing power spectra" << COLORTEXT_RESET << " at z = " << ((1./a) - 1.) <<  " (cycle " << cycle << "), tau/boxsize = " << tau << endl;
 
 #ifdef CHECK_B
-			writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &deltaT, &xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_deltaT, &plan_xi, &plan_zeta, &plan_phidot, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, &Bi_check, &BiFT_check, &plan_Bi_check);
+			writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &deltaT, &laplace_xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_deltaT, &plan_laplace_xi, &plan_zeta, &plan_phidot, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, &Bi_check, &BiFT_check, &plan_Bi_check);
 #else
-			writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &deltaT, &xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_deltaT, &plan_xi, &plan_zeta, &plan_phidot, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
+			writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &deltaT, &laplace_xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_deltaT, &plan_laplace_xi, &plan_zeta, &plan_phidot, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
 #endif
 			pkcount++;
 		}
@@ -1177,17 +1192,6 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 				}
 			}
 			COUT << endl;
-			// TODO REMOVE after fixing hibernation
-			// check_field(phi, "phi", numpts3d);
-			// check_field(xi, "xi", numpts3d);
-			// check_field(chi, "chi", numpts3d);
-			// check_field(phidot, "phidot", numpts3d);
-			// check_field(xidot, "xidot", numpts3d);
-			// check_field(deltaR, "deltaR", numpts3d);
-			// check_field(deltaT, "deltaT", numpts3d);
-			// check_field(zeta, "zeta", numpts3d);
-			// check_field(dot_deltaR, "dot_deltaR", numpts3d);
-			// TODO: End REMOVE
 		}
 
 		for(j = 0; j < numsteps; j++) // particle update
@@ -1261,14 +1265,49 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 					Hubble = Hconf(a, fourpiG, cosmo);
 					Rbar = 2. * fourpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a + 4. * cosmo.Omega_Lambda);
 				}
-				else // f(R) gravity, non-LCDM background
+				else if(sim.background_trace) // f(R) gravity, non-LCDM background, trace equation
 				{
 					if(numsteps_bg == 1)
-						rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
+					{
+						dtau = rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
+					}
 					else
+					{
 						for(g=0; g<numsteps_bg/2; g++)
-							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom, dtau_bg, sim.fofR_params, sim.fofR_type);
+						{
+							dtau = rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
+						}
+					}
+				}
+				else // f(R) gravity, non-LCDM background, Friedmann equation
+				{
+					if(numsteps_bg == 1)
+					{
+						if(sim.background_T00hom)
+						{
+							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom_a3, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
+						}
+						else
+						{
+							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
+						}
+					}
+					else // TODO: put if outside the for loop
+						for(g=0; g<numsteps_bg/2; g++)
+						{
+							if(sim.background_T00hom)
+							{
+								rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom_a3, dtau_bg, sim.fofR_params, sim.fofR_type);
+							}
+							else
+							{
+								rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
+							}
+						}
+				}
 
+				if(sim.mg_flag == FOFR)
+				{
 					Fbar = F(Rbar, sim.fofR_params, sim.fofR_type);
 					FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type);
 					FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type);
@@ -1307,30 +1346,54 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 					Hubble = Hconf(a, fourpiG, cosmo);
 					Rbar = 2. * fourpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a + 4. * cosmo.Omega_Lambda);
 				}
-				else // f(R) gravity, non-LCDM background
+				else if(sim.background_trace) // f(R) gravity, non-LCDM background, trace equation
 				{
 					if(numsteps_bg == 1)
-						rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
+					{
+						dtau = rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
+					}
+					else
+					{
+						for(g=0; g<numsteps_bg/2; g++)
+						{
+							dtau = rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
+						}
+					}
+				}
+				else // f(R) gravity, non-LCDM background, Friedmann equation
+				{
+					if(numsteps_bg == 1)
+					{
+						if(sim.background_T00hom)
+						{
+							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom_a3, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
+						}
+						else
+						{
+							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
+						}
+					}
 					else
 						for(g=0; g<numsteps_bg/2; g++)
-							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom, dtau_bg, sim.fofR_params, sim.fofR_type);
+						{
+							if(sim.background_T00hom)
+							{
+								rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom_a3, dtau_bg, sim.fofR_params, sim.fofR_type);
+							}
+							else
+							{
+								rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
+							}
+						}
+				}
 
+				if(sim.mg_flag == FOFR)
+				{
 					Fbar = F(Rbar, sim.fofR_params, sim.fofR_type);
 					FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type);
 					FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type);
 				}
 			}
-
-#ifdef OUTPUT_BACKGROUND // TODO: What does this bit actually do? Do we need it? Probably not...
-					//// write the f(R) background file
-			if(parallel.rank()==0)
-			{
-				ofstream fileBG;
-				fileBG.open("background.txt", std::ifstream::app);
-				fileBG << setprecision(16) << tau_temp << " " << a << " " << Hconf(a, fourpiG, cosmo) << " 1.0 1.0 1.0" << endl;
-				fileBG.close();
-			}
-#endif
 
 			f_params[0] = a;
 			f_params[1] = a * a * sim.numpts;
@@ -1356,30 +1419,53 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 				Hubble = Hconf(a, fourpiG, cosmo);
 				Rbar = 2. * fourpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a + 4. * cosmo.Omega_Lambda);
 			}
-			else // f(R) gravity, non-LCDM background
+			else if(sim.background_trace) // f(R) gravity, non-LCDM background, trace equation
 			{
 				if(numsteps_bg == 1)
-					rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
+				{
+					dtau = rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
+				}
+				else
+				{
+					for(g=0; g<numsteps_bg/2; g++)
+					{
+						dtau = rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
+					}
+				}
+			}
+			else // f(R) gravity, non-LCDM background, Friedmann equation
+			{
+				if(numsteps_bg == 1)
+				{
+					if(sim.background_T00hom)
+					{
+						rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom_a3, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
+					}
+					else
+					{
+						rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
+					}
+				}
 				else
 					for(g=0; g<numsteps_bg/2; g++)
-						rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom, dtau_bg, sim.fofR_params, sim.fofR_type);
+					{
+						if(sim.background_T00hom)
+						{
+							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom_a3, dtau_bg, sim.fofR_params, sim.fofR_type);
+						}
+						else
+						{
+							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
+						}
+					}
+			}
 
+			if(sim.mg_flag == FOFR)
+			{
 				Fbar = F(Rbar, sim.fofR_params, sim.fofR_type);
 				FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type);
 				FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type);
 			}
-
-			#ifdef OUTPUT_BACKGROUND // TODO: Do we need this?
-					//// write the f(R) background file
-					if(parallel.rank()==0)
-					{
-						ofstream fileBG;
-						fileBG.open("background.txt",std::ifstream::app);
-						fileBG <<setprecision(16)<< tau_temp <<" "<< a<< " " << Hconf(a, fourpiG, cosmo)<< " 1.0 1.0 1.0"<<endl;
-						fileBG.close();
-					}
-			#endif
-
 		}   // particle update done
 
 		parallel.max<double>(maxvel, numspecies);
@@ -1494,6 +1580,8 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 #endif
 	}
 
+	bgoutfile.close();
+
 	COUT << COLORTEXT_GREEN << " simulation complete." << COLORTEXT_RESET << endl;
 
 #ifdef BENCHMARK
@@ -1528,7 +1616,7 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 	COUT << "update momenta (count: "<<update_q_count <<"): "<< hourMinSec(update_q_time) << " ; " << 100. * update_q_time/cycle_time <<"%."<<endl;
 	COUT << "move particles (count: "<< moveParts_count <<"): "<< hourMinSec(moveParts_time) << " ; " << 100. * moveParts_time/cycle_time <<"%."<<endl;
 	COUT << "gravity solver             : "<< hourMinSec(gravity_solver_time) << " ; " << 100. * gravity_solver_time/cycle_time <<"%."<<endl;
-	COUT << "-- thereof Fast Fourier Transforms (count: " << fft_count <<"): "<< hourMinSec(fft_time) << " ; " << 100. * fft_time/gravity_solver_time <<"%."<<endl;
+	COUT << "-- thereof Fast Fourier Transforms (count: " << fft_count <<"): "<< hourMinSec(fft_time) << " ; " << 100. * fft_time/gravity_solver_time << "%." << endl;
 #endif
 
 #ifdef EXTERNAL_IO

@@ -689,6 +689,7 @@ void writeRestartSettings(metadata & sim,
 				fprintf(outfile, "check fields                = %d\n",sim.check_fields);
 				fprintf(outfile, "check pause                 = %d\n",sim.check_pause);
 				fprintf(outfile, "background only             = %d\n",sim.background_only);
+				fprintf(outfile, "background trace            = %d\n",sim.background_trace);
 				fprintf(outfile, "background initial redshift = %f\n",sim.bg_initial_redshift);
 				fprintf(outfile, "background final redshift   = %f\n",sim.bg_final_redshift);
 				fprintf(outfile, "lcdm background             = %d\n",sim.lcdm_background);
@@ -696,6 +697,7 @@ void writeRestartSettings(metadata & sim,
 				fprintf(outfile, "quasi-static                = %d\n",sim.quasi_static);
 				fprintf(outfile, "check redshift              = %f\n",sim.z_check);
 				fprintf(outfile, "CYCLE_INFO_INTERVAL         = %d\n",sim.CYCLE_INFO_INTERVAL);
+				fprintf(outfile, "BACKGROUND_NUMPTS           = %d\n",sim.BACKGROUND_NUMPTS);
 
 			}
 		}

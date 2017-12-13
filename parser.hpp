@@ -607,7 +607,7 @@ bool parseParameter(parameter * & params, const int numparam, const char * pname
 //
 //////////////////////////
 
-bool parseFieldSpecifiers(parameter * & params, const int numparam, const char * pname, int & pvalue, int fofR_flag)
+bool parseFieldSpecifiers(parameter * & params, const int numparam, const char * pname, int & pvalue)
 {
 	char * start;
 	char * comma;
@@ -630,11 +630,11 @@ bool parseFieldSpecifiers(parameter * & params, const int numparam, const char *
 				item[pos] = '\0';
 				if(strcmp(item, "Phi") == 0 || strcmp(item, "phi") == 0)
 					pvalue |= MASK_PHI;
-				else if( (strcmp(item, "xi") == 0 || strcmp(item, "Xi") == 0) && fofR_flag)
+				else if( (strcmp(item, "xi") == 0 || strcmp(item, "Xi") == 0) )
 					pvalue |= MASK_XI;
-				else if( (strcmp(item, "zeta") == 0 || strcmp(item, "Zeta") == 0) && fofR_flag)
+				else if( (strcmp(item, "zeta") == 0 || strcmp(item, "Zeta") == 0) )
 					pvalue |= MASK_ZETA;
-				else if( (strcmp(item, "deltaR") == 0 || strcmp(item, "DeltaR") == 0 || strcmp(item, "delta_R") == 0 || strcmp(item, "Delta_R") == 0) && fofR_flag)
+				else if( (strcmp(item, "deltaR") == 0 || strcmp(item, "DeltaR") == 0 || strcmp(item, "delta_R") == 0 || strcmp(item, "Delta_R") == 0) )
 					pvalue |= MASK_DELTAR;
 				else if( (strcmp(item, "deltaT") == 0 || strcmp(item, "DeltaT") == 0 || strcmp(item, "delta_T") == 0 || strcmp(item, "Delta_T") == 0) )
 					pvalue |= MASK_DELTAT;
@@ -671,11 +671,11 @@ bool parseFieldSpecifiers(parameter * & params, const int numparam, const char *
 
 			if(strcmp(start, "Phi") == 0 || strcmp(start, "phi") == 0)
 				pvalue |= MASK_PHI;
-			else if( (strcmp(start, "xi") == 0 || strcmp(start, "Xi") == 0) && fofR_flag)
+			else if( (strcmp(start, "xi") == 0 || strcmp(start, "Xi") == 0) )
 				pvalue |= MASK_XI;
-			else if( (strcmp(start, "zeta") == 0 || strcmp(start, "Zeta") == 0) && fofR_flag)
+			else if( (strcmp(start, "zeta") == 0 || strcmp(start, "Zeta") == 0) )
 				pvalue |= MASK_ZETA;
-			else if( (strcmp(start, "deltaR") == 0 || strcmp(start, "DeltaR") == 0 || strcmp(start, "delta_R") == 0 || strcmp(start, "Delta_R") == 0) && fofR_flag)
+			else if( (strcmp(start, "deltaR") == 0 || strcmp(start, "DeltaR") == 0 || strcmp(start, "delta_R") == 0 || strcmp(start, "Delta_R") == 0) )
 				pvalue |= MASK_DELTAR;
 			else if( (strcmp(start, "deltaT") == 0 || strcmp(start, "DeltaT") == 0 || strcmp(start, "delta_T") == 0 || strcmp(start, "Delta_T") == 0) )
 				pvalue |= MASK_DELTAT;
@@ -1062,6 +1062,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	sim.S0i_mode = 2;
 
 	parseParameter(params, numparam, "CYCLE_INFO_INTERVAL", sim.CYCLE_INFO_INTERVAL); // Defaults to 10
+	parseParameter(params, numparam, "BACKGROUND_NUMPTS", sim.BACKGROUND_NUMPTS); // Defaults to 10
 
 	if(parseParameter(params, numparam, "vector method", par_string))
 	{
@@ -1373,6 +1374,11 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 						COUT << " The coefficient a of F(R) = a * R^n is <= 0. Closing...\n";
 						parallel.abortForce();
 					}
+					else if(sim.fofR_params[1] == 0)
+					{
+						COUT << " The exponent n of F(R) = a*R^n is set to 0, which corresponds to a pure Lambda term. Closing...\n";
+						parallel.abortForce();
+					}
 					else if(sim.fofR_params[1] == 1)
 					{
 						COUT << " The exponent n of F(R) = a*R^n is set to 1. This is just a redefinition of Newton's constant. Closing...\n";
@@ -1475,6 +1481,12 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	if(sim.mg_flag == FOFR)
 	{
+		parseParameter(params, numparam, "background T00hom", sim.background_T00hom);
+		parseParameter(params, numparam, "background trace", sim.background_trace);
+		if(sim.background_trace)
+		{
+			COUT << " Background for f(R) gravity computed using the trace equation.\n";
+		}
 		parseParameter(params, numparam, "back to GR", sim.back_to_GR);
 		parseParameter(params, numparam, "quasi-static", sim.quasi_static);
 		if(sim.back_to_GR)
@@ -1506,17 +1518,39 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	parseParameter(params, numparam, "S0i mode", sim.S0i_mode);
 	parseParameter(params, numparam, "time step limit", sim.steplimit);
 
-	parseFieldSpecifiers(params, numparam, "snapshot outputs", sim.out_snapshot, sim.mg_flag == FOFR);
-	parseFieldSpecifiers(params, numparam, "Pk outputs", sim.out_pk, sim.mg_flag == FOFR);
+	parseFieldSpecifiers(params, numparam, "snapshot outputs", sim.out_snapshot);
+	parseFieldSpecifiers(params, numparam, "Pk outputs", sim.out_pk);
 
 	if(!parseParameter(params, numparam, "generic file base", sim.basename_generic))
 	{
 		if(sim.mg_flag == FOFR)
 		{
-			if(sim.background_only) strcpy(sim.basename_generic, "fR");
-			else if(sim.quasi_static) strcpy(sim.basename_generic, "fR_quasi-static");
-			else if(sim.back_to_GR) strcpy(sim.basename_generic, "fR_back-to-GR");
-			else strcpy(sim.basename_generic, "fR");
+			if(sim.background_only)
+			{
+				if(sim.background_trace)
+				{
+					strcpy(sim.basename_generic, "fR_trace");
+				}
+				else
+				{
+					strcpy(sim.basename_generic, "fR");
+				}
+			}
+			else if(sim.quasi_static)
+			{
+				if(sim.background_trace) strcpy(sim.basename_generic, "fR_quasi-static_trace");
+				else strcpy(sim.basename_generic, "fR_quasi-static");
+			}
+			else if(sim.back_to_GR)
+			{
+				if(sim.background_trace) strcpy(sim.basename_generic, "fR_back-to-GR_trace");
+				else strcpy(sim.basename_generic, "fR_back-to-GR");
+			}
+			else
+			{
+				if(sim.background_trace) strcpy(sim.basename_generic, "fR_trace");
+				else strcpy(sim.basename_generic, "fR");
+			}
 		}
 		else if(sim.gr_flag) strcpy(sim.basename_generic, "lcdm");
 		else strcpy(sim.basename_generic, "Newton");

@@ -27,90 +27,10 @@
 
 inline double Tbar(const double a, const cosmology cosmo)
 {
-	return -(cosmo.Omega_cdm + cosmo.Omega_b)/a/a/a - 4.*cosmo.Omega_Lambda;// TODO Put neutrinos in, if necessary
+	return -(cosmo.Omega_m)/a/a/a - 4.*cosmo.Omega_Lambda;// TODO Put neutrinos in, if necessary
 }
 
-void loadBackground(gsl_spline *& a_spline,
-										gsl_spline *& H_spline,
-										gsl_spline *& Rbar_spline,
-	  								const gsl_interp_type *t, const char * filename)
-{
-		ifstream file;
-		string line;
-		long lineCount;
-		istringstream iss;
 
-
-		if(parallel.grid_rank()[0]==0)
-		{
-			file.open(filename);
-			if(!file)
-			{
-					COUT<<"Background file error: cannot open file"<<endl;
-					if(parallel.rank()==0) parallel.abortForce();
-					return;
-			}
-
-			COUT << "loading background file: "<< filename <<endl;
-
-			getline(file, line);
-			getline(file, line);
-			iss.str(line);
-			iss >> lineCount;
-
-
-		}
-		parallel.broadcast_dim0(lineCount,0);
-
-		double * tau = new double[lineCount];
-		double * a = new double[lineCount];
-		double * H = new double[lineCount];
-		double * Rbar = new double[lineCount];
-
-
-
-		if(parallel.grid_rank()[0]==0)
-		{
-			for(int i=0;i<lineCount;i++)
-			{
-				getline(file, line);
-				iss.str(line);
-				iss.seekg (0, iss.beg);
-				iss >> tau[i] >> a[i] >> H[i] >> Rbar[i];
-			}
-		}
-
-
-		parallel.broadcast_dim0(tau,lineCount,0);
-		parallel.broadcast_dim0(a,lineCount,0);
-		parallel.broadcast_dim0(H,lineCount,0);
-		parallel.broadcast_dim0(Rbar,lineCount,0);
-
-		a_spline  = gsl_spline_alloc (t, lineCount);
-		H_spline  = gsl_spline_alloc (t, lineCount);
-		Rbar_spline  = gsl_spline_alloc (t, lineCount);
-
-		gsl_spline_init (a_spline, tau, a, lineCount);
-		gsl_spline_init (H_spline, tau, H, lineCount);
-		gsl_spline_init (Rbar_spline, tau, Rbar, lineCount);
-
-		if(parallel.grid_rank()[0]==0)file.close();
-
-		delete[] tau;
-		delete[] a;
-		delete[] H;
-		delete[] Rbar;
-}
-
-inline double Hconf(gsl_spline * spline, double tau, gsl_interp_accel * acc)
-{
-		return gsl_spline_eval(spline, tau, acc);
-}
-
-inline double getBackground(gsl_spline * spline, double tau, gsl_interp_accel * acc)
-{
-	  return gsl_spline_eval(spline, tau, acc);
-}
 
 // TODO: At the moment, initial conditions are such that:
 //	R_in = R_in(GR) = 8piG(rho_m + 4*rho_Lambda)
@@ -121,9 +41,9 @@ inline double getBackground(gsl_spline * spline, double tau, gsl_interp_accel * 
 //	R_in = R_in(GR) = 8piG(rho_m + 4*rho_Lambda)
 //	H = H(GR)
 //	R'_in = R'_in(R_GR, H_GR) -- see differential equation for R'
-inline double R_initial_fR(const double a, const double eightpiG, const cosmology cosmo)
+inline double R_initial_fR(const double a, const double fourpiG, const cosmology cosmo)
 {
-	double R0 = eightpiG * ( cosmo.Omega_m / a / a / a + 4. * (1. - cosmo.Omega_m - cosmo.Omega_rad) ); // TODO: Maybe not accurate enough at this stage, but let's try this first.
+	double R0 = 2. * fourpiG * ( cosmo.Omega_m / a / a / a + 4. * (1. - cosmo.Omega_m - cosmo.Omega_rad) ); // TODO: Maybe not accurate enough at this stage, but let's try this first.
 	return R0;
 }
 
@@ -132,6 +52,11 @@ inline double H_initial_fR(const double a, const double H, const double R, const
 	double H0 = H;
 	// double H0 = sqrt( (H*H + a*a*(fr*R - f)/6.) / (1. + fr - frr_term) );
 	return H0;
+}
+
+inline double dot_R_initial_fR(const double a, const double H, const double R0, const double fourpiG, const cosmology cosmo)
+{
+	return fourpiG * cosmo.Omega_m * (24.*H*H/a/a - R0) / a;
 }
 
 
@@ -150,7 +75,17 @@ inline double func_RK_adot(const double a, const double H)
 	return a * H;
 }
 
+inline double func_RK_trace_adot(const double a, const double H)
+{
+	return a * H;
+}
+
 inline double func_RK_Hdot(const double a, const double H, const double R)
+{
+	return a*a*R/6. - H*H;
+}
+
+inline double func_RK_trace_Hdot(const double a, const double H, const double R)
 {
 	return a*a*R/6. - H*H;
 }
@@ -159,11 +94,11 @@ inline double func_RK_Hdot(const double a, const double H, const double R)
 double func_RK_Rdot(const double a,
 										const double H,
 										const double R,
-										const double rho, // Actually 8 pi G * rho_background * a**2 -- TODO: Should this be T00hom instead?
+										const double rho, // Actually 8 pi G * rho_background * a**2 -- TODO: Should this be T00_hom instead?
 										const double fourpiG,
 										double * params,
 										const int fofR_type,
-										const double t00hom = 1.)
+										const double T00_hom = 1.)
 {
 	double frr = FRR(R, params, fofR_type, 25);
 	double fr = FR(R, params, fofR_type);
@@ -182,6 +117,45 @@ double func_RK_Rdot(const double a,
 				 << " FRR = " << frr << endl;
 		exit(3);
 	}
+}
+
+inline double func_RK_trace_Rdot(const double Y)
+{
+	return Y;
+}
+
+double func_RK_trace_Ydot(const double a,
+	 												const double H,
+													const double R,
+													const double Y,
+													const double Trace_hom,
+													const double fourpiG,
+													const cosmology cosmo,
+													const double * params,
+													const int fofR_type)
+{
+	double res;
+	double f = F(R, params, fofR_type);
+	double fr = FR(R, params, fofR_type);
+	double frr = FRR(R, params, fofR_type, 25);
+	double frrr = FRRR(R, params, fofR_type, 32);
+
+	if(frr)
+	{
+		res = fr * R - 2.*f - R - 2. * fourpiG * Trace_hom;
+		res *= a * a / 3.;
+		res -= frrr * Y * Y;
+		res /= frr;
+		res -= 2. * H * Y;
+	}
+	else
+	{
+		res = H / a;
+		res *= 24. * res;
+		res -= R;
+		res *= fourpiG * cosmo.Omega_m / a;
+	}
+	return res;
 }
 
 ////////////////////////
@@ -225,14 +199,14 @@ double rungekutta_fR(double & a,
 }
 
 ////////////////////////////////////////////
-// With explicit T00hom instead of theoretical value
+// With explicit T00_hom instead of theoretical value
 ////////////////////////////////////////////
 double rungekutta_fR(double & a,
 									   double & H,
 									   double & R,
 									   const double fourpiG,
 									   const cosmology cosmo,
-										 const double T00hom,
+										 const double T00_hom,
 									   const double dtau,
 									   double * params,
 									   const int fofR_type)
@@ -243,19 +217,19 @@ double rungekutta_fR(double & a,
 
 	a1 = func_RK_adot(a, H);
 	H1 = func_RK_Hdot(a, H, R);
-	R1 = func_RK_Rdot(a, H, R, 3. * Hconf(a, fourpiG, cosmo, T00hom) * Hconf(a, fourpiG, cosmo, T00hom), fourpiG, params, fofR_type);
+	R1 = func_RK_Rdot(a, H, R, 3. * Hconf(a, fourpiG, cosmo, T00_hom) * Hconf(a, fourpiG, cosmo, T00_hom), fourpiG, params, fofR_type);
 
 	a2 = func_RK_adot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau);
 	H2 = func_RK_Hdot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau);
-	R2 = func_RK_Rdot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau, 3. * Hconf(a + 0.5 * a1 * dtau, fourpiG, cosmo, T00hom) * Hconf(a + 0.5 * a1 * dtau, fourpiG, cosmo, T00hom), fourpiG, params, fofR_type);
+	R2 = func_RK_Rdot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau, 3. * Hconf(a + 0.5 * a1 * dtau, fourpiG, cosmo, T00_hom) * Hconf(a + 0.5 * a1 * dtau, fourpiG, cosmo, T00_hom), fourpiG, params, fofR_type);
 
 	a3 = func_RK_adot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau);
 	H3 = func_RK_Hdot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau);
-	R3 = func_RK_Rdot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau, 3. * Hconf(a + 0.5 * a2 * dtau, fourpiG, cosmo, T00hom) * Hconf(a + 0.5 * a2 * dtau, fourpiG, cosmo, T00hom), fourpiG, params, fofR_type);
+	R3 = func_RK_Rdot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau, 3. * Hconf(a + 0.5 * a2 * dtau, fourpiG, cosmo, T00_hom) * Hconf(a + 0.5 * a2 * dtau, fourpiG, cosmo, T00_hom), fourpiG, params, fofR_type);
 
 	a4 = func_RK_adot(a + a3 * dtau, H + H3 * dtau);
 	H4 = func_RK_Hdot(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau);
-	R4 = func_RK_Rdot(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau, 3. * Hconf(a + a3 * dtau, fourpiG, cosmo, T00hom) * Hconf(a + a3 * dtau, fourpiG, cosmo, T00hom), fourpiG, params, fofR_type);
+	R4 = func_RK_Rdot(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau, 3. * Hconf(a + a3 * dtau, fourpiG, cosmo, T00_hom) * Hconf(a + a3 * dtau, fourpiG, cosmo, T00_hom), fourpiG, params, fofR_type);
 
 	a += dtau * (a1 + 2.*a2 + 2.*a3 + a4) / 6.;
 	H += dtau * (H1 + 2.*H2 + 2.*H3 + H4) / 6.;
@@ -321,14 +295,15 @@ double rungekutta_fR_45(double & a,
 }
 
 ////////////////////////////////////////////
-// With explicit T00hom instead of theoretical value
+// With explicit T00_hom instead of theoretical value
+// TODO Comments here
 ////////////////////////////////////////////
 double rungekutta_fR_45(double & a,
 									 double & H,
 									 double & R,
 									 const double fourpiG,
 									 const cosmology cosmo,
-									 const double T00hom,
+									 const double T00_hom_a3,
 									 const double dtau,
 									 double * params,
 									 const int fofR_type)
@@ -341,27 +316,27 @@ double rungekutta_fR_45(double & a,
 
 	a1 = dtau * func_RK_adot(a, H);
 	H1 = dtau * func_RK_Hdot(a, H, R);
-	R1 = dtau * func_RK_Rdot(a, H, R, 3. * Hconf(a, fourpiG, cosmo, T00hom) * Hconf(a, fourpiG, cosmo, T00hom), fourpiG, params, fofR_type);
+	R1 = dtau * func_RK_Rdot(a, H, R, 3. * Hconf(a, fourpiG, cosmo, T00_hom_a3) * Hconf(a, fourpiG, cosmo, T00_hom_a3), fourpiG, params, fofR_type);
 
 	a2 = dtau * func_RK_adot(a + 0.25 * a1, H + 0.25 * H1);
 	H2 = dtau * func_RK_Hdot(a + 0.25 * a1, H + 0.25 * H1, R + 0.25 * R1);
-	R2 = dtau * func_RK_Rdot(a + 0.25 * a1, H + 0.25 * H1, R + 0.25 * R1, 3. * Hconf(a + 0.25 * a1, fourpiG, cosmo, T00hom) * Hconf(a + 0.25 * a1, fourpiG, cosmo, T00hom), fourpiG, params, fofR_type);
+	R2 = dtau * func_RK_Rdot(a + 0.25 * a1, H + 0.25 * H1, R + 0.25 * R1, 3. * Hconf(a + 0.25 * a1, fourpiG, cosmo, T00_hom_a3) * Hconf(a + 0.25 * a1, fourpiG, cosmo, T00_hom_a3), fourpiG, params, fofR_type);
 
 	a3 = dtau * func_RK_adot(a + 3./32. * a1 + 9./32. * a2, H + 3./32. * H1 + 9./32. * H2);
 	H3 = dtau * func_RK_Hdot(a + 3./32. * a1 + 9./32. * a2, H + 3./32. * H1 + 9./32. * H2, R + 3./32. * R1 + 9./32. * R2);
-	R3 = dtau * func_RK_Rdot(a + 3./32. * a1 + 9./32. * a2, H + 3./32. * H1 + 9./32. * H2, R + 3./32. * R1 + 9./32. * R2, 3. * Hconf(a + 3./32. * a1 + 9./32. * a2, fourpiG, cosmo, T00hom) * Hconf(a + 3./32. * a1 + 9./32. * a2, fourpiG, cosmo, T00hom), fourpiG, params, fofR_type);
+	R3 = dtau * func_RK_Rdot(a + 3./32. * a1 + 9./32. * a2, H + 3./32. * H1 + 9./32. * H2, R + 3./32. * R1 + 9./32. * R2, 3. * Hconf(a + 3./32. * a1 + 9./32. * a2, fourpiG, cosmo, T00_hom_a3) * Hconf(a + 3./32. * a1 + 9./32. * a2, fourpiG, cosmo, T00_hom_a3), fourpiG, params, fofR_type);
 
 	a4 = dtau * func_RK_adot(a + 1932./2197. * a1 - 7200./2197. * a2 + 7296./2197. * a3, H + 1932./2197. * H1 - 7200./2197. * H2 + 7296./2197. * H3);
 	H4 = dtau * func_RK_Hdot(a + 1932./2197. * a1 - 7200./2197. * a2 + 7296./2197. * a3, H + 1932./2197. * H1 - 7200./2197. * H2 + 7296./2197. * H3, R + 1932./2197. * R1 - 7200./2197. * R2 + 7296./2197. * R3);
-	R4 = dtau * func_RK_Rdot(a + 1932./2197. * a1 - 7200./2197. * a2 + 7296./2197. * a3, H + 1932./2197. * H1 - 7200./2197. * H2 + 7296./2197. * H3, R + 1932./2197. * R1 - 7200./2197. * R2 + 7296./2197. * R3, 3. * Hconf(a + 1932./2197. * a1 - 7200./2197. * a2 + 7296./2197. * a3, fourpiG, cosmo, T00hom) * Hconf(a + 1932./2197. * a1 - 7200./2197. * a2 + 7296./2197. * a3, fourpiG, cosmo, T00hom), fourpiG, params, fofR_type);
+	R4 = dtau * func_RK_Rdot(a + 1932./2197. * a1 - 7200./2197. * a2 + 7296./2197. * a3, H + 1932./2197. * H1 - 7200./2197. * H2 + 7296./2197. * H3, R + 1932./2197. * R1 - 7200./2197. * R2 + 7296./2197. * R3, 3. * Hconf(a + 1932./2197. * a1 - 7200./2197. * a2 + 7296./2197. * a3, fourpiG, cosmo, T00_hom_a3) * Hconf(a + 1932./2197. * a1 - 7200./2197. * a2 + 7296./2197. * a3, fourpiG, cosmo, T00_hom_a3), fourpiG, params, fofR_type);
 
 	a5 = dtau * func_RK_adot(a + 439./216. * a1 - 8. * a2 + 3680./513. * a3 - 845./4104. * a4, H + 439./216. * H1 - 8. * H2 + 3680./513. * H3 - 845./4104. * H4);
 	H5 = dtau * func_RK_Hdot(a + 439./216. * a1 - 8. * a2 + 3680./513. * a3 - 845./4104. * a4, H + 439./216. * H1 - 8. * H2 + 3680./513. * H3 - 845./4104. * H4, R + 439./216. * R1 - 8. * R2 + 3680./513. * R3 - 845./4104. * R4);
-	R5 = dtau * func_RK_Rdot(a + 439./216. * a1 - 8. * a2 + 3680./513. * a3 - 845./4104. * a4, H + 439./216. * H1 - 8. * H2 + 3680./513. * H3 - 845./4104. * H4, R + 439./216. * R1 - 8. * R2 + 3680./513. * R3 - 845./4104. * R4, 3. * Hconf(a + 439./216. * a1 - 8. * a2 + 3680./513. * a3 - 845./4104. * a4, fourpiG, cosmo, T00hom) * Hconf(a + 439./216. * a1 - 8. * a2 + 3680./513. * a3 - 845./4104. * a4, fourpiG, cosmo, T00hom), fourpiG, params, fofR_type);
+	R5 = dtau * func_RK_Rdot(a + 439./216. * a1 - 8. * a2 + 3680./513. * a3 - 845./4104. * a4, H + 439./216. * H1 - 8. * H2 + 3680./513. * H3 - 845./4104. * H4, R + 439./216. * R1 - 8. * R2 + 3680./513. * R3 - 845./4104. * R4, 3. * Hconf(a + 439./216. * a1 - 8. * a2 + 3680./513. * a3 - 845./4104. * a4, fourpiG, cosmo, T00_hom_a3) * Hconf(a + 439./216. * a1 - 8. * a2 + 3680./513. * a3 - 845./4104. * a4, fourpiG, cosmo, T00_hom_a3), fourpiG, params, fofR_type);
 
 	a6 = dtau * func_RK_adot(a - 8./27. * a1 + 2. * a2 - 3544./2565. * a3 + 1859./4104. * a4 - 11./40. * a5, H - 8./27. * H1 + 2. * H2 - 3544./2565. * H3 + 1859./4104. * H4 - 11./40. * H5);
 	H6 = dtau * func_RK_Hdot(a - 8./27. * a1 + 2. * a2 - 3544./2565. * a3 + 1859./4104. * a4 - 11./40. * a5, H - 8./27. * H1 + 2. * H2 - 3544./2565. * H3 + 1859./4104. * H4 - 11./40. * H5, R - 8./27. * R1 + 2. * R2 - 3544./2565. * R3 + 1859./4104. * R4 - 11./40. * R5);
-	R6 = dtau * func_RK_Rdot(a - 8./27. * a1 + 2. * a2 - 3544./2565. * a3 + 1859./4104. * a4 - 11./40. * a5, H - 8./27. * H1 + 2. * H2 - 3544./2565. * H3 + 1859./4104. * H4 - 11./40. * H5, R - 8./27. * R1 + 2. * R2 - 3544./2565. * R3 + 1859./4104. * R4 - 11./40. * R5, 3. * Hconf(a - 8./27. * a1 + 2. * a2 - 3544./2565. * a3 + 1859./4104. * a4 - 11./40. * a5, fourpiG, cosmo, T00hom) * Hconf(a - 8./27. * a1 + 2. * a2 - 3544./2565. * a3 + 1859./4104. * a4 - 11./40. * a5, fourpiG, cosmo, T00hom), fourpiG, params, fofR_type);
+	R6 = dtau * func_RK_Rdot(a - 8./27. * a1 + 2. * a2 - 3544./2565. * a3 + 1859./4104. * a4 - 11./40. * a5, H - 8./27. * H1 + 2. * H2 - 3544./2565. * H3 + 1859./4104. * H4 - 11./40. * H5, R - 8./27. * R1 + 2. * R2 - 3544./2565. * R3 + 1859./4104. * R4 - 11./40. * R5, 3. * Hconf(a - 8./27. * a1 + 2. * a2 - 3544./2565. * a3 + 1859./4104. * a4 - 11./40. * a5, fourpiG, cosmo, T00_hom_a3) * Hconf(a - 8./27. * a1 + 2. * a2 - 3544./2565. * a3 + 1859./4104. * a4 - 11./40. * a5, fourpiG, cosmo, T00_hom_a3), fourpiG, params, fofR_type);
 
 	ac = a + 25./216. * a1 + 1408./2565. * a3 + 2197./4101. * a4 - 1./5. * a5;
 	Hc = H + 25./216. * H1 + 1408./2565. * H3 + 2197./4101. * H4 - 1./5. * H5;
@@ -373,6 +348,137 @@ double rungekutta_fR_45(double & a,
 
 	return dtau;
 }
+
+
+//////////////////////////////////////////////
+//////////////////////////////////////////////
+//////////////////////////////////////////////
+//////////////////////////////////////////////
+double check_background_trace(double Rbar, double Tbar, double a2, double Hubble, double Fbar, double FRbar, double dot_FRbar, double ddot_FRbar, double fourpiG)
+{
+	double eightpiG = 2. * fourpiG;
+	double t;
+	t = 3. * ddot_FRbar + 6. * Hubble * dot_FRbar + (2. * Fbar + Rbar * (1 - FRbar) + eightpiG * Tbar) * a2;
+
+	COUT << "\t\tTrace = " << t
+	     << "\tddotFRbar = " << ddot_FRbar << "\n"
+			 << "\t\t6*H*dotFRbar = " << 6. * Hubble * dot_FRbar
+			 << "\t2Fbar*a2 = " << 2. * Fbar * a2 << "\n"
+			 << "\t\tRbar * a2 = " << Rbar * a2
+			 << "\teightpiG * Tbar * a2 = " << eightpiG * a2 * Tbar  << "\n";
+	return t;
+}
+
+
+////////////////////////////////////////////
+// (rescaled) Trace of the energy-momentum tensor
+// TODO: Write this function. Check correct evolution of T^\mu_\mu with scale factor (density AND velocity)
+////////////////////////////////////////////
+
+inline double T_mu_mu(const double a, const cosmology cosmo, const double fourpiG, const double T00_hom, const double Tiihom)
+{
+	return -1.;
+	// double eightpiG = 2. * fourpiG;
+	// return T00_hom * a * a;
+}
+
+
+////////////////////////////////////////////
+// Runge-Kutta background evolution with trace equation (theoretical background)
+// TODO: Details here
+////////////////////////////////////////////
+double rungekutta_fR_trace(double & a,
+									         double & H,
+									         double & R,
+													 double & Y, // := dot_R
+									         const double fourpiG,
+									         const cosmology cosmo,
+									         const double dtau,
+									         double * params,
+									         const int fofR_type)
+{
+	double a1, a2, a3, a4;
+	double H1, H2, H3, H4;
+	double R1, R2, R3, R4;
+	double Y1, Y2, Y3, Y4;
+
+	a1 = func_RK_trace_adot(a, H);
+	H1 = func_RK_trace_Hdot(a, H, R);
+	R1 = func_RK_trace_Rdot(Y);
+	Y1 = func_RK_trace_Ydot(a, H, R, Y, Tbar(a, cosmo), fourpiG, cosmo, params, fofR_type);
+
+	a2 = func_RK_trace_adot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau);
+	H2 = func_RK_trace_Hdot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau);
+	R2 = func_RK_trace_Rdot(Y + 0.5 * Y1 * dtau);
+	Y2 = func_RK_trace_Ydot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau, Y + 0.5 * Y1 * dtau, Tbar(a + 0.5 * a1 * dtau, cosmo), fourpiG, cosmo, params, fofR_type);
+
+	a3 = func_RK_trace_adot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau);
+	H3 = func_RK_trace_Hdot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau);
+	R3 = func_RK_trace_Rdot(Y + 0.5 * Y2 * dtau);
+	Y3 = func_RK_trace_Ydot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau, Y + 0.5 * Y2 * dtau, Tbar(a + 0.5 * a2 * dtau, cosmo), fourpiG, cosmo, params, fofR_type);
+
+	a4 = func_RK_trace_adot(a + a3 * dtau, H + H3 * dtau);
+	H4 = func_RK_trace_Hdot(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau);
+	R4 = func_RK_trace_Rdot(Y + Y3 * dtau);
+	Y4 = func_RK_trace_Ydot(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau, Y + Y3 * dtau, Tbar(a + a3 * dtau, cosmo), fourpiG, cosmo, params, fofR_type);
+
+	a += dtau * (a1 + 2.*a2 + 2.*a3 + a4) / 6.;
+	H += dtau * (H1 + 2.*H2 + 2.*H3 + H4) / 6.;
+	R += dtau * (R1 + 2.*R2 + 2.*R3 + R4) / 6.;
+	Y += dtau * (Y1 + 2.*Y2 + 2.*Y3 + Y4) / 6.;
+
+	return dtau;
+}
+
+////////////////////////////////////////////
+// Runge-Kutta background evolution with trace equation (theoretical background)
+// TODO: Details here
+////////////////////////////////////////////
+double rungekutta_fR_trace(double & a,
+									         double & H,
+									         double & R,
+													 double & Y, // := dot_R
+									         const double fourpiG,
+									         const cosmology cosmo,
+													 const double T_hom,
+									         const double dtau,
+									         double * params,
+									         const int fofR_type)
+{
+	double a1, a2, a3, a4;
+	double H1, H2, H3, H4;
+	double R1, R2, R3, R4;
+	double Y1, Y2, Y3, Y4;
+	double Tbar_0 = Tbar(a, cosmo);
+
+	a1 = func_RK_trace_adot(a, H);
+	H1 = func_RK_trace_Hdot(a, H, R);
+	R1 = func_RK_trace_Rdot(Y);
+	Y1 = func_RK_trace_Ydot(a, H, R, Y, T_hom, fourpiG, cosmo, params, fofR_type);
+
+	a2 = func_RK_trace_adot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau);
+	H2 = func_RK_trace_Hdot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau);
+	R2 = func_RK_trace_Rdot(Y + 0.5 * Y1 * dtau);
+	Y2 = func_RK_trace_Ydot(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau, Y + 0.5 * Y1 * dtau, T_hom * Tbar(a + 0.5 * a1 * dtau, cosmo) / Tbar_0, fourpiG, cosmo, params, fofR_type);
+
+	a3 = func_RK_trace_adot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau);
+	H3 = func_RK_trace_Hdot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau);
+	R3 = func_RK_trace_Rdot(Y + 0.5 * Y2 * dtau);
+	Y3 = func_RK_trace_Ydot(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau, Y + 0.5 * Y2 * dtau, T_hom * Tbar(a + 0.5 * a2 * dtau, cosmo) / Tbar_0, fourpiG, cosmo, params, fofR_type);
+
+	a4 = func_RK_trace_adot(a + a3 * dtau, H + H3 * dtau);
+	H4 = func_RK_trace_Hdot(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau);
+	R4 = func_RK_trace_Rdot(Y + Y3 * dtau);
+	Y4 = func_RK_trace_Ydot(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau, Y + Y3 * dtau, T_hom * Tbar(a + a3 * dtau, cosmo) / Tbar_0, fourpiG, cosmo, params, fofR_type);
+
+	a += dtau * (a1 + 2.*a2 + 2.*a3 + a4) / 6.;
+	H += dtau * (H1 + 2.*H2 + 2.*H3 + H4) / 6.;
+	R += dtau * (R1 + 2.*R2 + 2.*R3 + R4) / 6.;
+	Y += dtau * (Y1 + 2.*Y2 + 2.*Y3 + Y4) / 6.;
+
+	return dtau;
+}
+
 
 
 

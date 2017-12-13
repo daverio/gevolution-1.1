@@ -32,81 +32,6 @@ using namespace std;
 using namespace LATfield2;
 
 
-/////////////////////////////////////////////////
-// Tests the spin-0 part of the 0-i equation
-// TODO: Add comments here
-/////////////////////////////////////////////////
-template <class FieldType>
-void verify_0i(Field<FieldType> & phi,
-               Field<FieldType> & phidot,
-               Field<FieldType> & chi,
-               Field<FieldType> & T0ia4,
-               double a2,
-               double H,
-               double fourpiG_over_a2,
-               double dx,
-               long numpts3d)
-{
-  Site x(phi.lattice());
-  double max = 0., sum = 0., hom = 0., temp;
-  double lap_phidot = 0., H_phi = 0., H_chi = 0., T_term = 0., tot = 0.;
-  double dx2 = dx*dx;
-  int i;
-  for(x.first(); x.test(); x.next())
-  {
-    tot = 0.;
-    temp = H*(phi(x+0) + phi(x+1) + phi(x+2) + phi(x-0) + phi(x-1) + phi(x-2) - 6.*phi(x))/dx2;
-    hom += temp;
-    tot += temp;
-    temp = fabs(temp);
-    if(temp > H_phi) H_phi = fabs(temp);
-
-    temp = - H*(chi(x+0) + chi(x+1) + chi(x+2) + chi(x-0) + chi(x-1) + chi(x-2) - 6.*chi(x))/dx2;
-    hom += temp;
-    tot += temp;
-    temp = fabs(temp);
-    if(temp > H_chi) H_chi = fabs(temp);
-
-    temp = (phidot(x+0) + phidot(x+1) + phidot(x+2) + phidot(x-0) + phidot(x-1) + phidot(x-2) - 6.*phidot(x))/dx2;
-    hom += temp;
-    tot += temp;
-    temp = fabs(temp);
-    if(temp > lap_phidot) lap_phidot = fabs(temp);
-
-    temp = fourpiG_over_a2 * (T0ia4(x,0) - T0ia4(x-0,0) + T0ia4(x,1) - T0ia4(x-1,1) + T0ia4(x,2) - T0ia4(x-2,2))/dx;
-    hom += temp;
-    tot += temp;
-    temp = fabs(temp);
-    if(temp > T_term) T_term = fabs(temp);
-
-    temp = fabs(tot);
-    if(temp > max) max = temp;
-    sum += temp;
-  }
-
-  parallel.max(max);
-  parallel.max(H_phi);
-  parallel.max(lap_phidot);
-  parallel.max(H_chi);
-  parallel.max(T_term);
-
-  parallel.sum(sum);
-  parallel.sum(hom);
-  sum /= numpts3d;
-  hom /= numpts3d;
-
-  COUT << " Testing the 0i equation:\n\tmax = " << max
-       << "\n\thom = " << hom
-       << "\n\t|avg| = " << sum
-       << "\n\tH_phi = " << H_phi
-       << "\n\tlap_phidot = " << lap_phidot
-       << "\n\tH_chi = " << H_chi
-       << "\n\tT_term = " << T_term
-       << endl;
-  return;
-}
-
-
 //////////////////////////
 // prepareFTsource (1)
 //////////////////////////
@@ -230,7 +155,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
                          Field<FieldType> & xi_old,
                          Field<FieldType> & deltaR,
 												 Field<FieldType> & source, //
-												 const double T00hom, //  background T00
+												 const double T00_hom, //  background T00
 												 const double dx2,
 												 const double dtau,
 												 const double Hubble,
@@ -250,7 +175,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
   Site y(phi.lattice());
 	double laplace = 0.;
   double a2 = a*a;
-  double a3_T00hom = a*a*a*T00hom;
+  double a3_T00_hom = a*a*a*T00_hom;
   double threeH2 = 3. * Hubble * Hubble;
 	double grad[3];
   int i = 0;
@@ -259,7 +184,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
   {
     for (x.first(); x.test(); x.next())
     {
-      source(x) = fourpiG_over_a * (a3T00(x) + a3_T00hom);// 4piG * (-a^3*T00 + a^3*Tbar00) = -4piG * a^3 * dT00
+      source(x) = fourpiG_over_a * (a3T00(x) + a3_T00_hom);// 4piG * (-a^3*T00 + a^3*Tbar00) = -4piG * a^3 * dT00
       for(i=0; i<3; i++)
       {
         xn = x+i;
@@ -279,7 +204,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
   {
     for (x.first(); x.test(); x.next())
     {
-      source(x) = fourpiG_over_a * (a3T00(x) + a3_T00hom);// 4piG * (-a^3*T00 + a^3*Tbar00) = -4piG * a^3 * dT00
+      source(x) = fourpiG_over_a * (a3T00(x) + a3_T00_hom);// 4piG * (-a^3*T00 + a^3*Tbar00) = -4piG * a^3 * dT00
       for(i=0; i<3; i++)
       {
         xn = x+i;
@@ -295,7 +220,6 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
 
       // f(R) terms
       source(x) += 0.25 * a2 * (Rbar * xi_new(x) + Fbar - F(Rbar + deltaR(x), paramF, Ftype));
-
       // Rescaling with dx^2 (Needed! To be done before adding gradient squared)
       source(x) *= dx2;
 
@@ -307,7 +231,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
   {
     for (x.first(); x.test(); x.next())
     {
-      source(x) = fourpiG_over_a * (a3T00(x) + a3_T00hom);// 4piG * (-a^3*T00 + a^3*Tbar00) = -4piG * a^3 * dT00
+      source(x) = fourpiG_over_a * (a3T00(x) + a3_T00_hom);// 4piG * (-a^3*T00 + a^3*Tbar00) = -4piG * a^3 * dT00
       for(i=0; i<3; i++)
       {
         xn = x+i;
@@ -317,12 +241,11 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
         grad[i] *= grad[i];
       }
       laplace -= 6.*xi_new(x);
-      source(x) = (source(x) + 0.5*laplace/dx2) * (1. - 4.*phi(x) + 0.5 * (xi_new(x) + FRbar));
-
-      source(x) += threeH2 * (phi(x) - 0.5 * xi_new(x) - chi(x));
+      source(x) = (source(x) + 0.5 * laplace / dx2) * (1. - 4.*phi(x) + 0.5 * (xi_new(x) + FRbar));
+      source(x) += threeH2 * (phi(x) - chi(x) - 0.5 * xi_new(x));
       source(x) -= 1.5 * Hubble * (2. * phi(x) + xi_new(x) - xi_old(x)) / dtau;//TODO: check that this is the right interpolation
 
-      //f(R) terms
+      // f(R) terms
       source(x) += 0.25 * a2 * (Rbar * xi_new(x) + Fbar - F(Rbar + deltaR(x), paramF, Ftype));
       source(x) *= dx2; // Multiply by dx^2 all terms not containing derivatives
 
@@ -398,8 +321,9 @@ void computeTtrace(Field<FieldType> & dT,
 							     Field<FieldType> & a3_tij,
                    double a3,
                    double Tbar,
-                   double eightpiG)
+                   double fourpiG)
 {
+  double eightpiG = 2. * fourpiG;
 	Site x(dT.lattice());
 	for(x.first(); x.test(); x.next())
 	{
@@ -410,49 +334,6 @@ void computeTtrace(Field<FieldType> & dT,
     dT(x) *= eightpiG;
 	}
   dT.updateHalo();
-}
-
-/////////////////////////////////////////////////
-// Checks xi-zeta constraint:
-// xi = FR(R - 8piGdeltaT) + FRR(R - 8piGdeltaT) * zeta - FRbar
-// TODO: add comments here
-/////////////////////////////////////////////////
-template <class FieldType>
-void check_xi_constraint(Field<FieldType> & xi,
-                         Field<FieldType> & eightpiG_deltaT,
-                         Field<FieldType> & zeta,
-                         double Rbar,
-                         double FRbar,
-                         double * params,
-                         int type,
-                         int n = 64 // TODO: lattice size
-                         )
-{
-  Site x(xi.lattice());
-  double max = 0., hom = 0., sum = 0., temp;
-  for(x.first(); x.test(); x.next())
-  {
-    temp = xi(x)/(FR(Rbar - eightpiG_deltaT(x) + zeta(x), params, type, 277) - FRbar) - 1.;
-    hom += temp;
-    sum += fabs(temp);
-    if(fabs(temp) > max)
-    {
-      max = fabs(temp);
-    }
-  }
-  parallel.max(max);
-  parallel.sum(sum);
-  parallel.sum(hom);
-  sum /= n * n * n;
-  hom /= n * n * n;
-  // MPI_Barrier(MPI_COMM_WORLD);
-  COUT << "  Xi -- zeta constraint"
-       << ",  Max = " << max
-       << ",  hom = " << hom
-       << ",  |avg| = " << sum
-      //  << ", rank = " << parallel.rank()
-       << endl;
-  return;
 }
 
 

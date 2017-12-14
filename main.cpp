@@ -459,7 +459,7 @@ plan_Sij.initialize(&Sij, &SijFT);
 								<< "tau/boxsize" << setw(wid)
 								<< "a" << setw(wid)
 								<< "conformal H" << setw(wid)
-								<< "R" << "\n";
+								<< "R" << endl;
 		}
 
 		while(a < 1./(1. + sim.bg_final_redshift))
@@ -541,7 +541,6 @@ plan_Sij.initialize(&Sij, &SijFT);
 		// Generate Initial Conditions
 	if(ic.generator == ICGEN_BASIC)
 	{
-		COUT << " Using flag ICGEN_BASIC\n";
 		generateIC_basic(sim, ic, cosmo, fourpiG, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij); // generates ICs on the fly
 	}
 	else if(ic.generator == ICGEN_READ_FROM_DISK)
@@ -643,31 +642,6 @@ plan_Sij.initialize(&Sij, &SijFT);
 		}
 	}
 #endif
-
-	// Open background file
-	if(parallel.rank() == 0)
-	{
-		bgoutfile.open(bgfilename);
-		if(bgoutfile == NULL)
-		{
-			cout << " error opening file for background output!" << endl;
-			return -1;
-		}
-
-		wid = 6;
-		bgoutfile << scientific << setprecision(wid);
-		wid += 9;
-
-		bgoutfile << "# background statistics\n#"
-							<< setw(8) 	 << "cycle"
-							<< setw(wid) << "tau/boxsize"
-							<< setw(wid) << "a"
-							<< setw(wid) << "conformal H"
-							<< setw(wid) << "R"
-					 		<< setw(wid) << "phi(k=0)"
-							<< setw(wid) << "T00(k=0)"
-							<< "\n";
-	}
 
 	if(sim.mg_flag == FOFR)
 	{
@@ -787,7 +761,7 @@ plan_Sij.initialize(&Sij, &SijFT);
 
 			T00_hom_rescaled = T00_hom / (1. + 3. * phi_hom);
 
-			T00_hom_a3 = T00_hom * a * a * a;
+			T00_hom_a3 = T00_hom_rescaled * a * a * a;
 
 			if(cycle % sim.CYCLE_INFO_INTERVAL == 0)
 			{
@@ -1006,7 +980,42 @@ plan_Sij.initialize(&Sij, &SijFT);
 		// record some background data
 		if(kFT.setCoord(0, 0, 0))
 		{
+			if(!cycle)
+			{
+				bgoutfile.open(bgfilename);
+				if(bgoutfile == NULL)
+				{
+					cout << " error opening file for background output!" << endl;
+					return -1;
+				}
+
+				wid = 6;
+				bgoutfile << scientific << setprecision(wid);
+				wid += 9;
+
+				bgoutfile << "# background statistics\n#"
+									<< setw(8) 	 << "cycle"
+									<< setw(wid) << "tau/boxsize"
+									<< setw(wid) << "a"
+									<< setw(wid) << "conformal H"
+									<< setw(wid) << "R"
+							 		<< setw(wid) << "phi(k=0)"
+									<< setw(wid) << "T00(k=0)"
+									<< "\n";
+			}
+			else
+			{
+				bgoutfile.open(bgfilename, std::ofstream::app);
+				if(bgoutfile == NULL)
+				{
+					cout << " error opening file for background output!" << endl;
+					return -1;
+				}
+			}
+
 			bgoutfile << setw(9) << cycle << setw(wid) << tau	<< setw(wid) << a	<< setw(wid) << Hubble << setw(wid) << Rbar	<< setw(wid) << phi_hom << setw(wid) << -T00_hom_rescaled*a*a*a << "\n";
+
+			bgoutfile.close();
 		}
 
 		// done recording background data
@@ -1269,41 +1278,46 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 				{
 					if(numsteps_bg == 1)
 					{
-						dtau = rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
+						rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
 					}
 					else
 					{
 						for(g=0; g<numsteps_bg/2; g++)
 						{
-							dtau = rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
+							rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
 						}
 					}
 				}
 				else // f(R) gravity, non-LCDM background, Friedmann equation
 				{
-					if(numsteps_bg == 1)
+					if(sim.background_T00hom)
 					{
-						if(sim.background_T00hom)
+						if(numsteps_bg == 1)
 						{
 							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom_a3, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
 						}
 						else
 						{
-							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
-						}
-					}
-					else // TODO: put if outside the for loop
-						for(g=0; g<numsteps_bg/2; g++)
-						{
-							if(sim.background_T00hom)
+							for(g=0; g<numsteps_bg/2; g++)
 							{
 								rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom_a3, dtau_bg, sim.fofR_params, sim.fofR_type);
 							}
-							else
+						}
+					}
+					else
+					{
+						if(numsteps_bg == 1)
+						{
+							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
+						}
+						else
+						{
+							for(g=0; g<numsteps_bg/2; g++)
 							{
 								rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
 							}
 						}
+					}
 				}
 
 				if(sim.mg_flag == FOFR)
@@ -1313,6 +1327,7 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 					FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type);
 				}
 			}
+			// if numsteps == 1 ends here
 
 			f_params[0] = a;
 			f_params[1] = a * a * sim.numpts;
@@ -1350,41 +1365,46 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 				{
 					if(numsteps_bg == 1)
 					{
-						dtau = rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
+						rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
 					}
 					else
 					{
 						for(g=0; g<numsteps_bg/2; g++)
 						{
-							dtau = rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
+							rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
 						}
 					}
 				}
 				else // f(R) gravity, non-LCDM background, Friedmann equation
 				{
-					if(numsteps_bg == 1)
+					if(sim.background_T00hom)
 					{
-						if(sim.background_T00hom)
+						if(numsteps_bg == 1)
 						{
 							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom_a3, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
 						}
 						else
 						{
-							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
-						}
-					}
-					else
-						for(g=0; g<numsteps_bg/2; g++)
-						{
-							if(sim.background_T00hom)
+							for(g=0; g<numsteps_bg/2; g++)
 							{
 								rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom_a3, dtau_bg, sim.fofR_params, sim.fofR_type);
 							}
-							else
+						}
+					}
+					else
+					{
+						if(numsteps_bg == 1)
+						{
+							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
+						}
+						else
+						{
+							for(g=0; g<numsteps_bg/2; g++)
 							{
 								rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
 							}
 						}
+					}
 				}
 
 				if(sim.mg_flag == FOFR)
@@ -1393,7 +1413,7 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 					FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type);
 					FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type);
 				}
-			}
+			} // if (numsteps != 1) ends here
 
 			f_params[0] = a;
 			f_params[1] = a * a * sim.numpts;
@@ -1423,41 +1443,46 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 			{
 				if(numsteps_bg == 1)
 				{
-					dtau = rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
+					rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
 				}
 				else
 				{
 					for(g=0; g<numsteps_bg/2; g++)
 					{
-						dtau = rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
+						rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
 					}
 				}
 			}
 			else // f(R) gravity, non-LCDM background, Friedmann equation
 			{
-				if(numsteps_bg == 1)
+				if(sim.background_T00hom)
 				{
-					if(sim.background_T00hom)
+					if(numsteps_bg == 1)
 					{
 						rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom_a3, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
 					}
 					else
 					{
-						rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
-					}
-				}
-				else
-					for(g=0; g<numsteps_bg/2; g++)
-					{
-						if(sim.background_T00hom)
+						for(g=0; g<numsteps_bg/2; g++)
 						{
 							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom_a3, dtau_bg, sim.fofR_params, sim.fofR_type);
 						}
-						else
+					}
+				}
+				else
+				{
+					if(numsteps_bg == 1)
+					{
+						rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
+					}
+					else
+					{
+						for(g=0; g<numsteps_bg/2; g++)
 						{
 							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
 						}
 					}
+				}
 			}
 
 			if(sim.mg_flag == FOFR)
@@ -1467,6 +1492,7 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 				FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type);
 			}
 		}   // particle update done
+			// for(j = 0; j < numsteps; j++) ends here
 
 		parallel.max<double>(maxvel, numspecies);
 

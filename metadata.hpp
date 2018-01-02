@@ -123,10 +123,10 @@
 #define FOFR 1   // f(R)
 
 //f(R) models
-#define FOFR_TYPE_RN 0
-#define FOFR_TYPE_R2 1
-#define FOFR_TYPE_HU_SAWICKI 2
-#define FOFR_TYPE_DELTA 3
+#define FOFR_TYPE_RN 1
+#define FOFR_TYPE_R2 2
+#define FOFR_TYPE_HU_SAWICKI 3
+#define FOFR_TYPE_DELTA 4
 
 
 // color escape sequences for terminal highlighting (enable with -DCOLORTERMINAL)
@@ -194,7 +194,6 @@ struct metadata
 	int quasi_static = 0;
 	int background_only = 0;
 	int background_trace = 0;
-	int background_T00hom = 0;
 	double bg_initial_redshift = 100.;
 	double bg_final_redshift = 0.;
 	int lcdm_background = 0;
@@ -265,7 +264,6 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "quasi_static: " << sim.quasi_static << "\n";
 	os << "background_only: " << sim.background_only << "\n";
 	os << "background_trace: " << sim.background_trace << "\n";
-	os << "background_T00hom: " << sim.background_T00hom << "\n";
 	os << "bg_initial_redshift: " << sim.bg_initial_redshift << "\n";
 	os << "bg_final_redshift: " << sim.bg_final_redshift << "\n";
 	os << "lcdm_background: " << sim.lcdm_background << "\n";

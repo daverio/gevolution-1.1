@@ -219,7 +219,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
       source(x) -= 1.5 * Hubble * (2. * phi(x) + xi_new(x) - xi_old(x)) / dtau;//TODO: Do we want to keep this in the Quasi-static limit?
 
       // f(R) terms
-      source(x) += 0.25 * a2 * (Rbar * xi_new(x) + Fbar - F(Rbar + deltaR(x), paramF, Ftype));
+      source(x) += 0.25 * a2 * (Rbar * xi_new(x) + Fbar - F(Rbar + deltaR(x), paramF, Ftype, 110));
       // Rescaling with dx^2 (Needed! To be done before adding gradient squared)
       source(x) *= dx2;
 
@@ -246,7 +246,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
       source(x) -= 1.5 * Hubble * (2. * phi(x) + xi_new(x) - xi_old(x)) / dtau;//TODO: check that this is the right interpolation
 
       // f(R) terms
-      source(x) += 0.25 * a2 * (Rbar * xi_new(x) + Fbar - F(Rbar + deltaR(x), paramF, Ftype));
+      source(x) += 0.25 * a2 * (Rbar * xi_new(x) + Fbar - F(Rbar + deltaR(x), paramF, Ftype, 111));
       source(x) *= dx2; // Multiply by dx^2 all terms not containing derivatives
 
       // gradient squared
@@ -319,19 +319,18 @@ template <class FieldType>
 void computeTtrace(Field<FieldType> & dT,
 							     Field<FieldType> & minus_a3_t00,
 							     Field<FieldType> & a3_tij,
-                   double a3,
-                   double Tbar,
-                   double fourpiG)
+                   const double a3,
+                   const double Trace_hom,
+                   const double fourpiG)
 {
   double eightpiG = 2. * fourpiG;
 	Site x(dT.lattice());
 	for(x.first(); x.test(); x.next())
 	{
-		dT(x) = -minus_a3_t00(x);
-    dT(x) += a3_tij(x,0,0) + a3_tij(x,1,1) + a3_tij(x,2,2);
-    dT(x) /= a3;
-    dT(x) -= Tbar;
-    dT(x) *= eightpiG;
+		dT(x) = -minus_a3_t00(x) + a3_tij(x,0,0) + a3_tij(x,1,1) + a3_tij(x,2,2);
+		dT(x) /= a3;
+    dT(x) -= Trace_hom;
+		dT(x) *= eightpiG;
 	}
   dT.updateHalo();
 }

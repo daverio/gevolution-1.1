@@ -1290,7 +1290,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	{
 		if(parseParameter(params, numparam, "background initial redshift", sim.bg_initial_redshift))
 		{
-			COUT << " Background only mode! Initial redshift (on file!) = " << sim.bg_initial_redshift << "\n";
+			COUT << " Background only mode. Initial redshift = " << sim.bg_initial_redshift << "\n";
 		}
 		else sim.bg_initial_redshift = sim.z_in;
 
@@ -1368,10 +1368,14 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			{
 				if(par_string[0] == 'R' || par_string[0] == 'r')
 				{
-					sim.fofR_type = FOFR_TYPE_RN;
 					if(sim.fofR_params[0] <= 0)
 					{
-						COUT << " The coefficient a of F(R) = a * R^n is <= 0. Closing...\n";
+						COUT << " The coefficient a of F(R) = a * R^n is <= 0. This leads to a tachyonic instability for the scalaron. Closing...\n";
+						parallel.abortForce();
+					}
+					else if(sim.fofR_params[1] < 0)
+					{
+						COUT << " The coefficient n of F(R) = a * R^n is <= 0. Closing...\n";
 						parallel.abortForce();
 					}
 					else if(sim.fofR_params[1] == 0)
@@ -1387,6 +1391,10 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 					else if(sim.fofR_params[1] == 2)
 					{
 						sim.fofR_type = FOFR_TYPE_R2;
+					}
+					else
+					{
+						sim.fofR_type = FOFR_TYPE_RN;
 					}
 				}
 				else if(par_string[0] == 'H' || par_string[0] == 'h')
@@ -1481,7 +1489,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	if(sim.mg_flag == FOFR)
 	{
-		parseParameter(params, numparam, "background T00hom", sim.background_T00hom);
 		parseParameter(params, numparam, "background trace", sim.background_trace);
 		if(sim.background_trace)
 		{

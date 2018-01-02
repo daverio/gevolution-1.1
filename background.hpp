@@ -137,15 +137,16 @@ double bg_ncdm(const double a, const cosmology cosmo)
 
 double Hconf(const double a, const double fourpiG, const cosmology cosmo)
 {
-	return sqrt((2. * fourpiG / 3.) * (((cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) / a) + (cosmo.Omega_Lambda * a * a) + (cosmo.Omega_rad / a / a)));
+	return sqrt((2. * fourpiG / 3.) * ( (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo))/a + cosmo.Omega_Lambda*a*a + cosmo.Omega_rad/a/a ));
 }
+
 ////////////////////////////////////////////
 // With explicit T00_hom instead of theoretical value
 // TODO: Check that the correct 4piG is taken into account in T00hom
 ////////////////////////////////////////////
 double Hconf(const double a, const double fourpiG, const cosmology cosmo, const double T00_hom_a3)
 {
-	return sqrt((2. * fourpiG / 3.) * ((-T00_hom_a3 + bg_ncdm(a, cosmo)) / a + (cosmo.Omega_Lambda * a * a) + (cosmo.Omega_rad / a / a)));
+	return sqrt((2. * fourpiG / 3.) * ( (-T00_hom_a3 + bg_ncdm(a, cosmo))/a + cosmo.Omega_Lambda*a*a + cosmo.Omega_rad/a/a ));
 }
 
 
@@ -154,6 +155,11 @@ double Omega_m(const double a, const cosmology cosmo) { return cosmo.Omega_m / (
 double Omega_rad(const double a, const cosmology cosmo) { return (cosmo.Omega_rad + (bg_ncdm(a, cosmo) + cosmo.Omega_cdm + cosmo.Omega_b - cosmo.Omega_m) * a) / ((cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * a + cosmo.Omega_Lambda * a * a * a * a + cosmo.Omega_rad); }
 
 double Omega_Lambda(const double a, const cosmology cosmo) { return cosmo.Omega_Lambda / ((cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) / a / a / a + cosmo.Omega_Lambda + cosmo.Omega_rad / a / a / a / a); }
+
+double rho(const double a, const cosmology cosmo)
+{
+	return (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo))/a/a/a + cosmo.Omega_Lambda + cosmo.Omega_rad/a/a/a/a;
+}
 
 
 //////////////////////////

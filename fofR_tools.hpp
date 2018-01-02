@@ -18,13 +18,13 @@
 ///////////////////// F(R) FUNCTIONS /////////////////////
 
 // F(R) = f(R) - R
-Real F(const double R, const double * params, const int fofR_type, int code = -1)
+Real F(const double R, double const * const params, const int fofR_type, int code)
 {
 	double output, Rpow;
 
 	if(fofR_type == FOFR_TYPE_RN)
 	{
-		Rpow = pow(R,params[1]);
+		Rpow = pow(R, params[1]);
 		output = params[0] * Rpow;
 	}
 	else if(fofR_type == FOFR_TYPE_R2)
@@ -52,7 +52,10 @@ Real F(const double R, const double * params, const int fofR_type, int code = -1
 		parallel.abortForce();
 	}
 
-	if(!std::isnan(output)) return output;
+	if(!std::isnan(output))
+	{
+		return output;
+	}
 	else
 	{
 		COUT << " F(R) Evaluated to NaN (code " << code << ").\n"
@@ -64,7 +67,7 @@ Real F(const double R, const double * params, const int fofR_type, int code = -1
 
 
 // F_R(R) -- First derivative with respect to R
-Real FR(const double R, const double * params, const int fofR_type, int code = -1)
+Real FR(const double R, double const * const params, const int fofR_type, int code)
 {
 	double output, Rpow;
 
@@ -105,7 +108,6 @@ Real FR(const double R, const double * params, const int fofR_type, int code = -
 	else
 	{
 		COUT << " FR Evaluated to NaN (code " << code << ").\n"
-				 << " params = " << params[0] << " " << params[1] << " " << params[2] << " " << params[3] << endl
 		     << " R = " << R << ", Rpow = " << Rpow << ", FR = " << output << "\n Closing...\n";
 		parallel.abortForce();
 	}
@@ -113,7 +115,7 @@ Real FR(const double R, const double * params, const int fofR_type, int code = -
 
 
 // F_{RR}(R) -- Second derivative with respect to R
-Real FRR(const double R, const double * params, const int fofR_type, int code = -1)
+Real FRR(const double R, double const * const params, const int fofR_type, int code)
 {
 	double output, Roverm2, Rpow;
 
@@ -173,7 +175,7 @@ Real FRR(const double R, const double * params, const int fofR_type, int code = 
 
 
 // F_{RRR}(R) -- Third derivative with respect to R
-Real FRRR(const double R, const double * params, const int fofR_type, int code = -1)
+Real FRRR(const double R, double const * const params, const int fofR_type, int code)
 {
 	double output, Roverm2, Rpow;
 
@@ -252,21 +254,22 @@ void fR_details(const cosmology cosmo, metadata * sim, const double fourpiG)
 		double temp = sim->fofR_params[0];
 		sim->fofR_params[3] = sim->fofR_params[1] * 6. * (1. - cosmo.Omega_m - cosmo.Omega_rad) / cosmo.Omega_m / sim->fofR_params[0]; //Omega_m > 0, checked in parseMetadata()
 		sim->fofR_params[0] *= fourpiG * cosmo.Omega_m / 1.5;
-		COUT << " f(R) model: Hu-Sawicki    F(R) = - m2 * c1 * pow(R/m2, n) / (1. + c2 * pow(R/m2, n))" << endl
-				 << "  with m2 = " << temp << " * 8piG * rho_{m0} / 3. = " << sim->fofR_params[0] << endl;
-		COUT << "       c1 = " << sim->fofR_params[3] << endl
-				 << "       c2 = " << sim->fofR_params[1] << endl
-				 << "       n  = " << sim->fofR_params[2] << endl
-				 << " so |fR0| ~ -n*c1/c2^2/(12/Omega_m - 9)^(n+1) = " << sim->fofR_params[2] * sim->fofR_params[3] / sim->fofR_params[1]/sim->fofR_params[1] / pow( 12. / cosmo.Omega_m - 9., sim->fofR_params[2] + 1.) << "   (should be << 1)\n";
+		COUT << " f(R) model: Hu-Sawicki\n F(R) = - m2 * c1 * pow(R/m2, n) / (1. + c2 * pow(R/m2, n))" << endl
+				 << " with m2 = " << temp << " * 8piG * rho_{m0} / 3. = " << sim->fofR_params[0] << endl;
+		COUT << "      c1 = " << sim->fofR_params[3] << endl
+				 << "      c2 = " << sim->fofR_params[1] << endl
+				 << "      n  = " << sim->fofR_params[2] << endl
+				 << "so |fR0| ~ -n*c1/c2^2/(12/Omega_m - 9)^(n+1) = " << sim->fofR_params[2] * sim->fofR_params[3] / sim->fofR_params[1]/sim->fofR_params[1] / pow( 12. / cosmo.Omega_m - 9., sim->fofR_params[2] + 1.) << " (should be << 1)\n";
 	}
-	else if(sim->fofR_type == FOFR_TYPE_RN || sim->fofR_type == FOFR_TYPE_R2)
+	else if(sim->fofR_type == FOFR_TYPE_RN)
 	{
-		if(sim->fofR_type == FOFR_TYPE_R2)
-		{
-			// In R + alpha * R^2, alpha is expressed in units of (inverse) 8piG * density today (= 1.)
-			sim->fofR_params[0] /= 2. * fourpiG;
-		}
 		COUT << " f(R) model: a*R^n, with a = " << sim->fofR_params[0] << " and n = " << sim->fofR_params[1] << endl;
+	}
+	else if(sim->fofR_type == FOFR_TYPE_R2)
+	{
+		// In R + alpha * R^2, alpha is expressed in units of (inverse) 8piG * density today (= 1.)
+		sim->fofR_params[0] /= 2. * fourpiG;
+		COUT << " f(R) model: a*R^2, with a = " << sim->fofR_params[0] << endl;
 	}
 	else if(sim->fofR_type == FOFR_TYPE_DELTA) //  TODO: Fix for delta < 0: FRR < 0, so everything blows up!
 	{
@@ -367,7 +370,7 @@ void check_vector_field(Field<FieldType> & field, string field_name, long n3, st
 // TODO Add description
 
 template <class FieldType>
-double compute_max_FRR(Field<FieldType> &deltaR, double Rbar, double * params, int type)
+double compute_max_FRR(Field<FieldType> &deltaR, double Rbar, double const * const params, int type)
 {
 	if(type == FOFR_TYPE_R2)// In R + R^2 gravity, FRR is a constant
 	{
@@ -552,7 +555,7 @@ void lp_update_dotxi(Field<FieldType> & xi, Field<FieldType> & zeta, Field<Field
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
-void xi_set(Field<FieldType> & xi, Field<FieldType> & deltaR, double Rbar, double FRbar, double * fofR_params, int fofR_type)
+void xi_set(Field<FieldType> & xi, Field<FieldType> & deltaR, double const Rbar, double const FRbar, double const * const fofR_params, int const fofR_type)
 {
 	Site x(xi.lattice());
 	if(fofR_type == FOFR_TYPE_R2)
@@ -602,9 +605,9 @@ double computeDRzeta(Field<FieldType> & eightpiG_deltaT,
                      Field<FieldType> & deltaR,
 									   Field<FieldType> & zeta,
 									   Field<FieldType> & xi,
-									   double Rbar,
-								 	   double FRbar,
-								 	   double * params,
+									   const double Rbar,
+								 	   const double FRbar,
+								 	   double const * const params,
 									   const int fofR_type,
                      double prec)
 {
@@ -613,30 +616,75 @@ double computeDRzeta(Field<FieldType> & eightpiG_deltaT,
   double R_temp, temp, max_FRR = 0., FRR_temp;
   int count, count_max = 10000;
 
-	for(x.first(); x.test(); x.next())
+	if(fofR_type == FOFR_TYPE_HU_SAWICKI)
 	{
-		R_temp = Rbar - eightpiG_deltaT(x);
-		count = 0;
-		while(true)
+		for(x.first(); x.test(); x.next())
 		{
-			temp = fabs(xi(x)/(FR(R_temp, params, fofR_type, 56) - FRbar) - 1.);
-			if(temp < prec) break;
-			FRR_temp = FRR(R_temp, params, fofR_type, 159);
-			R_temp = FRR_temp > 0 ? R_temp + (xi(x) - FR(R_temp, params, fofR_type, 373) + FRbar) / FRR_temp : 1.1 * R_temp; // Displace R_temp slightly, if FRR(R_temp) is "bad"
-			count ++;
-			if(count > count_max)
+			R_temp = Rbar - eightpiG_deltaT(x);
+			count = 0;
+			while(true)
 			{
-				// cout << "Could only reach a precision of " << temp << " in " << count_max << " steps.\n";
-				break;
+				temp = fabs(xi(x)/(FR(R_temp, params, fofR_type, 56) - FRbar) - 1.);
+				if(temp < prec) break;
+				FRR_temp = FRR(R_temp, params, fofR_type, 159);
+				R_temp += FRR_temp > 0 ? log((xi(x) + FRbar) / (FR(R_temp, params, fofR_type, 873))) * FR(R_temp, params, fofR_type, 872) / FRR_temp : 0.01 * R_temp; // Displace R_temp slightly, if FRR(R_temp) is "bad"
+				count ++;
+				if(count > count_max)
+				{
+					cout << "Could only reach a precision of " << temp << " in " << count_max << " steps.\n";
+					break;
+				}
 			}
+			FRR_temp = fabs(FRR(R_temp, params, fofR_type, 157));
+			if(max_FRR < FRR_temp) max_FRR = FRR_temp;
+			deltaR(x) = R_temp - Rbar;
+			zeta(x) = deltaR(x) + eightpiG_deltaT(x);
 		}
-		FRR_temp = fabs(FRR(R_temp, params, fofR_type, 157));
-		if(max_FRR < FRR_temp) max_FRR = FRR_temp;
-		deltaR(x) = R_temp - Rbar;
-		zeta(x) = deltaR(x) + eightpiG_deltaT(x);
+	}
+	else if(fofR_type == FOFR_TYPE_RN)
+	{
+		for(x.first(); x.test(); x.next())
+		{
+			R_temp = pow(Rbar, params[1] - 1.) + xi(x)/params[0]/params[1];
+			R_temp = pow(R_temp, 1./(params[1] - 1.));
+			FRR_temp = fabs(FRR(R_temp, params, fofR_type, 157));
+			if(max_FRR < FRR_temp) max_FRR = FRR_temp;
+			deltaR(x) = R_temp - Rbar;
+			zeta(x) = deltaR(x) + eightpiG_deltaT(x);
+		}
+	}
+	else if(fofR_type == FOFR_TYPE_R2)
+	{
+		COUT << "Something is wrong. R + R^2 shouldn not call this function. Closing...\n";
+		parallel.abortForce();
+	}
+	else
+	{
+		for(x.first(); x.test(); x.next())
+		{
+			R_temp = Rbar - eightpiG_deltaT(x);
+			count = 0;
+			while(true)
+			{
+				temp = fabs(xi(x)/(FR(R_temp, params, fofR_type, 56) - FRbar) - 1.);
+				if(temp < prec) break;
+				FRR_temp = FRR(R_temp, params, fofR_type, 159);
+				R_temp = FRR_temp > 0 ? R_temp + (xi(x) - FR(R_temp, params, fofR_type, 373) + FRbar) / FRR_temp : 1.01 * R_temp; // Displace R_temp slightly, if FRR(R_temp) is "bad"
+				count ++;
+				if(count > count_max)
+				{
+					cout << "Could only reach a precision of " << temp << " in " << count_max << " steps.\n";
+					break;
+				}
+			}
+			FRR_temp = fabs(FRR(R_temp, params, fofR_type, 157));
+			if(max_FRR < FRR_temp) max_FRR = FRR_temp;
+			deltaR(x) = R_temp - Rbar;
+			zeta(x) = deltaR(x) + eightpiG_deltaT(x);
+		}
 	}
 
-  parallel.max(max_FRR);
+	parallel.max(max_FRR);
   if(max_FRR and !std::isnan(max_FRR)) return max_FRR;
   else
   {
@@ -644,17 +692,6 @@ double computeDRzeta(Field<FieldType> & eightpiG_deltaT,
     return FRR(Rbar, params, fofR_type, 45);
   }
 }
-
-
-
-
-
-
-
-
-
-
-
 
 
 // Checks equation: laplace(left_field) == coeff * right_field + coeff2 * left_field

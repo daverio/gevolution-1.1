@@ -118,8 +118,7 @@ int main(int argc, char **argv)
 	icsettings ic;
 	gadget2_header hdr;
 	Real T00_hom;
-	Real T00_hom_a3;
-	Real T00_hom_rescaled;
+	Real T00_hom_rescaled_a3;
 	Real Tii_hom;
 	Real Trace_hom;
 	Real phi_hom;
@@ -250,6 +249,7 @@ int main(int argc, char **argv)
 	Field<Real> xi_prev;
 	Field<Real> zeta;
 	Field<Real> deltaR;
+	Field<Real> deltaR_plus_deltaT_minus_zeta;
 	Field<Real> dot_deltaR;
 	Field<Real> deltaR_prev;
 	Field<Real> deltaT;
@@ -290,7 +290,10 @@ xidot.initialize(lat,1);
 xidot.alloc();
 
 laplace_xi.initialize(lat,1);
+deltaR_plus_deltaT_minus_zeta.initialize(lat,1);
+deltaR_plus_deltaT_minus_zeta.alloc();
 
+zeta.initialize(lat,1);
 zeta.initialize(lat,1);
 deltaR.initialize(lat,1);
 dot_deltaR.initialize(lat, 1);
@@ -344,9 +347,7 @@ plan_Sij.initialize(&Sij, &SijFT);
 	double Fbar;
 	double FRbar;
 	double FRRbar;
-	double dot_FRbar;
-	double ddot_FRbar;
-	double temp1, temp2;
+	double t1, t2, t3; // TODO: Temp variables, remove after debugging
 	double coeffm2;
 
 	gsl_spline * a_spline;
@@ -386,15 +387,15 @@ plan_Sij.initialize(&Sij, &SijFT);
 		if(!sim.lcdm_background)
 		{
 			Rbar = R_initial_fR(a, fourpiG, cosmo);
+			Fbar = F(Rbar, sim.fofR_params, sim.fofR_type, 100);
+			FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type, 101);
+			FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type, 102);
+			Hubble = H_initial_fR(a, Hconf(a, fourpiG, cosmo), Rbar, Fbar, FRbar,	6. * fourpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * FRRbar / a / a / a); // TODO: Check Omega_m term
+
 			if(sim.background_trace)
 			{
-				dot_Rbar = dot_R_initial_fR(a, Hubble, Rbar, fourpiG, cosmo);
+				dot_Rbar = dot_R_initial_fR(a, Hubble, fourpiG, cosmo, sim.fofR_params, sim.fofR_type);
 			}
-			COUT << "\tInitial Rbar = " << Rbar << "\n";
-			Fbar = F(Rbar, sim.fofR_params, sim.fofR_type);
-			FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type);
-			FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type);
-			Hubble = H_initial_fR(a, Hconf(a, fourpiG, cosmo), Rbar, Fbar, FRbar,	6. * fourpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * FRRbar / a / a / a); // TODO: Check Omega_m term
 
 			if(sim.Cf * dx < sim.steplimit / Hubble)
 			{
@@ -409,9 +410,9 @@ plan_Sij.initialize(&Sij, &SijFT);
 		{
 			Hubble = Hconf(a, fourpiG, cosmo);
 			Rbar = 2. * fourpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a + 4.*cosmo.Omega_Lambda );
-			Fbar = F(Rbar, sim.fofR_params, sim.fofR_type);
-			FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type);
-			FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type);
+			Fbar = F(Rbar, sim.fofR_params, sim.fofR_type, 200);
+			FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type, 201);
+			FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type, 202);
 			if(sim.Cf * dx < sim.steplimit / Hconf(a, fourpiG, cosmo)) dtau = sim.Cf * dx;
 		  else dtau = sim.steplimit / Hconf(a, fourpiG, cosmo);
 		}
@@ -459,7 +460,12 @@ plan_Sij.initialize(&Sij, &SijFT);
 								<< "tau/boxsize" << setw(wid)
 								<< "a" << setw(wid)
 								<< "conformal H" << setw(wid)
-								<< "R" << endl;
+								<< "R";
+			if(sim.mg_flag == FOFR)
+			{
+				bgoutfile << setw(wid) << "dR/R";
+			}
+			bgoutfile << endl;
 		}
 
 		while(a < 1./(1. + sim.bg_final_redshift))
@@ -476,13 +482,9 @@ plan_Sij.initialize(&Sij, &SijFT);
 				{
 					dtau = rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, dtau, sim.fofR_params, sim.fofR_type);
 				}
-				Fbar = F(Rbar, sim.fofR_params, sim.fofR_type);
-				temp1 = FRbar;
-				temp2 = dot_FRbar;
-				FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type);
-				dot_FRbar = (FRbar - temp1) / dtau;
-				ddot_FRbar = (dot_FRbar - temp2) / dtau;
-				FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type);
+				Fbar = F(Rbar, sim.fofR_params, sim.fofR_type, 300);
+				FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type, 301);
+				FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type, 302);
 				tau += dtau; // TODO: CHECK
 			}
 			else
@@ -508,13 +510,17 @@ plan_Sij.initialize(&Sij, &SijFT);
 				if(sim.mg_flag != FOFR || tau >= tau_print)
 				{
 					cout << " cycle " << cycle << "\tz = " << 1./a - 1. << "\ttau = " << tau << "\tdtau = " << dtau << endl;
-					bgoutfile << setw(9) << cycle << setw(wid) << tau	<< setw(wid) << a	<< setw(wid) << Hubble << setw(wid) << Rbar	<< "\n";
+					bgoutfile << setw(9) << cycle << setw(wid) << tau	<< setw(wid) << a	<< setw(wid) << Hubble << setw(wid) << Rbar;
 					if(sim.mg_flag == FOFR)
 					{
 						tau_print += dtau_print;
+						t1 = Rbar/R_GR(a, fourpiG, cosmo) - 1.;
+						bgoutfile << setw(wid) << fabs(t1);
 					}
+					bgoutfile << endl;
 				}
 			}
+
 			cycle++;
 		}
 
@@ -549,9 +555,9 @@ plan_Sij.initialize(&Sij, &SijFT);
 		{
 				readIC(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, Hubble, Rbar, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &xi, &xi_prev, &zeta, &deltaR, &deltaR_prev, &dot_deltaR, &deltaT, &phidot, &xidot, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount, settingsfile_bin);
 
-				Fbar = F(Rbar, sim.fofR_params, sim.fofR_type);
-				FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type);
-				FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type);
+				Fbar = F(Rbar, sim.fofR_params, sim.fofR_type, 400);
+				FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type, 401);
+				FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type, 402);
 		}
 		else
 		{
@@ -643,12 +649,6 @@ plan_Sij.initialize(&Sij, &SijFT);
 	}
 #endif
 
-	if(sim.mg_flag == FOFR)
-	{
-		dtau_print = tau / sqrt(a * (sim.bg_final_redshift + 1.)) / sim.BACKGROUND_NUMPTS;
-		tau_print = tau;
-	}
-
 	//////////////////////////////////////////////////////// Main loop
 	while(true)
 	{
@@ -662,6 +662,18 @@ plan_Sij.initialize(&Sij, &SijFT);
 			COUT << "\n                              ----- Beginning full f(R) background evolution at z = " << 1./a - 1. << " -----\n";
 			cosmo.Omega_Lambda = 0.;
 			sim.lcdm_background = 0;
+		}
+
+		if(cycle % sim.CYCLE_INFO_INTERVAL == 0 && sim.check_fields)
+		{
+			check_field(phi, "phi", numpts3d);
+			check_field(deltaR, "deltaR", numpts3d);
+			check_field(deltaT, "deltaT", numpts3d);
+			if(sim.mg_flag == FOFR)
+			{
+				check_field(zeta, "zeta", numpts3d);
+				check_field(deltaR_plus_deltaT_minus_zeta, "deltaR_plus_deltaT_minus_zeta", numpts3d);
+			}
 		}
 
 #ifdef BENCHMARK
@@ -743,8 +755,8 @@ plan_Sij.initialize(&Sij, &SijFT);
 			phi_hom = 0.;
 			for(x.first(); x.test(); x.next())
 			{
-				T00_hom += source(x); // source = - a^3 * T00 = a^3 * rho
-				Tii_hom += Sij(x,0,0) + Sij(x,1,1) + Sij(x,2,2); // Sij = a^3 Tij = a^3 * Kronecker_delta_ij * P
+				T00_hom += -source(x); // source = - a^3 * T00
+				Tii_hom += Sij(x,0,0) + Sij(x,1,1) + Sij(x,2,2); // Sij = a^3 Tij
 				phi_hom += phi(x);
 			}
 
@@ -752,44 +764,30 @@ plan_Sij.initialize(&Sij, &SijFT);
 			parallel.sum<Real>(Tii_hom);
 			parallel.sum<Real>(phi_hom);
 			T00_hom /= (Real) numpts3d;
-			T00_hom /= -a*a*a; // T00_hom contained a^3 * rho, now contains the correct T00 = -rho
 			Tii_hom /= (Real) numpts3d;
-			Tii_hom /= a*a*a; // Tii contains 3.*P
-			Trace_hom = T00_hom + Tii_hom;
 			phi_hom /= (Real) numpts3d;
+			T00_hom_rescaled_a3 = T00_hom / (1. + 3. * phi_hom);
 
+			// Computes 8piG*deltaT = 8piG( (T00 + T11 + T22 + T33) - (-rho_backg + 3P_backg) ), to be stored in {deltaT}
+			// At the moment: {source} = -a^3*T00, {Sij} = a^3*Tij
+			computeTtrace(deltaT, source, Sij, a*a*a, cosmo.Omega_m/a/a/a, fourpiG); // TODO: Should this include the explicit Lambda term?
 
-			T00_hom_rescaled = T00_hom / (1. + 3. * phi_hom);
+			T00_hom /= a*a*a; // T00_hom contained a^3 * <T00>, now contains the correct <T00>
+			Tii_hom /= a*a*a; // same for Tii
+			Trace_hom = T00_hom + Tii_hom; // same for Trace
 
-			T00_hom_a3 = T00_hom_rescaled * a * a * a;
+			if(sim.mg_flag != FOFR)
+			{
+				copy_field(deltaT, deltaR, -1.);
+			}
 
 			if(cycle % sim.CYCLE_INFO_INTERVAL == 0)
 			{
 				COUT << "\n cycle " << cycle << ", background information:\n"
 				     << "           z = " << (1./a) - 1. << "\n"
 						 << "           background model = " << cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo) << "\n"
-						 << "           average/rescaled T00 = " << T00_hom*a*a*a << " / " << T00_hom_rescaled*a*a*a << "\n"
+						 << "           average/rescaled T00 = " << T00_hom*a*a*a << " / " << T00_hom_rescaled_a3 << "\n"
 						 << "           phi_hom = " << phi_hom << "\n";
-				if(sim.check_fields)
-				{
-					check_field(phi, "phi", numpts3d);
-					if(sim.mg_flag == FOFR)
-					{
-						check_field(deltaR, "deltaR", numpts3d);
-						check_field(zeta, "zeta", numpts3d);
-					}
-				}
-			}
-
-
-			// Computes 8piG*deltaT = 8piG( (T00 + T11 + T22 + T33) - (-rho_backg + 3P_backg) ), to be stored in {deltaT}
-			// At the moment: {source} = -a^3*T00, {Sij} = a^3*Tij
-			// TODO: Should we use (-T00_hom + Tii_hom) or the predicted value (i.e. Omega_m/a^3 + ...)
-			computeTtrace(deltaT, source, Sij, a*a*a, Trace_hom, fourpiG); // TODO: Should this include the explicit Lambda term?
-
-			if(sim.mg_flag != FOFR && sim.gr_flag)
-			{
-				copy_field(deltaT, deltaR, -1.);
 			}
 
 			if(sim.mg_flag == FOFR)
@@ -894,7 +892,9 @@ plan_Sij.initialize(&Sij, &SijFT);
 							add_fields(xi, xidot, xi, 1., dtau_old);
 							xi.updateHalo();
 						}
+
 						computeDRzeta(deltaT, deltaR, zeta, xi, Rbar, FRbar, sim.fofR_params, sim.fofR_type, sim.fofR_target_precision);
+
 						if(cycle)
 						{
 							lp_update_dotxi(xi, zeta, xidot, xidot, Hubble, a*a, dtau_old, dtau, dx*dx);
@@ -903,13 +903,19 @@ plan_Sij.initialize(&Sij, &SijFT);
 				}
 			}
 
+			if(sim.mg_flag == FOFR) //TODO: Remove after debugging
+			{
+				add_fields(deltaR, deltaT, deltaR_plus_deltaT_minus_zeta);
+				add_fields(deltaR_plus_deltaT_minus_zeta, zeta, deltaR_plus_deltaT_minus_zeta, 1., -1.);
+			}
+
 			if(cycle) // Only after the 0th cycle
 			{
 				if(sim.mg_flag == FOFR)
 				{
 					// Write source term for the 00 equation in {source}
-					// prepareFTsource_S00<Real>(source, phi, chi, xi, xi_prev, deltaR, source, cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo), dx*dx, dtau_old, Hubble, a, fourpiG / a, Rbar, Fbar, FRbar, sim.fofR_params, sim.fofR_type, sim.back_to_GR, sim.quasi_static);
-					prepareFTsource_S00<Real>(source, phi, chi, xi, xi_prev, deltaR, source, T00_hom + bg_ncdm(a, cosmo), dx*dx, dtau_old, Hubble, a, fourpiG / a, Rbar, Fbar, FRbar, sim.fofR_params, sim.fofR_type, sim.back_to_GR, sim.quasi_static);
+					prepareFTsource_S00<Real>(source, phi, chi, xi, xi_prev, deltaR, source, -(cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo))/a/a/a, dx*dx, dtau_old, Hubble, a, fourpiG / a, Rbar, Fbar, FRbar, sim.fofR_params, sim.fofR_type, sim.back_to_GR, sim.quasi_static);
+					// prepareFTsource_S00<Real>(source, phi, chi, xi, xi_prev, deltaR, source, T00_hom - bg_ncdm(a, cosmo), dx*dx, dtau_old, Hubble, a, fourpiG / a, Rbar, Fbar, FRbar, sim.fofR_params, sim.fofR_type, sim.back_to_GR, sim.quasi_static);
 				}
 				else if(sim.gr_flag)
 				{
@@ -1013,7 +1019,7 @@ plan_Sij.initialize(&Sij, &SijFT);
 				}
 			}
 
-			bgoutfile << setw(9) << cycle << setw(wid) << tau	<< setw(wid) << a	<< setw(wid) << Hubble << setw(wid) << Rbar	<< setw(wid) << phi_hom << setw(wid) << -T00_hom_rescaled*a*a*a << "\n";
+			bgoutfile << setw(9) << cycle << setw(wid) << tau	<< setw(wid) << a	<< setw(wid) << Hubble << setw(wid) << Rbar	<< setw(wid) << phi_hom << setw(wid) << -T00_hom_rescaled_a3 << "\n";
 
 			bgoutfile.close();
 		}
@@ -1290,41 +1296,24 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 				}
 				else // f(R) gravity, non-LCDM background, Friedmann equation
 				{
-					if(sim.background_T00hom)
+					if(numsteps_bg == 1)
 					{
-						if(numsteps_bg == 1)
-						{
-							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom_a3, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
-						}
-						else
-						{
-							for(g=0; g<numsteps_bg/2; g++)
-							{
-								rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom_a3, dtau_bg, sim.fofR_params, sim.fofR_type);
-							}
-						}
+						rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
 					}
 					else
 					{
-						if(numsteps_bg == 1)
+						for(g=0; g<numsteps_bg/2; g++)
 						{
-							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
-						}
-						else
-						{
-							for(g=0; g<numsteps_bg/2; g++)
-							{
-								rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
-							}
+							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
 						}
 					}
 				}
 
 				if(sim.mg_flag == FOFR)
 				{
-					Fbar = F(Rbar, sim.fofR_params, sim.fofR_type);
-					FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type);
-					FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type);
+					Fbar = F(Rbar, sim.fofR_params, sim.fofR_type, 500);
+					FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type, 501);
+					FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type, 502);
 				}
 			}
 			// if numsteps == 1 ends here
@@ -1377,41 +1366,24 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 				}
 				else // f(R) gravity, non-LCDM background, Friedmann equation
 				{
-					if(sim.background_T00hom)
+					if(numsteps_bg == 1)
 					{
-						if(numsteps_bg == 1)
-						{
-							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom_a3, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
-						}
-						else
-						{
-							for(g=0; g<numsteps_bg/2; g++)
-							{
-								rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom_a3, dtau_bg, sim.fofR_params, sim.fofR_type);
-							}
-						}
+						rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
 					}
 					else
 					{
-						if(numsteps_bg == 1)
+						for(g=0; g<numsteps_bg/2; g++)
 						{
-							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
-						}
-						else
-						{
-							for(g=0; g<numsteps_bg/2; g++)
-							{
-								rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
-							}
+							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
 						}
 					}
 				}
 
 				if(sim.mg_flag == FOFR)
 				{
-					Fbar = F(Rbar, sim.fofR_params, sim.fofR_type);
-					FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type);
-					FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type);
+					Fbar = F(Rbar, sim.fofR_params, sim.fofR_type, 600);
+					FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type, 601);
+					FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type, 602);
 				}
 			} // if (numsteps != 1) ends here
 
@@ -1455,41 +1427,24 @@ if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation 
 			}
 			else // f(R) gravity, non-LCDM background, Friedmann equation
 			{
-				if(sim.background_T00hom)
+				if(numsteps_bg == 1)
 				{
-					if(numsteps_bg == 1)
-					{
-						rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom_a3, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
-					}
-					else
-					{
-						for(g=0; g<numsteps_bg/2; g++)
-						{
-							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, T00_hom_a3, dtau_bg, sim.fofR_params, sim.fofR_type);
-						}
-					}
+					rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
 				}
 				else
 				{
-					if(numsteps_bg == 1)
+					for(g=0; g<numsteps_bg/2; g++)
 					{
-						rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, 0.5 * dtau, sim.fofR_params, sim.fofR_type);
-					}
-					else
-					{
-						for(g=0; g<numsteps_bg/2; g++)
-						{
-							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
-						}
+						rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, dtau_bg, sim.fofR_params, sim.fofR_type);
 					}
 				}
 			}
 
 			if(sim.mg_flag == FOFR)
 			{
-				Fbar = F(Rbar, sim.fofR_params, sim.fofR_type);
-				FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type);
-				FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type);
+				Fbar = F(Rbar, sim.fofR_params, sim.fofR_type, 700);
+				FRbar = FR(Rbar, sim.fofR_params, sim.fofR_type, 701);
+				FRRbar = FRR(Rbar, sim.fofR_params, sim.fofR_type, 702);
 			}
 		}   // particle update done
 			// for(j = 0; j < numsteps; j++) ends here

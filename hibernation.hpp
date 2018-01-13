@@ -570,7 +570,7 @@ void writeRestartSettings(metadata & sim,
 #else
 				fprintf(outfile, ", B_unused.h5");
 #endif
-			if(sim.mg_flag==FOFR)
+			if(sim.mg_flag==FR)
 			{
 				fprintf(outfile, ", %s%s%s_xi.h5", sim.restart_path, sim.basename_restart, buffer);
 				fprintf(outfile, ", %s%s%s_xi_prev.h5", sim.restart_path, sim.basename_restart, buffer);
@@ -655,35 +655,34 @@ void writeRestartSettings(metadata & sim,
 			{
 				fprintf(outfile, "gravity theory      = GR\n");
 			}
-			else if(sim.mg_flag == FOFR)
+			else if(sim.mg_flag == FR)
 			{
 				fprintf(outfile, "gravity theory      = fr\n");
 				fprintf(outfile, "\n\n# f(R) settings\n\n");
-				fprintf(outfile, "background file             = %s\n",sim.background_filename);
 
-				if(sim.fofR_type == FOFR_TYPE_RN || sim.fofR_type == FOFR_TYPE_R2)
+				if(sim.fR_type == FR_TYPE_RN || sim.fR_type == FR_TYPE_R2)
 				{
-					if(sim.fofR_type == FOFR_TYPE_R2) fprintf(outfile, "# WARNING: f(R) parameters for R + R^2 model hav already been rescaled. See fofR_tools.hpp for additional information.\n");
+					if(sim.fR_type == FR_TYPE_R2) fprintf(outfile, "# WARNING: f(R) parameters for R + R^2 model hav already been rescaled. See FR_tools.hpp for additional information.\n");
 					fprintf(outfile, "f(R) type                   = RN\n");
-					fprintf(outfile, "f(R) parameters             = %e, %f\n", sim.fofR_params[0], sim.fofR_params[1]);
+					fprintf(outfile, "f(R) parameters             = %e, %f\n", sim.fR_params[0], sim.fR_params[1]);
 				}
-				else if(sim.fofR_type == FOFR_TYPE_DELTA)
+				else if(sim.fR_type == FR_TYPE_DELTA)
 				{
 					fprintf(outfile, "f(R) type                   = DE\n");
-					fprintf(outfile, "f(R) parameters             = %e, %f\n", sim.fofR_params[0], sim.fofR_params[1]);
+					fprintf(outfile, "f(R) parameters             = %e, %f\n", sim.fR_params[0], sim.fR_params[1]);
 					}
-				else if(sim.fofR_type == FOFR_TYPE_HU_SAWICKI)
+				else if(sim.fR_type == FR_TYPE_HU_SAWICKI)
 				{
-					fprintf(outfile, "# WARNING: f(R) parameters for Hu-Sawicki model have already been rescaled. See fofR_tools.hpp for additional information.\n");
+					fprintf(outfile, "# WARNING: f(R) parameters for Hu-Sawicki model have already been rescaled. See FR_tools.hpp for additional information.\n");
 					fprintf(outfile, "f(R) type                   = HS\n");
-					fprintf(outfile, "f(R) parameters             = %f, %f, %f, %f\n",sim.fofR_params[0], sim.fofR_params[1], sim.fofR_params[2], sim.fofR_params[3]);
+					fprintf(outfile, "f(R) parameters             = %f, %f, %f, %f\n",sim.fR_params[0], sim.fR_params[1], sim.fR_params[2], sim.fR_params[3]);
 				}
 				else
 					COUT<< " error f(R) type not recognized!" << endl;
 
-				fprintf(outfile, "f(R) epsilon background     = %f\n",sim.fofR_epsilon_bg);
-				fprintf(outfile, "f(R) epsilon fields         = %f\n",sim.fofR_epsilon_fields);
-				fprintf(outfile, "f(R) target precision       = %f\n",sim.fofR_target_precision);
+				fprintf(outfile, "f(R) epsilon background     = %f\n",sim.fR_epsilon_bg);
+				fprintf(outfile, "f(R) epsilon fields         = %f\n",sim.fR_epsilon_fields);
+				fprintf(outfile, "f(R) target precision       = %f\n",sim.fR_target_precision);
 				fprintf(outfile, "S0i mode                    = %d\n",sim.S0i_mode);
 				fprintf(outfile, "back to GR                  = %d\n",sim.back_to_GR);
 				fprintf(outfile, "check fields                = %d\n",sim.check_fields);
@@ -1061,7 +1060,7 @@ void hibernate(metadata & sim,
 		Bi.saveHDF5_server_open(h5filename + "_B_check");
 #endif
 
-if(sim.mg_flag == FOFR)
+if(sim.mg_flag == FR)
 {
 	xi.saveHDF5_server_open(h5filename + "_xi.h5");
 	xi_prev.saveHDF5_server_open(h5filename + "_xi_prev.h5");
@@ -1091,7 +1090,7 @@ if(sim.mg_flag == FOFR)
 #endif
 		Bi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 
-		if(sim.mg_flag == FOFR)
+		if(sim.mg_flag == FR)
 		{
 			xi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 			xi_prev.saveHDF5_server_write(NUMBER_OF_IO_FILES);
@@ -1128,7 +1127,7 @@ if(sim.mg_flag == FOFR)
 		Bi.saveHDF5(h5filename + "_B_check.h5");
 #endif
 
-if(sim.mg_flag == FOFR)
+if(sim.mg_flag == FR)
 {
 	xi.saveHDF5(h5filename + "_xi.h5");
 	xi_prev.saveHDF5(h5filename + "_xi_prev.h5");

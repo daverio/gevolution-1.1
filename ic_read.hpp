@@ -782,7 +782,7 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 			chi->updateHalo();
 		}
 
-		if(sim.mg_flag == FOFR)
+		if(sim.mg_flag == FR)
 		{
 			int j = 3;
 			filename.assign(ic.metricfile[j]);

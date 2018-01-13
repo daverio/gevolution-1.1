@@ -22,8 +22,8 @@
 #define MAX_OUTPUTS 32
 #endif
 
-#ifndef MAX_FOFR_PARAMS
-#define MAX_FOFR_PARAMS 8
+#ifndef MAX_FR_PARAMS
+#define MAX_FR_PARAMS 8
 #endif
 
 #ifndef PARAM_MAX_LENGTH
@@ -120,13 +120,13 @@
 
 //Modified gravity types
 #define GENREL 0 // General Relativity
-#define FOFR 1   // f(R)
+#define FR 1   // f(R)
 
-//f(R) models
-#define FOFR_TYPE_RN 1
-#define FOFR_TYPE_R2 2
-#define FOFR_TYPE_HU_SAWICKI 3
-#define FOFR_TYPE_DELTA 4
+//F(R) models
+#define FR_TYPE_RN 1
+#define FR_TYPE_R2 2
+#define FR_TYPE_HU_SAWICKI 3
+#define FR_TYPE_DELTA 4
 
 
 // color escape sequences for terminal highlighting (enable with -DCOLORTERMINAL)
@@ -181,7 +181,7 @@ struct metadata
 	int baryon_flag;
 	int gr_flag;
 	int mg_flag;
-	int fofR_type;
+	int fR_type;
 	int vector_flag;
 	int radiation_flag;
 	int out_pk;
@@ -190,7 +190,7 @@ struct metadata
 	int numbins;
 	int num_snapshot;
 	int num_restart;
-	int num_fofR_params;
+	int num_fR_params;
 	int quasi_static = 0;
 	int background_only = 0;
 	int background_trace = 0;
@@ -204,10 +204,12 @@ struct metadata
 	int check_pause = 1;
 
 	double Cf;
-	double fofR_params[MAX_FOFR_PARAMS];
-	double fofR_epsilon_bg;
-	double fofR_epsilon_fields;
-	double fofR_target_precision;
+	double fR_params[MAX_FR_PARAMS];
+	double fR_epsilon_bg;
+	double fR_epsilon_fields;
+	double fR_target_precision;
+	double fR_count_max;
+	double fR_relax_error;
 	double movelimit;
 	double steplimit;
 	double boxsize;
@@ -229,7 +231,6 @@ struct metadata
 	char output_path[PARAM_MAX_LENGTH];
 	char restart_path[PARAM_MAX_LENGTH];
 	char basename_restart[PARAM_MAX_LENGTH];
-	char background_filename[PARAM_MAX_LENGTH];
 };
 
 std::ostream& operator<< (std::ostream& os, const metadata& sim)
@@ -251,7 +252,7 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "baryon_flag: " << sim.baryon_flag << "\n";
 	os << "gr_flag: " << sim.gr_flag << "\n";
 	os << "mg_flag: " << sim.mg_flag << "\n";
-	os << "fofR_type: " << sim.fofR_type << "\n";
+	os << "fR_type: " << sim.fR_type << "\n";
 	os << "vector_flag: " << sim.vector_flag << "\n";
 	os << "radiation_flag: " << sim.radiation_flag << "\n";
 	os << "out_pk: " << sim.out_pk << "\n";
@@ -260,7 +261,7 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "numbins: " << sim.numbins << "\n";
 	os << "num_snapshot: " << sim.num_snapshot << "\n";
 	os << "num_restart: " << sim.num_restart << "\n";
-	os << "num_fofR_params: " << sim.num_fofR_params << "\n";
+	os << "num_fR_params: " << sim.num_fR_params << "\n";
 	os << "quasi_static: " << sim.quasi_static << "\n";
 	os << "background_only: " << sim.background_only << "\n";
 	os << "background_trace: " << sim.background_trace << "\n";
@@ -275,13 +276,14 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 
 	os << "Cf: " << sim.Cf << "\n";
 
-	os << "fofR_params: " << sim.fofR_params[0];
-	for(int i = 1; i<MAX_FOFR_PARAMS; i++) os << " , " << sim.fofR_params[i];
+	os << "fR_params: " << sim.fR_params[0];
+	for(int i = 1; i<MAX_FR_PARAMS; i++) os << " , " << sim.fR_params[i];
 	os << "\n";
 
-	os << "fofR_epsilon_bg: " << sim.fofR_epsilon_bg << "\n";
-	os << "fofR_epsilon_fields: " << sim.fofR_epsilon_fields << "\n";
-	os << "fofR_target_precision: " << sim.fofR_target_precision << "\n";
+	os << "fR_epsilon_bg: " << sim.fR_epsilon_bg << "\n";
+	os << "fR_epsilon_fields: " << sim.fR_epsilon_fields << "\n";
+	os << "fR_target_precision: " << sim.fR_target_precision << "\n";
+	os << "fR_relax_error: " << sim.fR_relax_error << "\n";
 	os << "movelimit: " << sim.movelimit << "\n";
 	os << "steplimit: " << sim.steplimit << "\n";
 	os << "boxsize: " << sim.boxsize << "\n";
@@ -319,7 +321,6 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "output_path: " << sim.output_path << "\n";
 	os << "restart_path: " << sim.restart_path << "\n";
 	os << "basename_restart: " << sim.basename_restart << "\n";
-	os << "background_filename: " << sim.background_filename << "\n";
 	os << "---------------------------------\n";
 
 	return os;
@@ -346,7 +347,7 @@ struct icsettings
 	double n_s;
 	double k_pivot;
 
-	///fofR restart
+	///f(R) restart
 	double restart_dtau_old;
 	double restart_dtau_old_2;
 	double restart_dtau_osci;

@@ -144,7 +144,7 @@ void prepareFTsource(Field<FieldType> & phi, Field<FieldType> & Tij, Field<Field
 
 
 /////////////////////////////////////////////////
-// Prepare source for 00 equation in f(R) gravity
+// Prepare source for 00 equation in F(R) gravity
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
@@ -164,10 +164,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
 												 const double Rbar,
 												 const double Fbar,
 												 const double FRbar,
-												 double * paramF,
-												 const int Ftype,
-                         int flag_back_to_GR,
-                         int flag_quasi_static = 0)
+												 const metadata & sim)
 {
 	Site x(phi.lattice());
   Site xn(phi.lattice());
@@ -180,7 +177,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
 	double grad[3];
   int i = 0;
 
-  if(flag_back_to_GR) // If back_to_GR
+  if(sim.back_to_GR) // If back_to_GR
   {
     for (x.first(); x.test(); x.next())
     {
@@ -200,7 +197,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
   		source(x) -= 0.375 * (grad[0] + grad[1] + grad[2]);
      }
 	}
-  else if(flag_quasi_static) // Quasi-static approximation -- Modified Newtonian
+  else if(sim.quasi_static) // Quasi-static approximation -- Modified Newtonian
   {
     for (x.first(); x.test(); x.next())
     {
@@ -218,8 +215,8 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
       source(x) += threeH2 * (phi(x) - chi(x) - 0.5 * xi_new(x));
       source(x) -= 1.5 * Hubble * (2. * phi(x) + xi_new(x) - xi_old(x)) / dtau;//TODO: Do we want to keep this in the Quasi-static limit?
 
-      // f(R) terms
-      source(x) += 0.25 * a2 * (Rbar * xi_new(x) + Fbar - F(Rbar + deltaR(x), paramF, Ftype, 110));
+      // F(R) terms
+      source(x) += 0.25 * a2 * (Rbar * xi_new(x) + Fbar - F(Rbar + deltaR(x), sim, 110));
       // Rescaling with dx^2 (Needed! To be done before adding gradient squared)
       source(x) *= dx2;
 
@@ -245,8 +242,8 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
       source(x) += threeH2 * (phi(x) - chi(x) - 0.5 * xi_new(x));
       source(x) -= 1.5 * Hubble * (2. * phi(x) + xi_new(x) - xi_old(x)) / dtau;//TODO: check that this is the right interpolation
 
-      // f(R) terms
-      source(x) += 0.25 * a2 * (Rbar * xi_new(x) + Fbar - F(Rbar + deltaR(x), paramF, Ftype, 111));
+      // F(R) terms
+      source(x) += 0.25 * a2 * (Rbar * xi_new(x) + Fbar - F(Rbar + deltaR(x), sim, 111));
       source(x) *= dx2; // Multiply by dx^2 all terms not containing derivatives
 
       // gradient squared
@@ -257,7 +254,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
 }
 
 /////////////////////////////////////////////////
-// Project source for 00 equation in f(R) gravity
+// Project source for 00 equation in F(R) gravity
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
@@ -373,7 +370,7 @@ void prepareFTsource(Field<FieldType> & phi,
 		result(x) = coeff2 * (source(x) - bgmodel);
 
 #ifdef PHINONLINEAR
-#ifdef ORIGINALMETRIC // TODO: impose that f(R) works only for ORIGINALMETRIC
+#ifdef ORIGINALMETRIC // TODO: impose that F(R) works only for ORIGINALMETRIC
 		result(x) *= 1. - 4. * phi(x);
 		result(x) -= 0.375 * (phi(x-0) - phi(x+0)) * (phi(x-0) - phi(x+0));
 		result(x) -= 0.375 * (phi(x-1) - phi(x+1)) * (phi(x-1) - phi(x+1));

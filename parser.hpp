@@ -1056,9 +1056,9 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	sim.boxsize = -1.;
 	sim.wallclocklimit = -1.;
 	sim.z_in = 0.;
-	sim.fofR_type = 0;
-	for (i = 0; i < MAX_FOFR_PARAMS; i++) sim.fofR_params[i] = 0;
-	sim.num_fofR_params = MAX_FOFR_PARAMS;
+	sim.fR_type = 0;
+	for (i = 0; i < MAX_FR_PARAMS; i++) sim.fR_params[i] = 0;
+	sim.num_fR_params = MAX_FR_PARAMS;
 	sim.S0i_mode = 2;
 
 	parseParameter(params, numparam, "CYCLE_INFO_INTERVAL", sim.CYCLE_INFO_INTERVAL); // Defaults to 10
@@ -1154,11 +1154,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": tracer factor not set properly; using default value (1)" << endl;
 			sim.tracer_factor[i-1] = 1;
 		}
-	}
-
-	if((sim.num_snapshot <= 0 || sim.out_snapshot == 0) && (sim.num_pk <= 0 || sim.out_pk == 0))
-	{
-		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": no output specified!" << endl;
 	}
 
 	if(!parseParameter(params, numparam, "Pk bins", sim.numbins))
@@ -1360,57 +1355,57 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			}
 
 			sim.gr_flag = 1;
-			sim.mg_flag = FOFR;
+			sim.mg_flag = FR;
 
-			//TODO: read F(R) params and type
-			parseParameter(params, numparam, "f(R) parameters", sim.fofR_params, sim.num_fofR_params);
+			//TODO: read f(R) params and type
+			parseParameter(params, numparam, "f(R) parameters", sim.fR_params, sim.num_fR_params);
 			if(parseParameter(params, numparam, "f(R) type", par_string))
 			{
 				if(par_string[0] == 'R' || par_string[0] == 'r')
 				{
-					if(sim.fofR_params[0] <= 0)
+					if(sim.fR_params[0] <= 0)
 					{
-						COUT << " The coefficient a of F(R) = a * R^n is <= 0. This leads to a tachyonic instability for the scalaron. Closing...\n";
+						COUT << " The coefficient a of f(R) = a * R^n is <= 0. This leads to a tachyonic instability for the scalaron. Closing...\n";
 						parallel.abortForce();
 					}
-					else if(sim.fofR_params[1] < 0)
+					else if(sim.fR_params[1] < 0)
 					{
-						COUT << " The coefficient n of F(R) = a * R^n is <= 0. Closing...\n";
+						COUT << " The coefficient n of f(R) = a * R^n is <= 0. Closing...\n";
 						parallel.abortForce();
 					}
-					else if(sim.fofR_params[1] == 0)
+					else if(sim.fR_params[1] == 0)
 					{
-						COUT << " The exponent n of F(R) = a*R^n is set to 0, which corresponds to a pure Lambda term. Closing...\n";
+						COUT << " The exponent n of f(R) = a*R^n is set to 0, which corresponds to a pure Lambda term. Closing...\n";
 						parallel.abortForce();
 					}
-					else if(sim.fofR_params[1] == 1)
+					else if(sim.fR_params[1] == 1)
 					{
-						COUT << " The exponent n of F(R) = a*R^n is set to 1. This is just a redefinition of Newton's constant. Closing...\n";
+						COUT << " The exponent n of f(R) = a*R^n is set to 1. This is just a redefinition of Newton's constant. Closing...\n";
 						parallel.abortForce();
 					}
-					else if(sim.fofR_params[1] == 2)
+					else if(sim.fR_params[1] == 2)
 					{
-						sim.fofR_type = FOFR_TYPE_R2;
+						sim.fR_type = FR_TYPE_R2;
 					}
 					else
 					{
-						sim.fofR_type = FOFR_TYPE_RN;
+						sim.fR_type = FR_TYPE_RN;
 					}
 				}
 				else if(par_string[0] == 'H' || par_string[0] == 'h')
 				{
-					if(sim.num_fofR_params < 3)
+					if(sim.num_fR_params < 3)
 					{
 						COUT << " Not enough parameters for Hu-Sawicki model! Closing...\n";
 						parallel.abortForce();
 					}
-					else if(sim.fofR_params[0] <= 0)
+					else if(sim.fR_params[0] <= 0)
 					{
 						COUT << " The parameter m2 of Hu-Sawicki model should be strictly positive. Closing...\n";
 						parallel.abortForce();
 						// TODO: Check that parameter n of Hu-Sawicki is >= 1
 					}
-					sim.fofR_type = FOFR_TYPE_HU_SAWICKI;
+					sim.fR_type = FR_TYPE_HU_SAWICKI;
 					if(sim.lcdm_background)
 					{
 						cosmo.Omega_Lambda = 1. - cosmo.Omega_m - cosmo.Omega_rad;
@@ -1424,26 +1419,21 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 				}
 				else if(par_string[0] == 'D' || par_string[0] == 'd')
 				{
-					if(sim.num_fofR_params < 2)
+					if(sim.num_fR_params < 2)
 					{
 						COUT << " Not enough parameters for Hu-Sawicki model! Closing...\n";
 						parallel.abortForce();
 					}
-					else if(sim.fofR_params[0] <= 0)
+					else if(sim.fR_params[0] <= 0)
 					{
 						COUT << " The parameter a of a * (R/a)^(1+delta) model must be positive. Closing...\n";
 						parallel.abortForce();
 					}
-					else if(fabs(sim.fofR_params[1]) > 0.1)
-					{
-						COUT << " The parameter delta of a * (R/a)^(1+delta) model must be small, at least < 0.1. Closing...\n";
-						parallel.abortForce();
-					}
-					sim.fofR_type = FOFR_TYPE_DELTA;
+					sim.fR_type = FR_TYPE_DELTA;
 				}
 
 				// Added parser for Omega_Lambda in f(R) gravity -- Lambda will typically be zero, but can be nonzero
-				if(sim.fofR_type != FOFR_TYPE_HU_SAWICKI)
+				if(sim.fR_type != FR_TYPE_HU_SAWICKI)
 				{
 					if(sim.lcdm_background)
 					{
@@ -1487,7 +1477,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		sim.gr_flag = 1;
 	}
 
-	if(sim.mg_flag == FOFR)
+	if(sim.mg_flag == FR)
 	{
 		parseParameter(params, numparam, "background trace", sim.background_trace);
 		if(sim.background_trace)
@@ -1498,7 +1488,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		parseParameter(params, numparam, "quasi-static", sim.quasi_static);
 		if(sim.back_to_GR)
 		{
-			COUT << " Back-to-GR mode active. F(R) will only affect the background evolution!\n";
+			COUT << " Back-to-GR mode active. f(R) will only affect the background evolution!\n";
 			if(sim.quasi_static)
 			{
 				COUT << "/!\\ Warning: Quasi-static mode also selected. This option is overridden by back-to-GR.\n";
@@ -1507,14 +1497,18 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		}
 		else
 		{
-			parseParameter(params, numparam, "f(R) target precision", sim.fofR_target_precision);
+			parseParameter(params, numparam, "f(R) target precision", sim.fR_target_precision);
+			parseParameter(params, numparam, "f(R) count max", sim.fR_count_max);
+			parseParameter(params, numparam, "f(R) relaxation error", sim.fR_relax_error); // Rescale relaxation error by the number of grid points
+			sim.fR_relax_error *= (long) sim.numpts * (long) sim.numpts * (long) sim.numpts;
+
 			if(sim.quasi_static)
 			{
 				COUT << " Quasi-static mode active (modified Newtonian).\n";
 			}
-			parseParameter(params, numparam, "f(R) epsilon fields", sim.fofR_epsilon_fields);
+			parseParameter(params, numparam, "f(R) epsilon fields", sim.fR_epsilon_fields);
 		}
-		parseParameter(params, numparam, "f(R) epsilon background", sim.fofR_epsilon_bg);// TODO: put some of these only for f(R)
+		parseParameter(params, numparam, "f(R) epsilon background", sim.fR_epsilon_bg);// TODO: put some of these only for f(R)
 	}
 	parseParameter(params, numparam, "check fields", sim.check_fields);
 	if(sim.check_fields)
@@ -1528,9 +1522,14 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	parseFieldSpecifiers(params, numparam, "snapshot outputs", sim.out_snapshot);
 	parseFieldSpecifiers(params, numparam, "Pk outputs", sim.out_pk);
 
+	if((sim.num_snapshot <= 0 || sim.out_snapshot == 0) && (sim.num_pk <= 0 || sim.out_pk == 0))
+	{
+		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": no output specified!" << endl;
+	}
+
 	if(!parseParameter(params, numparam, "generic file base", sim.basename_generic))
 	{
-		if(sim.mg_flag == FOFR)
+		if(sim.mg_flag == FR)
 		{
 			if(sim.background_only)
 			{
@@ -1577,9 +1576,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	if(!parseParameter(params, numparam, "hibernation file base", sim.basename_restart))
 		strcpy(sim.basename_restart, "restart");
-
-	if(!parseParameter(params, numparam, "background file", sim.background_filename))
-		sim.background_filename[0] = '\0';
 
 	COUT << " cosmological parameters are: Omega_m0 = " << cosmo.Omega_m
 			 << ", Omega_rad0 = " << cosmo.Omega_rad

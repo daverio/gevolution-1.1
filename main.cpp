@@ -123,7 +123,7 @@ int main(int argc, char **argv)
 	Real Tii_hom;
 	Real Trace_hom;
 	Real phi_hom;
-	Real max_f_RR;
+	Real max_fRR;
 
 	#ifndef H5_DEBUG
 		H5Eset_auto2 (H5E_DEFAULT, NULL, NULL);
@@ -326,20 +326,20 @@ int main(int argc, char **argv)
 	update_ncdm_fields[1] = &chi;
 	update_ncdm_fields[2] = &Bi;
 
-	//F(R) background description and gsl spline
+	//f(R) background description and gsl spline
 	double Hubble;
 	double Rbar;
 	double dot_Rbar;
 	double fbar;
-	double f_Rbar;
-	double f_RRbar;
+	double fRbar;
+	double fRRbar;
 	double temp1, temp2, temp3; // TODO: Temp variables, remove after debugging
 	double coeffm2;
 
 	gsl_spline * a_spline;
 	gsl_spline * H_spline;
 	gsl_spline * Rbar_spline;
-	gsl_interp_accel * gsl_inpl_acc = gsl_interp_accel_alloc ();
+	gsl_interp_accel * gsl_inpl_acc = gsl_interp_accel_alloc();
 	const gsl_interp_type *gsl_inpl_type = gsl_interp_linear;
 
 	Site x(lat);
@@ -374,9 +374,9 @@ int main(int argc, char **argv)
 		{
 			Rbar = R_initial_fR(a, fourpiG, cosmo);
 			fbar = F(Rbar, sim, 100);
-			f_Rbar = f_R(Rbar, sim, 101);
-			f_RRbar = f_RR(Rbar, sim, 102);
-			Hubble = H_initial_fR(a, Hconf(a, fourpiG, cosmo), Rbar, fbar, f_Rbar,	6. * fourpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * f_RRbar / a / a / a); // TODO: Check Omega_m term
+			fRbar = fR(Rbar, sim, 101);
+			fRRbar = fRR(Rbar, sim, 102);
+			Hubble = H_initial_fR(a, Hconf(a, fourpiG, cosmo), Rbar, fbar, fRbar,	6. * fourpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * fRRbar / a / a / a); // TODO: Check Omega_m term
 
 			if(sim.background_trace)
 			{
@@ -397,14 +397,14 @@ int main(int argc, char **argv)
 			Hubble = Hconf(a, fourpiG, cosmo);
 			Rbar = 2. * fourpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a + 4.*cosmo.Omega_Lambda );
 			fbar = F(Rbar, sim, 200);
-			f_Rbar = f_R(Rbar, sim, 201);
-			f_RRbar = f_RR(Rbar, sim, 202);
+			fRbar = fR(Rbar, sim, 201);
+			fRRbar = fRR(Rbar, sim, 202);
 			if(sim.Cf * dx < sim.steplimit / Hconf(a, fourpiG, cosmo)) dtau = sim.Cf * dx;
 		  else dtau = sim.steplimit / Hconf(a, fourpiG, cosmo);
 		}
 		if(!sim.back_to_GR && !sim.quasi_static) // If back_to_GR or quasi-static, dtau for fields dictated by usual steplimit (background is still split in smaller timesteps)
 		{
-			dtau_osci = sim.fR_epsilon_fields * sqrt(3.0 * fabs(f_RRbar))/a;
+			dtau_osci = sim.fR_epsilon_fields * sqrt(3.0 * fabs(fRRbar))/a;
 			if(dtau > dtau_osci) dtau = dtau_osci;
 		}
 	}
@@ -459,7 +459,7 @@ int main(int argc, char **argv)
 			if(sim.mg_flag == FR && !sim.lcdm_background)
 			{
 				dtau_old = dtau;
-				dtau = sim.fR_epsilon_bg * sqrt(3. * fabs(f_RRbar)) / a;
+				dtau = sim.fR_epsilon_bg * sqrt(3. * fabs(fRRbar)) / a;
 				if(sim.background_trace)
 				{
 					dtau = rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, dtau, sim);
@@ -469,8 +469,8 @@ int main(int argc, char **argv)
 					dtau = rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, dtau, sim);
 				}
 				fbar = F(Rbar, sim, 300);
-				f_Rbar = f_R(Rbar, sim, 301);
-				f_RRbar = f_RR(Rbar, sim, 302);
+				fRbar = fR(Rbar, sim, 301);
+				fRRbar = fRR(Rbar, sim, 302);
 				tau += dtau; // TODO: CHECK
 			}
 			else
@@ -542,8 +542,8 @@ int main(int argc, char **argv)
 				readIC(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, Hubble, Rbar, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &xi, &xi_prev, &zeta, &deltaR, &deltaR_prev, &dot_deltaR, &eightpiG_deltaT, &phidot, &xidot, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount, settingsfile_bin);
 
 				fbar = F(Rbar, sim, 400);
-				f_Rbar = f_R(Rbar, sim, 401);
-				f_RRbar = f_RR(Rbar, sim, 402);
+				fRbar = fR(Rbar, sim, 401);
+				fRRbar = fRR(Rbar, sim, 402);
 		}
 		else
 		{
@@ -658,13 +658,14 @@ int main(int argc, char **argv)
 		// Check fields if option loaded
 		if(cycle % sim.CYCLE_INFO_INTERVAL == 0 && sim.check_fields)
 		{
+			COUT << endl;
 			check_field(phi, "phi", numpts3d);
 			check_field(deltaR, "deltaR", numpts3d);
 			check_field(eightpiG_deltaT, "eightpiG_deltaT", numpts3d);
-			if(sim.mg_flag == FR)
-			{
-				check_field(zeta, "zeta", numpts3d);
-			}
+			check_field(zeta, "zeta", numpts3d);
+			check_field(xi, "xi", numpts3d);
+			check_field(chi, "chi", numpts3d);
+			check_vector_field(Bi, "Bi", numpts3d);
 		}
 
 		#ifdef BENCHMARK
@@ -681,6 +682,7 @@ int main(int argc, char **argv)
 		}
 		#endif
 
+		// Project T00
 		if(sim.gr_flag > 0)
 		{
 			projection_T00_project(&pcls_cdm, &source, a, &phi);
@@ -712,6 +714,7 @@ int main(int argc, char **argv)
 			projection_T00_comm(&source);
 		}
 
+		// Project T0i
 		if(sim.vector_flag == VECTOR_ELLIPTIC)
 		{
 			projection_init(&Bi);
@@ -726,7 +729,7 @@ int main(int argc, char **argv)
 			projection_T0i_comm(&Bi);
 		}
 
-		// Writes a^3 Tij in {Sij}
+		// Project Tij -- Write a^3 Tij in {Sij}
 		projection_init(&Sij);
 		projection_Tij_project(&pcls_cdm, &Sij, a, &phi);
 		if(sim.baryon_flag)
@@ -825,7 +828,7 @@ int main(int argc, char **argv)
 						deltaR_prev.updateHalo(); // TODO: Probably unnecessary
 						add_fields(deltaR, eightpiG_deltaT, zeta);
 						copy_field(xi, xi_prev);
-						xi_set(xi, deltaR, Rbar, f_Rbar, sim); // Needs value of deltaR
+						xi_set(xi, deltaR, Rbar, fRbar, sim); // Needs value of deltaR
 					}
 					else // TODO: LEAPFROG
 					{
@@ -850,7 +853,7 @@ int main(int argc, char **argv)
 						}
 						// Done at each step:
 						copy_field(xi, xi_prev);// TODO: is this needed?
-						xi_set(xi, deltaR, Rbar, f_Rbar, sim); // Needs value of deltaR
+						xi_set(xi, deltaR, Rbar, fRbar, sim); // Needs value of deltaR
 						if(cycle == 1) // Builds dot_deltaR_{1/2} from deltaR_1 and deltaR_0
 						{
 							add_fields(deltaR, deltaR_prev, dot_deltaR, 1./dtau_old, -1./dtau_old);
@@ -868,7 +871,7 @@ int main(int argc, char **argv)
 						copy_field(deltaR, deltaR_prev);
 						copy_field(xi, xi_prev);
 						copy_field(eightpiG_deltaT, deltaR, -1.);
-						xi_set(xi, deltaR, Rbar, f_Rbar, sim);
+						xi_set(xi, deltaR, Rbar, fRbar, sim);
 						if(cycle == 1) // Builds xidot_{1/2} from xi_1 and xi_0
 						{
 							add_fields(xi, xi_prev, xidot, 1./dtau_old, -1./dtau_old);
@@ -876,7 +879,7 @@ int main(int argc, char **argv)
 					}
 					else
 					{
-						temp1 = relax_xi(xi, laplace_xi, deltaR, zeta, eightpiG_deltaT, a, dx, Rbar, f_Rbar, sim);
+						temp1 = relax_xi(xi, laplace_xi, deltaR, zeta, eightpiG_deltaT, a, dx, Rbar, fRbar, sim);
 					}
 				}
 				else // Generic F(R) model (not R + R^2), all time derivatives
@@ -886,7 +889,7 @@ int main(int argc, char **argv)
 						copy_field(deltaR, deltaR_prev);
 						copy_field(xi, xi_prev);
 						copy_field(eightpiG_deltaT, deltaR, -1.);
-						xi_set(xi, deltaR, Rbar, f_Rbar, sim);
+						xi_set(xi, deltaR, Rbar, fRbar, sim);
 						deltaR.updateHalo();
 						deltaR_prev.updateHalo(); // TODO: Probably unnecessary
 						if(cycle == 1) // Builds xidot_{1/2} from xi_1 and xi_0
@@ -900,7 +903,11 @@ int main(int argc, char **argv)
 						xi.updateHalo();
 					}
 
-					computeDRzeta(eightpiG_deltaT, deltaR, zeta, xi, Rbar, f_Rbar, sim);
+					// Compute deltaR from a given xi
+					computeDRzeta(eightpiG_deltaT, deltaR, zeta, xi, Rbar, fRbar, sim);
+
+					// Build laplacian TODO: Remove when no longer needed
+					build_laplacian(xi, laplace_xi, dx);
 
 					if(cycle) // Write xidot
 					{
@@ -918,7 +925,7 @@ int main(int argc, char **argv)
 				if(sim.mg_flag == FR)
 				{
 					// Write source term for the 00 equation in {source}
-					// prepareFTsource_S00<Real>(source, phi, chi, xi, xi_prev, deltaR, source, -(cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo))/a/a/a, dx*dx, dtau_old, Hubble, a, fourpiG / a, Rbar, fbar, f_Rbar, sim);
+					// prepareFTsource_S00<Real>(source, phi, chi, xi, xi_prev, deltaR, source, -(cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo))/a/a/a, dx*dx, dtau_old, Hubble, a, fourpiG / a, Rbar, fbar, fRbar, sim);
 
 
 					// ONLY FOR DEBUGGING:
@@ -1030,7 +1037,6 @@ int main(int argc, char **argv)
 
 			bgoutfile.close();
 		}
-		// done recording background data
 
 		// prepare nonlinear source for additional equations
 		prepareFTsource<Real>(phi, Sij, Sij, 2. * fourpiG * dx * dx / a);
@@ -1124,9 +1130,9 @@ int main(int argc, char **argv)
 			COUT << COLORTEXT_CYAN << " writing snapshot" << COLORTEXT_RESET << " at z = " << ((1./a) - 1.) <<  " (cycle " << cycle << "), tau/boxsize = " << tau << endl;
 
 			#ifdef CHECK_B
-			writeSnapshots(sim, cosmo, fourpiG, hdr, a, snapcount, h5filename, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_zeta, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, &Bi_check, &BiFT_check, &plan_Bi_check);
+			writeSnapshots(sim, cosmo, fourpiG, hdr, a, snapcount, h5filename, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, &Bi_check, &BiFT_check, &plan_Bi_check);
 			#else
-			writeSnapshots(sim, cosmo, fourpiG, hdr, a, snapcount, h5filename, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_zeta, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
+			writeSnapshots(sim, cosmo, fourpiG, hdr, a, snapcount, h5filename, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
 			#endif
 			snapcount++;
 		}
@@ -1142,9 +1148,9 @@ int main(int argc, char **argv)
 			COUT << COLORTEXT_CYAN << " writing power spectra" << COLORTEXT_RESET << " at z = " << ((1./a) - 1.) <<  " (cycle " << cycle << "), tau/boxsize = " << tau << endl;
 
 			#ifdef CHECK_B
-			writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &laplace_xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_laplace_xi, &plan_zeta, &plan_phidot, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, &Bi_check, &BiFT_check, &plan_Bi_check);
+			writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_phidot, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, &Bi_check, &BiFT_check, &plan_Bi_check);
 			#else
-			writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &laplace_xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_laplace_xi, &plan_zeta, &plan_phidot, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
+			writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_phidot, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
 			#endif
 			pkcount++;
 		}
@@ -1197,7 +1203,7 @@ int main(int argc, char **argv)
 
 		if(sim.mg_flag == FR && !sim.lcdm_background) // set timesteps for F(R) background evolution
 		{
-			dtau_bg = sim.fR_epsilon_bg * sqrt(3. * f_RRbar) / a; // This would be the "ideal" timestep to evolve the F(R) background
+			dtau_bg = sim.fR_epsilon_bg * sqrt(3. * fRRbar) / a; // This would be the "ideal" timestep to evolve the F(R) background
 			if(dtau >= 2. * dtau_bg)// numsteps_bg must be even -- we split the background evolution in two steps of dtau/2 each
 			{
 				numsteps_bg = (int) (dtau / dtau_bg / 2.);
@@ -1342,8 +1348,8 @@ int main(int argc, char **argv)
 						}
 					}
 					fbar = F(Rbar, sim, 500);
-					f_Rbar = f_R(Rbar, sim, 501);
-					f_RRbar = f_RR(Rbar, sim, 502);
+					fRbar = fR(Rbar, sim, 501);
+					fRRbar = fRR(Rbar, sim, 502);
 				}
 				else // F(R) gravity, non-LCDM background, Friedmann equation
 				{
@@ -1359,8 +1365,8 @@ int main(int argc, char **argv)
 						}
 					}
 					fbar = F(Rbar, sim, 500);
-					f_Rbar = f_R(Rbar, sim, 501);
-					f_RRbar = f_RR(Rbar, sim, 502);
+					fRbar = fR(Rbar, sim, 501);
+					fRRbar = fRR(Rbar, sim, 502);
 				}
 			}
 
@@ -1415,8 +1421,8 @@ int main(int argc, char **argv)
 						}
 					}
 					fbar = F(Rbar, sim, 600);
-					f_Rbar = f_R(Rbar, sim, 601);
-					f_RRbar = f_RR(Rbar, sim, 602);
+					fRbar = fR(Rbar, sim, 601);
+					fRRbar = fRR(Rbar, sim, 602);
 				}
 				else // F(R) gravity, non-LCDM background, Friedmann equation
 				{
@@ -1432,8 +1438,8 @@ int main(int argc, char **argv)
 						}
 					}
 					fbar = F(Rbar, sim, 600);
-					f_Rbar = f_R(Rbar, sim, 601);
-					f_RRbar = f_RR(Rbar, sim, 602);
+					fRbar = fR(Rbar, sim, 601);
+					fRRbar = fRR(Rbar, sim, 602);
 				}
 			}
 
@@ -1480,8 +1486,8 @@ int main(int argc, char **argv)
 					}
 				}
 				fbar = F(Rbar, sim, 700);
-				f_Rbar = f_R(Rbar, sim, 701);
-				f_RRbar = f_RR(Rbar, sim, 702);
+				fRbar = fR(Rbar, sim, 701);
+				fRRbar = fRR(Rbar, sim, 702);
 			}
 			else // F(R) gravity, non-LCDM background, Friedmann equation
 			{
@@ -1497,8 +1503,8 @@ int main(int argc, char **argv)
 					}
 				}
 				fbar = F(Rbar, sim, 700);
-				f_Rbar = f_R(Rbar, sim, 701);
-				f_RRbar = f_RR(Rbar, sim, 702);
+				fRbar = fR(Rbar, sim, 701);
+				fRRbar = fRR(Rbar, sim, 702);
 			}
 		}
 
@@ -1536,7 +1542,7 @@ int main(int argc, char **argv)
 					plan_Bi_check.execute(FFT_BACKWARD);
 					if(sim.mg_flag == FR)
 					{
-						hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, dot_deltaR, eightpiG_deltaT, phidot, xidot, a, tau, dtau, dtau_old, dtau_old_2, Hubble, Rbar, cycle);
+						hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, dot_deltaR, eightpiG_deltaT, phidot, xidot, laplace_xi, a, tau, dtau, dtau_old, dtau_old_2, Hubble, Rbar, cycle);
 					}
 					else
 					{
@@ -1548,7 +1554,7 @@ int main(int argc, char **argv)
 				#endif
 					if(sim.mg_flag == FR)
 					{
-						hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, dot_deltaR, eightpiG_deltaT, phidot, xidot,	a, tau, dtau, dtau_old, dtau_old_2, Hubble, Rbar,	cycle);
+						hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, dot_deltaR, eightpiG_deltaT, phidot, xidot,	laplace_xi, a, tau, dtau, dtau_old, dtau_old_2, Hubble, Rbar,	cycle);
 					}
 					else
 					{
@@ -1575,7 +1581,7 @@ int main(int argc, char **argv)
 				plan_Bi_check.execute(FFT_BACKWARD);
 				if(sim.mg_flag == FR)
 				{
-					hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, dot_deltaR, eightpiG_deltaT, phidot, xidot, a, tau, dtau, dtau_old, dtau_old_2, Hubble, Rbar, cycle, restartcount);
+					hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, dot_deltaR, eightpiG_deltaT, phidot, xidot, laplace_xi, a, tau, dtau, dtau_old, dtau_old_2, Hubble, Rbar, cycle, restartcount);
 				}
 				else
 				{
@@ -1587,7 +1593,7 @@ int main(int argc, char **argv)
 				#endif
 				if(sim.mg_flag == FR)
 				{
-					hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, dot_deltaR, eightpiG_deltaT, phidot, xidot, a, tau, dtau, dtau_old, dtau_old_2, Hubble, Rbar, cycle, restartcount);
+					hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, dot_deltaR, eightpiG_deltaT, phidot, xidot, laplace_xi, a, tau, dtau, dtau_old, dtau_old_2, Hubble, Rbar, cycle, restartcount);
 				}
 				else
 				{
@@ -1614,8 +1620,8 @@ int main(int argc, char **argv)
 			}
 			if(!sim.back_to_GR && !sim.quasi_static)
 			{
-				max_f_RR = compute_max_f_RR(deltaR, Rbar, sim);
-				dtau_osci = sim.fR_epsilon_fields * sqrt(3. * max_f_RR) / a;
+				max_fRR = compute_max_fRR(deltaR, Rbar, sim);
+				dtau_osci = sim.fR_epsilon_fields * sqrt(3. * max_fRR) / a;
 				if(dtau > dtau_osci) dtau = dtau_osci;
 			}
 		}

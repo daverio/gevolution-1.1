@@ -570,7 +570,7 @@ void writeRestartSettings(metadata & sim,
 #else
 				fprintf(outfile, ", B_unused.h5");
 #endif
-			if(sim.mg_flag==FR)
+			if(sim.mg_flag == FR)
 			{
 				fprintf(outfile, ", %s%s%s_xi.h5", sim.restart_path, sim.basename_restart, buffer);
 				fprintf(outfile, ", %s%s%s_xi_prev.h5", sim.restart_path, sim.basename_restart, buffer);
@@ -581,6 +581,7 @@ void writeRestartSettings(metadata & sim,
 				fprintf(outfile, ", %s%s%s_deltaT.h5", sim.restart_path, sim.basename_restart, buffer);
 				fprintf(outfile, ", %s%s%s_phidot.h5", sim.restart_path, sim.basename_restart, buffer);
 				fprintf(outfile, ", %s%s%s_xidot.h5", sim.restart_path, sim.basename_restart, buffer);
+				fprintf(outfile, ", %s%s%s_laplace_xi.h5", sim.restart_path, sim.basename_restart, buffer);
 			}
 			fprintf(outfile, "\n");
 		}
@@ -828,6 +829,12 @@ void writeRestartSettings(metadata & sim,
 			if(sim.out_snapshot & MASK_DELTAT)
 			{
 				fprintf(outfile, "deltaT");
+				if(sim.out_snapshot > MASK_LAPLACE_XI)
+					fprintf(outfile, ", ");
+			}
+			if(sim.out_snapshot & MASK_LAPLACE_XI)
+			{
+				fprintf(outfile, "laplace_xi");
 			}
 			fprintf(outfile, "\n");
 
@@ -944,6 +951,12 @@ void writeRestartSettings(metadata & sim,
 			if(sim.out_snapshot & MASK_DELTAT)
 			{
 				fprintf(outfile, "deltaT");
+				if(sim.out_snapshot > MASK_LAPLACE_XI)
+				fprintf(outfile, ", ");
+			}
+			if(sim.out_snapshot & MASK_LAPLACE_XI)
+			{
+				fprintf(outfile, "laplace_xi");
 			}
 			fprintf(outfile, "\n");
 		}
@@ -998,6 +1011,7 @@ void hibernate(metadata & sim,
 						 	 Field<Real> & deltaT,
 							 Field<Real> & phidot,
 							 Field<Real> & xidot,
+							 Field<Real> & laplace_xi,
 							 const double a,
 							 const double tau,
 							 const double dtau,
@@ -1071,6 +1085,7 @@ if(sim.mg_flag == FR)
 	deltaT.saveHDF5_server_open(h5filename + "_deltaT.h5");
 	phidot.saveHDF5_server_open(h5filename + "_phidot.h5");
 	xidot.saveHDF5_server_open(h5filename + "_xidot.h5");
+	laplace_xi.saveHDF5_server_open(h5filename + "_laplace_xi.h5");
 }
 
 	pcls_cdm->saveHDF5_server_write();
@@ -1101,6 +1116,7 @@ if(sim.mg_flag == FR)
 			deltaT.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 			phidot.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 			xidot.saveHDF5_server_write(NUMBER_OF_IO_FILES);
+			laplace_xi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 		}
 
 	ioserver.closeOstream();
@@ -1138,6 +1154,7 @@ if(sim.mg_flag == FR)
 	deltaT.saveHDF5(h5filename + "_deltaT.h5");
 	phidot.saveHDF5(h5filename + "_phidot.h5");
 	xidot.saveHDF5(h5filename + "_xidot.h5");
+	laplace_xi.saveHDF5(h5filename + "_laplace_xi.h5");
 }
 
 

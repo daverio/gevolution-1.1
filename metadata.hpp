@@ -42,24 +42,25 @@
 #define METRICFILE_LENGTH 20
 #endif
 
-#define MASK_PHI       1
-#define MASK_CHI       2
-#define MASK_POT       4
-#define MASK_B         8
-#define MASK_T00       16
-#define MASK_TIJ       32
-#define MASK_RBARE     64
-#define MASK_HIJ       128
-#define MASK_P         256
-#define MASK_GADGET    512
-#define MASK_PCLS      1024
-#define MASK_XSPEC     2048
-#define MASK_DELTA     4096
-#define MASK_DBARE     8192
-#define MASK_XI  		   16384
-#define MASK_ZETA      32768
-#define MASK_DELTAR	   65536
-#define MASK_DELTAT		 131072
+#define MASK_PHI         1
+#define MASK_CHI         2
+#define MASK_POT         4
+#define MASK_B           8
+#define MASK_T00         16
+#define MASK_TIJ         32
+#define MASK_RBARE       64
+#define MASK_HIJ         128
+#define MASK_P           256
+#define MASK_GADGET      512
+#define MASK_PCLS        1024
+#define MASK_XSPEC       2048
+#define MASK_DELTA       4096
+#define MASK_DBARE       8192
+#define MASK_XI  		     16384
+#define MASK_ZETA        32768
+#define MASK_DELTAR	     65536
+#define MASK_DELTAT		   131072
+#define MASK_LAPLACE_XI  262144
 
 #define ICFLAG_CORRECT_DISPLACEMENT 1
 #define ICFLAG_KSPHERE              2

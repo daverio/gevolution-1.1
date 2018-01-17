@@ -1,6 +1,6 @@
 # programming environment
-COMPILER     := mpic++
-INCLUDE      := # add the path to LATfield2 and other libraries (if necessary)
+COMPILER     := CC
+INCLUDE      := -I../LATfield2
 LIB          := -lfftw3 -lm -lhdf5 -lgsl -lgslcblas
 
 # target and source
@@ -9,10 +9,10 @@ SOURCE       := main.cpp
 HEADERS      := $(wildcard *.hpp)
 
 # mandatory compiler settings (LATfield2)
-DLATFIELD2   := -DFFT3D -DHDF5
+DLATFIELD2   := -DFFT3D -DHDF5 -DMULTIGRID
 
 # optional compiler settings (LATfield2)
-#DLATFIELD2   += -DH5_HAVE_PARALLEL
+DLATFIELD2   += -DH5_HAVE_PARALLEL
 #DLATFIELD2   += -DEXTERNAL_IO
 
 # optional compiler settings (gevolution)
@@ -26,4 +26,3 @@ OPT          := -O3 -std=c++11
 
 $(EXEC): $(SOURCE) $(HEADERS) makefile
 	$(COMPILER) $< -o $@ $(OPT) $(DLATFIELD2) $(DGEVOLUTION) $(INCLUDE) $(LIB)
-

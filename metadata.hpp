@@ -1,7 +1,7 @@
 //////////////////////////
 // metadata.hpp
 //////////////////////////
-// 
+//
 // Constants and metadata structures
 //
 // Author: Julian Adamek (Université de Genève & Observatoire de Paris)
@@ -49,6 +49,10 @@
 #define MASK_XSPEC  2048
 #define MASK_DELTA  4096
 #define MASK_DBARE  8192
+#define MASK_RHO	  16384
+
+#define PHI_SOLVER_FT 0
+#define PHI_SOLVER_MG 1
 
 #define ICFLAG_CORRECT_DISPLACEMENT 1
 #define ICFLAG_KSPHERE              2
@@ -183,6 +187,8 @@ struct metadata
 	char output_path[PARAM_MAX_LENGTH];
 	char restart_path[PARAM_MAX_LENGTH];
 	char basename_restart[PARAM_MAX_LENGTH];
+
+	int phi_solver_type;
 };
 
 struct icsettings

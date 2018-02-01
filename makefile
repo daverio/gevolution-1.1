@@ -9,7 +9,7 @@ SOURCE       := main.cpp
 HEADERS      := $(wildcard *.hpp)
 
 # mandatory compiler settings (LATfield2)
-DLATFIELD2   := -DFFT3D -DHDF5
+DLATFIELD2   := -DFFT3D -DHDF5 -DMULTIGRID
 
 # optional compiler settings (LATfield2)
 #DLATFIELD2   += -DH5_HAVE_PARALLEL

@@ -219,6 +219,9 @@ int main(int argc, char **argv)
 	Lattice latFT;
 	latFT.initializeRealFFT(lat,0);
 
+	MultiGrid mg_engine;
+	mg_engine.initialize(&lat, 3, 8);
+
 	Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> pcls_cdm;
 	Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> pcls_b;
 	Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> pcls_ncdm[MAX_PCL_SPECIES-2];
@@ -247,6 +250,16 @@ int main(int argc, char **argv)
 	Field<Real> phidot;
 	Field<Real> xidot;
 	Field<Real> laplace_xi;
+	Field<Real> residual;
+	Field<Real> err;
+
+	// MultiFields
+	MultiField<Real> * mg_deltaR;
+	MultiField<Real> * mg_eightpiG_deltaT;
+	MultiField<Real> * mg_u;
+	MultiField<Real> * mg_diff_u;
+	MultiField<Real> * mg_residual;
+	MultiField<Real> * mg_err;
 
   PlanFFT<Cplx> plan_source;
   PlanFFT<Cplx> plan_phi;
@@ -257,9 +270,7 @@ int main(int argc, char **argv)
   PlanFFT<Cplx> plan_deltaR_prev;
   PlanFFT<Cplx> plan_eightpiG_deltaT;
   PlanFFT<Cplx> plan_xi;
-
   PlanFFT<Cplx> plan_laplace_xi;
-
 	PlanFFT<Cplx> plan_Bi;
   PlanFFT<Cplx> plan_Sij;
 
@@ -284,6 +295,12 @@ int main(int argc, char **argv)
 	deltaR.initialize(lat,1);
 	dot_deltaR.initialize(lat, 1);
 	dot_deltaR.alloc();
+
+	residual.initialize(lat, 1);
+	residual.alloc();
+	err.initialize(lat, 1);
+	err.alloc();
+
 	deltaR_prev.initialize(lat,1);
 	eightpiG_deltaT.initialize(lat,1);
 	phidot.initialize(lat,1);
@@ -305,6 +322,14 @@ int main(int argc, char **argv)
 	Sij.initialize(lat,3,3,symmetric);
 	SijFT.initialize(latFT,3,3,symmetric);
 	plan_Sij.initialize(&Sij, &SijFT);
+
+	// Initialize MultiGrid fields
+	mg_engine.initialize_Field(&xi, mg_u);
+	mg_engine.initialize_Field(&laplace_xi, mg_diff_u);
+	mg_engine.initialize_Field(&deltaR, mg_deltaR);
+	mg_engine.initialize_Field(&eightpiG_deltaT, mg_eightpiG_deltaT);
+	mg_engine.initialize_Field(&residual, mg_residual);
+	mg_engine.initialize_Field(&err, mg_err);
 
 	#ifdef CHECK_B
 	Field<Real> Bi_check;
@@ -632,7 +657,9 @@ int main(int argc, char **argv)
 			prepareFTchiLinear(class_background, class_perturbs, class_spectra, scalarFT, sim, ic, cosmo, fourpiG, a);
 			plan_source.execute(FFT_BACKWARD);
 			for(x.first(); x.test(); x.next())
+			{
 				chi(x) += source(x);
+			}
 			chi.updateHalo();
 		}
 	}
@@ -664,8 +691,6 @@ int main(int argc, char **argv)
 			check_field(eightpiG_deltaT, "eightpiG_deltaT", numpts3d);
 			check_field(zeta, "zeta", numpts3d);
 			check_field(xi, "xi", numpts3d);
-			check_field(chi, "chi", numpts3d);
-			check_vector_field(Bi, "Bi", numpts3d);
 		}
 
 		#ifdef BENCHMARK
@@ -781,16 +806,19 @@ int main(int argc, char **argv)
 			if(sim.mg_flag != FR) // in GR/Newton, deltaR tracks exactly eightpiG_deltaT
 			{
 				copy_field(eightpiG_deltaT, deltaR, -1.);
-				deltaR.updateHalo();
 			}
 
 			if(cycle % sim.CYCLE_INFO_INTERVAL == 0) // output some info
 			{
-				COUT << "\n cycle " << cycle << ", background information:\n"
-				     << "           z = " << (1./a) - 1. << "\n"
-						 << "           background model = " << cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo) << "\n"
-						 << "           average/rescaled T00 = " << T00_hom*a*a*a << " / " << T00_hom_rescaled_a3 << "\n"
-						 << "           phi_hom = " << phi_hom << "\n";
+				COUT << "\n cycle " << cycle << ", background information:" << endl
+				     << "                z = " << (1./a) - 1. << endl
+				     << "                H = " << Hubble << endl
+				     << "             Rbar = " << Rbar << endl
+				     << "            fRbar = " << fRbar << endl
+				     << "           fRRbar = " << fRRbar << endl
+						 << " background model = " << cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo) << endl
+						 << " avg/rescaled T00 = " << T00_hom*a*a*a << " / " << T00_hom_rescaled_a3 << endl
+						 << "          phi_hom = " << phi_hom << endl;
 			}
 
 			//////////////////////////////////////////////////////////////////
@@ -802,16 +830,14 @@ int main(int argc, char **argv)
 				{
 					flip_fields(deltaR, deltaR_prev, zeta);
 					copy_field(eightpiG_deltaT, deltaR, -1.);
-					if(cycle) add_fields(deltaR, deltaR_prev, dot_deltaR, 1./dtau_old, -1./dtau_old); // Computes dot_deltaR at time (t-1/2)
+					if(cycle)
+					{
+						add_fields(deltaR, 1./dtau_old, deltaR_prev, -1./dtau_old, dot_deltaR); // Computes dot_deltaR at time (t-1/2)
+					}
+
 					flip_fields(xi, xi_prev);
 					copy_field(xi, xi, 0.); // Sets xi = 0.
 					copy_field(zeta, zeta, 0.); // Sets zeta = 0.
-
-					// TODO: Are these necessary?
-					deltaR.updateHalo();
-					deltaR_prev.updateHalo();
-					zeta.updateHalo();
-					dot_deltaR.updateHalo();
 				}
 				else if(sim.fR_type == FR_TYPE_R2) // First let's work out the R + R^2 case
 				{
@@ -824,42 +850,37 @@ int main(int argc, char **argv)
 						solveModifiedPoissonFT(scalarFT, scalarFT, 1., coeffm2); // TODO CHECK
 						plan_zeta.execute(FFT_BACKWARD); // Back to real space, {scalarFT} -> {zeta}
 						flip_fields(deltaR, deltaR_prev, zeta);
-						deltaR.updateHalo();
-						deltaR_prev.updateHalo(); // TODO: Probably unnecessary
 						add_fields(deltaR, eightpiG_deltaT, zeta);
 						copy_field(xi, xi_prev);
-						xi_set(xi, deltaR, Rbar, fRbar, sim); // Needs value of deltaR
+						convert_deltaR_to_xi(xi, deltaR, Rbar, fRbar, sim); // Needs value of deltaR
 					}
 					else // TODO: LEAPFROG
 					{
 						if(cycle <= 1) // Initial conditions for non-quasi-static are the same as quasi-static!
 						{
-							prepareFTsource_leapfrog_R2(eightpiG_deltaT, zeta, dx*dx);
+							eightpiG_deltaT.updateHalo();
+							prepareFTsource_leapfrog_R2(eightpiG_deltaT, zeta, dx);
 							plan_zeta.execute(FFT_FORWARD); // Fourier space, {zeta} -> {scalarFT}
 							// Solve wave-like equation transformed into Poisson-like
 							solveModifiedPoissonFT(scalarFT, scalarFT, 1., coeffm2); // TODO CHECK
 							plan_zeta.execute(FFT_BACKWARD); // Back to real space, {scalarFT} -> {zeta}
 							flip_fields(deltaR, deltaR_prev);
-							add_fields(zeta, eightpiG_deltaT, deltaR, 1., -1.);
-							zeta.updateHalo();
-							deltaR.updateHalo();
+							add_fields(zeta, 1., eightpiG_deltaT, -1., deltaR);
 						}
 						else // Else builds deltaR_i from deltaR_{i-1} and dot_deltaR_{i-1/2}, for i >= 2
 						{
-							add_fields(deltaR, dot_deltaR, deltaR, 1., dtau_old);
-							add_fields(deltaR, eightpiG_deltaT, zeta);
-							deltaR.updateHalo();
-							zeta.updateHalo();
+							add_fields(deltaR, 1., dot_deltaR, dtau_old, deltaR);
 						}
 						// Done at each step:
 						copy_field(xi, xi_prev);// TODO: is this needed?
-						xi_set(xi, deltaR, Rbar, fRbar, sim); // Needs value of deltaR
+						convert_deltaR_to_xi(xi, deltaR, Rbar, fRbar, sim); // Needs value of deltaR
 						if(cycle == 1) // Builds dot_deltaR_{1/2} from deltaR_1 and deltaR_0
 						{
-							add_fields(deltaR, deltaR_prev, dot_deltaR, 1./dtau_old, -1./dtau_old);
+							add_fields(deltaR, 1./dtau_old, deltaR_prev, -1./dtau_old, dot_deltaR);
 						}
 						if(cycle)
 						{
+							deltaR.updateHalo();
 							leapfrog_dotR(deltaR, eightpiG_deltaT, dot_deltaR, dot_deltaR, Hubble, coeffm2, dtau_old, dtau, dx * dx);
 						}
 					}
@@ -871,15 +892,37 @@ int main(int argc, char **argv)
 						copy_field(deltaR, deltaR_prev);
 						copy_field(xi, xi_prev);
 						copy_field(eightpiG_deltaT, deltaR, -1.);
-						xi_set(xi, deltaR, Rbar, fRbar, sim);
+						convert_deltaR_to_xi(xi, deltaR, Rbar, fRbar, sim);
 						if(cycle == 1) // Builds xidot_{1/2} from xi_1 and xi_0
 						{
-							add_fields(xi, xi_prev, xidot, 1./dtau_old, -1./dtau_old);
+							add_fields(xi, 1./dtau_old, xi_prev, -1./dtau_old, xidot);
 						}
 					}
 					else
 					{
-						temp1 = relax_xi(xi, laplace_xi, deltaR, zeta, eightpiG_deltaT, a, dx, Rbar, fRbar, sim);
+						if(sim.fR_relax_method == METHOD_U)
+						{
+							temp1 = relax_u(xi, laplace_xi, deltaR, eightpiG_deltaT, zeta, a, dx, Rbar, fRbar, sim);
+						}
+						else if(sim.fR_relax_method == METHOD_FFT_U)
+						{
+							temp1 = relax_u_FFT(xi, deltaR, zeta, eightpiG_deltaT, source, scalarFT, &plan_source, &plan_xi, a, dx, Rbar, fRbar, sim);
+						}
+						else if(sim.fR_relax_method == METHOD_MULTIGRID_U)
+						{
+							// Copy regular fields on their MultiGrid counterparts (necessary?)
+							if(parallel.layer(mg_engine.player(0)).isPartLayer())
+							{
+								convert_xi_to_u(xi, xi, fRbar);
+								copy_field(xi, mg_u[0]);
+								mg_u[0].updateHalo();
+								build_diff_u(mg_u[0], mg_diff_u[0], dx, fRbar);
+								copy_field(eightpiG_deltaT, mg_eightpiG_deltaT[0]);
+							}
+							temp1 = MultiGrid_relax_u(mg_u, mg_diff_u, mg_deltaR, mg_eightpiG_deltaT, mg_residual, mg_err, mg_engine, zeta, a, dx, Rbar, fRbar, sim);
+						}
+						// Build zeta from deltaR and eightpiG_deltaT
+						add_fields(deltaR, eightpiG_deltaT, zeta);
 					}
 				}
 				else // Generic F(R) model (not R + R^2), all time derivatives
@@ -889,32 +932,32 @@ int main(int argc, char **argv)
 						copy_field(deltaR, deltaR_prev);
 						copy_field(xi, xi_prev);
 						copy_field(eightpiG_deltaT, deltaR, -1.);
-						xi_set(xi, deltaR, Rbar, fRbar, sim);
-						deltaR.updateHalo();
-						deltaR_prev.updateHalo(); // TODO: Probably unnecessary
+						convert_deltaR_to_xi(xi, deltaR, Rbar, fRbar, sim);
 						if(cycle == 1) // Builds xidot_{1/2} from xi_1 and xi_0
 						{
-							add_fields(xi, xi_prev, xidot, 1./dtau_old, -1./dtau_old);
+							add_fields(xi, 1./dtau_old, xi_prev, -1./dtau_old, xidot);
 						}
 					}
 					else // Else builds xi_i from xi_{i-1} and xidot_{i-1/2}, for i >= 2
 					{
-						add_fields(xi, xidot, xi, 1., dtau_old);
-						xi.updateHalo();
+						add_fields(xi, 1., xidot, dtau_old, xi);
 					}
 
 					// Compute deltaR from a given xi
-					computeDRzeta(eightpiG_deltaT, deltaR, zeta, xi, Rbar, fRbar, sim);
+					convert_xi_to_deltaR(eightpiG_deltaT, deltaR, xi, Rbar, fRbar, sim);
+					// Build zeta from deltaR and eightpiG_deltaT
+					add_fields(deltaR, eightpiG_deltaT, zeta);
 
-					// Build laplacian TODO: Remove when no longer needed
-					build_laplacian(xi, laplace_xi, dx);
-
-					if(cycle) // Write xidot
+					if(cycle) // Update xidot
 					{
+						xi.updateHalo();
 						leapfrog_dotxi(xi, zeta, xidot, xidot, Hubble, a*a, dtau_old, dtau, dx*dx);
 					}
 				}
 
+				// Build laplacian
+				xi.updateHalo(); // TODO: Find a way to do this only once (see a few lines above)
+				build_laplacian(xi, laplace_xi, dx);
 			}
 
 			//////////////////////////////////////////////////////////////////
@@ -960,7 +1003,7 @@ int main(int argc, char **argv)
 				// go back to position space: {scalarFT} --> {phidot}
 				plan_phidot.execute(FFT_BACKWARD);
 				flip_fields(phi, phidot); // Now {phi} contains phi_new, {phidot} contains phi_old
-				add_fields(phi, phidot, phidot, 1./dtau_old, -1./dtau_old); // Computes phidot = (phi_new - phi_old)/dtau
+				add_fields(phi, 1./dtau_old, phidot, -1./dtau_old, phidot); // Computes phidot = (phi_new - phi_old)/dtau
 				// Update halos for phi and phidot
 
 				#ifdef BENCHMARK
@@ -993,7 +1036,6 @@ int main(int argc, char **argv)
 			fft_count++;
 			#endif
 			phi.updateHalo();  // communicate halo values
-			phidot.updateHalo();
 		}
 
 

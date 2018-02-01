@@ -129,6 +129,15 @@
 #define FR_TYPE_HU_SAWICKI 3
 #define FR_TYPE_DELTA 4
 
+// Relaxation methods
+#define METHOD_U 1
+#define METHOD_FFT_U 2
+#define METHOD_MULTIGRID_U 3
+
+// Multigrid shapes
+#define MG_SHAPE_V 1
+#define MG_SHAPE_W 2
+#define MG_SHAPE_FMG 3
 
 // color escape sequences for terminal highlighting (enable with -DCOLORTERMINAL)
 #ifdef COLORTERMINAL
@@ -211,6 +220,9 @@ struct metadata
 	double fR_target_precision;
 	double fR_count_max;
 	double fR_relax_error;
+	int fR_relax_method = 0;
+	int multigrid_shape = 0;
+	int relax_steps = 0;
 	double movelimit;
 	double steplimit;
 	double boxsize;

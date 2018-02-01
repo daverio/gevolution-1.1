@@ -1499,8 +1499,37 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		{
 			parseParameter(params, numparam, "f(R) target precision", sim.fR_target_precision);
 			parseParameter(params, numparam, "f(R) count max", sim.fR_count_max);
-			parseParameter(params, numparam, "f(R) relaxation error", sim.fR_relax_error); // Rescale relaxation error by the number of grid points
-			sim.fR_relax_error *= (long) sim.numpts * (long) sim.numpts * (long) sim.numpts;
+
+			if(parseParameter(params, numparam, "f(R) relaxation method", sim.fR_relax_method))
+			{
+				parseParameter(params, numparam, "f(R) relaxation error", sim.fR_relax_error);
+				parseParameter(params, numparam, "multigrid relax steps", sim.relax_steps);
+				if(parseParameter(params, numparam, "multigrid shape", par_string))
+				{
+					if(par_string[0] == 'V' || par_string[0] == 'v')
+					{
+						sim.multigrid_shape = MG_SHAPE_V;
+					}
+					else if(par_string[0] == 'W' || par_string[0] == 'w')
+					{
+						sim.multigrid_shape = MG_SHAPE_W;
+					}
+					else if(par_string[0] == 'F' || par_string[0] == 'f')
+					{
+						sim.multigrid_shape = MG_SHAPE_FMG;
+					}
+					if(!sim.multigrid_shape)
+					{
+						COUT << " /!\\ Multigrid shape not specified. Closing..." << endl;
+						parallel.abortForce();
+					}
+				}
+			}
+			else
+			{
+				COUT << " /!\\ No relaxation method specified. Closing..." << endl;
+				parallel.abortForce();
+			}
 
 			if(sim.quasi_static)
 			{

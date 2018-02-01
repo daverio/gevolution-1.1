@@ -406,8 +406,6 @@ void flip_fields(Field<FieldType> & field1, Field<FieldType> & field2)
 		field1(x) = field2(x);
 		field2(x) = temp;
 	}
-	field1.updateHalo();
-	field2.updateHalo();
 	return;
 }
 
@@ -424,9 +422,6 @@ void flip_fields(Field<FieldType> & field1, Field<FieldType> & field2, Field<Fie
 		field2(x) = field1(x);
 		field1(x) = temp;
 	}
-	field1.updateHalo();
-	field2.updateHalo();
-	field3.updateHalo();
 	return;
 }
 
@@ -453,7 +448,6 @@ void copy_field(Field<FieldType> & source, Field<FieldType> & destination, doubl
 			destination(x) = coeff * source(x);
 		}
 	}
-	destination.updateHalo();
 	return;
 }
 
@@ -469,19 +463,17 @@ void add_fields(Field<FieldType> & field1, Field<FieldType> & field2, Field<Fiel
 	{
 		result(x) = field1(x) + field2(x);
 	}
-	result.updateHalo();
 	return;
 }
 
 template <class FieldType>
-void add_fields(Field<FieldType> & field1, Field<FieldType> & field2, Field<FieldType> & result, double coeff1, double coeff2)
+void add_fields(Field<FieldType> & field1, double coeff1, Field<FieldType> & field2, double coeff2, Field<FieldType> & result)
 {
 	Site x(field1.lattice());
 	for(x.first(); x.test(); x.next())
 	{
 		result(x) = coeff1 * field1(x) + coeff2 * field2(x);
 	}
-	result.updateHalo();
 	return;
 }
 
@@ -528,11 +520,11 @@ void leapfrog_dotxi(Field<FieldType> & xi, Field<FieldType> & zeta, Field<FieldT
 }
 
 /////////////////////////////////////////////////
-// Initial conditions for xi
+// Converts deltaR to xi
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
-void xi_set(Field<FieldType> & xi, Field<FieldType> & deltaR, double const Rbar, double const fRbar, const metadata & sim)
+void convert_deltaR_to_xi(Field<FieldType> & xi, Field<FieldType> & deltaR, double const Rbar, double const fRbar, const metadata & sim)
 {
 	Site x(xi.lattice());
 	if(sim.fR_type == FR_TYPE_R2)
@@ -549,9 +541,57 @@ void xi_set(Field<FieldType> & xi, Field<FieldType> & deltaR, double const Rbar,
 			xi(x) = fR(Rbar + deltaR(x), sim, 832) - fRbar;
 		}
 	}
-	xi.updateHalo();
 	return;
 }
+
+
+/////////////////////////////////////////////////
+// Converts deltaR to u
+// TODO: Add comments here
+/////////////////////////////////////////////////
+template <class FieldType>
+void convert_deltaR_to_u(Field<FieldType> & u, Field<FieldType> & deltaR, double const Rbar, double const fRbar, const metadata & sim)
+{
+	Site x(u.lattice());
+	for(x.first(); x.test(); x.next())
+	{
+		u(x) = log(fR(Rbar + deltaR(x), sim, 833)/fRbar);
+	}
+	return;
+}
+
+
+/////////////////////////////////////////////////
+// Converts u to xi
+// TODO: Add comments here
+/////////////////////////////////////////////////
+template <class FieldType>
+void convert_u_to_xi(Field<FieldType> & u, Field<FieldType> & xi, double const fRbar)
+{
+	Site x(u.lattice());
+	for(x.first(); x.test(); x.next())
+	{
+		xi(x) = fRbar * (exp(u(x)) - 1.);
+	}
+	return;
+}
+
+
+/////////////////////////////////////////////////
+// Converts xi to u
+// TODO: Add comments here
+/////////////////////////////////////////////////
+template <class FieldType>
+void convert_xi_to_u(Field<FieldType> & xi, Field<FieldType> & u, double const fRbar)
+{
+	Site x(u.lattice());
+	for(x.first(); x.test(); x.next())
+	{
+		u(x) = log(xi(x)/fRbar + 1.);
+	}
+	return;
+}
+
 
 /////////////////////////////////////////////////
 // Initial conditions for xi_prev
@@ -574,13 +614,12 @@ void xi_prev_initial_conditions(Field<FieldType> & xi_prev, Field<FieldType> & x
 // the typical oscillation frenquency will be of order a/(sqrt(3*fRR_max))
 /////////////////////////////////////////////////
 template <class FieldType>
-double computeDRzeta(Field<FieldType> & eightpiG_deltaT,
-                     Field<FieldType> & deltaR,
-									   Field<FieldType> & zeta,
-									   Field<FieldType> & xi,
-									   const double Rbar,
-								 	   const double fRbar,
-								 	   const metadata & sim)
+double convert_xi_to_deltaR(Field<FieldType> & eightpiG_deltaT,
+                      	 		Field<FieldType> & deltaR,
+									    	 		Field<FieldType> & xi,
+									    	 		const double Rbar,
+								 	    	 		const double fRbar,
+								 	    	 		const metadata & sim)
 {
   // Using Newton-Raphson Method
   Site x(xi.lattice());
@@ -590,23 +629,29 @@ double computeDRzeta(Field<FieldType> & eightpiG_deltaT,
 
 	if(sim.fR_type == FR_TYPE_HU_SAWICKI)
 	{
+		double correction = 0.99;
 		double m2 = sim.fR_params[0],
 					 c2 = sim.fR_params[1],
 					  n = sim.fR_params[2],
 					 c1 = sim.fR_params[3];
 
-		if(n == 1)
+		if(n == 1.) // xi <-> R relation is invertible algebraically
 		{
 			for(x.first(); x.test(); x.next())
 			{
-				R_temp = m2 / c2 * ( sqrt(-c1 / (xi(x) + fRbar)) - 1.);
-				fRR_temp = fabs(fRR(R_temp, sim, 59));
+				R_temp = -c1 / (xi(x) + fRbar);
+				if(R_temp <= 1.)
+				{
+					xi(x) = - correction * fRbar;
+					R_temp = -c1 / (1. - correction) / fRbar;
+				}
+				R_temp = m2 / c2 * ( sqrt(R_temp) - 1.);
+				fRR_temp = fabs(fRR(R_temp, sim, 5911));
 				if(max_fRR < fRR_temp)
 				{
 					max_fRR = fRR_temp;
 				}
 				deltaR(x) = R_temp - Rbar;
-				zeta(x) = deltaR(x) + eightpiG_deltaT(x);
 			}
 		}
 		else
@@ -615,8 +660,8 @@ double computeDRzeta(Field<FieldType> & eightpiG_deltaT,
 			{
 				// The initial guess for R is:
 				// 1) found from a large-R expansion of FR for R >> m2, or
-				// 2) equal to the new GR solution (Rbar - eightpiG_deltaT) plus the old f(R) correction (zeta) for R ~= m2
-				R_temp = Rbar - eightpiG_deltaT(x) + zeta(x);
+				// 2) equal to the new GR solution (Rbar - eightpiG_deltaT)
+				R_temp = Rbar - eightpiG_deltaT(x);
 				if(R_temp > 10. * m2)
 				{
 					R_temp = -c1 * n / c2 / c2 / (xi(x) + fRbar);
@@ -636,7 +681,7 @@ double computeDRzeta(Field<FieldType> & eightpiG_deltaT,
 					}
 					else
 					{
-						R_temp = Rbar - eightpiG_deltaT(x) + zeta(x);
+						R_temp = Rbar - eightpiG_deltaT(x);
 						R_temp += ((double) rand() / RAND_MAX) * 0.1 * R_temp;
 					}
 
@@ -648,13 +693,12 @@ double computeDRzeta(Field<FieldType> & eightpiG_deltaT,
 					}
 				}
 
-				fRR_temp = fabs(fRR(R_temp, sim, 59));
+				fRR_temp = fabs(fRR(R_temp, sim, 5912));
 				if(max_fRR < fRR_temp)
 				{
 					max_fRR = fRR_temp;
 				}
 				deltaR(x) = R_temp - Rbar;
-				zeta(x) = deltaR(x) + eightpiG_deltaT(x);
 			}
 		}
 	}
@@ -667,7 +711,6 @@ double computeDRzeta(Field<FieldType> & eightpiG_deltaT,
 			fRR_temp = fabs(fRR(R_temp, sim, 60));
 			if(max_fRR < fRR_temp) max_fRR = fRR_temp;
 			deltaR(x) = R_temp - Rbar;
-			zeta(x) = deltaR(x) + eightpiG_deltaT(x);
 		}
 	}
 	else if(sim.fR_type == FR_TYPE_R2)
@@ -697,12 +740,8 @@ double computeDRzeta(Field<FieldType> & eightpiG_deltaT,
 			fRR_temp = fabs(fRR(R_temp, sim, 64));
 			if(max_fRR < fRR_temp) max_fRR = fRR_temp;
 			deltaR(x) = R_temp - Rbar;
-			zeta(x) = deltaR(x) + eightpiG_deltaT(x);
 		}
 	}
-
-	deltaR.updateHalo();
-	zeta.updateHalo();
 
 	parallel.max(max_fRR);
   if(max_fRR and !std::isnan(max_fRR))
@@ -716,25 +755,171 @@ double computeDRzeta(Field<FieldType> & eightpiG_deltaT,
   }
 }
 
+
+
+// Convert u = log(xi/fRbar + 1.)
+template <class FieldType>
+double convert_u_to_deltaR(Field<FieldType> & eightpiG_deltaT,
+                      	 	 Field<FieldType> & deltaR,
+									    	 	 Field<FieldType> & u,
+									    	 	 const double Rbar,
+								 	    	 	 const double fRbar,
+								 	    	 	 const metadata & sim)
+{
+  // Using Newton-Raphson Method
+  Site x(u.lattice());
+  double R_temp, temp, max_fRR = 0., fRR_temp;
+  int count, count_n = 1;
+	int my_check = 0;
+
+	if(sim.fR_type == FR_TYPE_HU_SAWICKI)
+	{
+		double m2 = sim.fR_params[0],
+					 c2 = sim.fR_params[1],
+					  n = sim.fR_params[2],
+					 c1 = sim.fR_params[3];
+
+		if(n == 1.) // u <-> R relation is invertible algebraically
+		{
+			for(x.first(); x.test(); x.next())
+			{
+				R_temp = m2 / c2 * ( sqrt(-c1 * exp(-u(x)) / fRbar ) - 1.);
+				fRR_temp = fabs(fRR(R_temp, sim, 5913));
+				if(max_fRR < fRR_temp)
+				{
+					max_fRR = fRR_temp;
+				}
+				deltaR(x) = R_temp - Rbar;
+			}
+		}
+		else
+		{
+			for(x.first(); x.test(); x.next())
+			{
+				u(x) = fRbar * (exp(u(x)) - 1.); // Convert xi -> u
+				// The initial guess for R is:
+				// 1) found from a large-R expansion of FR for R >> m2, or
+				// 2) equal to the new GR solution (Rbar - eightpiG_deltaT)
+				R_temp = Rbar - eightpiG_deltaT(x);
+				if(R_temp > 10. * m2)
+				{
+					R_temp = -c1 * n / c2 / c2 / (u(x) + fRbar);
+					R_temp = m2 * pow( R_temp, 1./(n+1.));
+				}
+
+				count = 0;
+				while(true)
+				{
+					temp = fabs(u(x)/(fR(R_temp, sim, 56) - fRbar) - 1.);
+					if(temp < sim.fR_target_precision) break;
+					fRR_temp = fRR(R_temp, sim, 57);
+
+					if(fRR_temp > 0 && fabs(R_temp) <= 1.E+20)
+					{
+						R_temp += (u(x) - fR(R_temp, sim, 58) + fRbar) / fRR_temp;
+					}
+					else
+					{
+						R_temp = Rbar - eightpiG_deltaT(x);
+						R_temp += ((double) rand() / RAND_MAX) * 0.1 * R_temp;
+					}
+
+					count ++;
+					if(count > count_n * sim.fR_count_max)
+					{
+						cout << "Could only reach a precision of " << temp << " in " << count_n * sim.fR_count_max << " steps.\n";
+						count_n++;
+					}
+				}
+
+				fRR_temp = fabs(fRR(R_temp, sim, 5914));
+				if(max_fRR < fRR_temp)
+				{
+					max_fRR = fRR_temp;
+				}
+				deltaR(x) = R_temp - Rbar;
+				u(x) = log(u(x)/fRbar + 1.); // Convert back u -> xi
+			}
+		}
+	}
+	else if(sim.fR_type == FR_TYPE_RN)
+	{
+		for(x.first(); x.test(); x.next())
+		{
+			u(x) = fRbar * (exp(u(x)) - 1.); // Convert xi -> u
+			R_temp = pow(Rbar, sim.fR_params[1] - 1.) + u(x)/sim.fR_params[0]/sim.fR_params[1];
+			R_temp = pow(R_temp, 1./(sim.fR_params[1] - 1.));
+			fRR_temp = fabs(fRR(R_temp, sim, 60));
+			if(max_fRR < fRR_temp) max_fRR = fRR_temp;
+			deltaR(x) = R_temp - Rbar;
+			u(x) = log(u(x)/fRbar + 1.); // Convert back u -> xi
+		}
+	}
+	else if(sim.fR_type == FR_TYPE_R2)
+	{
+		cout << "Something is wrong. R + R^2 shouldn not call this function. Closing...\n";
+		parallel.abortForce();
+	}
+	else // For other f(R) models TODO check!!
+	{
+		for(x.first(); x.test(); x.next())
+		{
+			u(x) = fRbar * (exp(u(x)) - 1.); // Convert xi -> u
+			R_temp = Rbar - eightpiG_deltaT(x);
+			count = 0;
+			while(true)
+			{
+				temp = fabs(u(x)/(fR(R_temp, sim, 61) - fRbar) - 1.);
+				if(temp < sim.fR_target_precision) break;
+				fRR_temp = fRR(R_temp, sim, 62);
+				R_temp += fRR_temp > 0 ? (u(x) - fR(R_temp, sim, 63) + fRbar) / fRR_temp : .01 * R_temp; // Displace R_temp slightly, if fRR(R_temp) is "bad"
+				count ++;
+				if(count > sim.fR_count_max)
+				{
+					cout << "Could only reach a precision of " << temp << " in " << sim.fR_count_max << " steps.\n";
+					break;
+				}
+			}
+			fRR_temp = fabs(fRR(R_temp, sim, 64));
+			if(max_fRR < fRR_temp) max_fRR = fRR_temp;
+			deltaR(x) = R_temp - Rbar;
+			u(x) = log(u(x)/fRbar + 1.); // Convert back u -> xi
+		}
+	}
+
+	parallel.max(max_fRR);
+  if(max_fRR and !std::isnan(max_fRR))
+	{
+		return max_fRR;
+	}
+  else
+  {
+    COUT << " Warning: returning fRRbar\n";
+    return fRR(Rbar, sim, 65);
+  }
+}
+
+
 // Builds laplacian from field
 template <class FieldType>
-void build_laplacian(Field<FieldType> & field, Field<FieldType> & laplace_field, double dx)
+void build_laplacian(Field<FieldType> & field, Field<FieldType> & laplace, double dx)
 {
 	double dx2 = dx*dx;
 	Site x(field.lattice());
 	for(x.first(); x.test(); x.next())
 	{
-		laplace_field(x) = field(x+0) + field(x-0) + field(x+1) + field(x-1) + field(x+2) + field(x-2) - 6. * field(x);
-		laplace_field(x) /= dx2;
+		laplace(x) = field(x+0) + field(x-0) + field(x+1) + field(x-1) + field(x+2) + field(x-2) - 6. * field(x);
+		laplace(x) /= dx2;
 	}
-	laplace_field.updateHalo();
 	return;
 }
 
+
 // TODO: Maybe put this in gevolution.hpp?
 template <class FieldType>
-void prepareFTsource_leapfrog_R2(Field<FieldType> & eightpiG_deltaT, Field<FieldType> & source, const double dx2)
+void prepareFTsource_leapfrog_R2(Field<FieldType> & eightpiG_deltaT, Field<FieldType> & source, const double dx)
 {
+	double dx2 = dx*dx;
 	Site x(source.lattice());
 	for(x.first(); x.test(); x.next())
 	{

@@ -111,6 +111,8 @@ int main(int argc, char **argv)
 	gadget2_header hdr;
 	Real T00hom;
 
+	bool solves_first_phi = true;
+
 #ifndef H5_DEBUG
 	H5Eset_auto2 (H5E_DEFAULT, NULL, NULL);
 #endif
@@ -246,15 +248,20 @@ int main(int argc, char **argv)
 	MultiField<Real> * msource;
 	Field<Real> residual;
 	MultiField<Real> * mresidual;
+	Field<Real> errorMG;
+	MultiField<Real> * merrorMG;
 
 	if(sim.phi_solver_type==PHI_SOLVER_MG)
 	{
-		mg_engine.initialize(&lat,20,8);
+		mg_engine.initialize(&lat,20,2);
 		residual.initialize(lat,1);
 		residual.alloc();
+		errorMG.initialize(lat,1);
+		errorMG.alloc();
 		mg_engine.initialize_Field(&phi,mphi);
 		mg_engine.initialize_Field(&source,msource);
 		mg_engine.initialize_Field(&residual,mresidual);
+		mg_engine.initialize_Field(&errorMG,merrorMG);
 	}
 #endif
 
@@ -479,7 +486,12 @@ int main(int argc, char **argv)
 		{
 			if (dtau_old > 0.)
 			{
-				prepareFTsource<Real>(phi, chi, source, cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo), source, 3. * Hconf(a, fourpiG, cosmo) * dx * dx / dtau_old, fourpiG * dx * dx / a, 3. * Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) * dx * dx);  // prepare nonlinear source for phi update
+				prepareFTsource<Real>(phi, chi, source,
+					 										cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo),
+														  source,
+															3. * Hconf(a, fourpiG, cosmo) * dx * dx / dtau_old,
+															fourpiG * dx * dx / a,
+															3. * Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) * dx * dx);  // prepare nonlinear source for phi update
 
 				if(sim.phi_solver_type == PHI_SOLVER_FT)
 				{
@@ -506,17 +518,40 @@ int main(int argc, char **argv)
 				}
 				else if(sim.phi_solver_type == PHI_SOLVER_MG)
 				{
-					#ifdef MULTIGRID
-						solveModifiedPoissonMG(mg_engine,
-																 	 msource,
-																 	 mphi,
-																 	 mresidual,
-																	1. / (dx * dx),
-																	3. * Hconf(a, fourpiG, cosmo) / dtau_old);
-					#else
+					if(solves_first_phi)
+					{
+						plan_source.execute(FFT_FORWARD);
+						solveModifiedPoissonFT(scalarFT,
+																 	 scalarFT,
+																 	 1. / (dx * dx),
+																 	 3. * Hconf(a, fourpiG, cosmo) / dtau_old);
+						plan_phi.execute(FFT_BACKWARD);
+						solves_first_phi = false;
+					}
+					else
+					{
+						for (x.first(); x.test(); x.next())source(x)/= dx*dx;
+
+
+						#ifdef MULTIGRID
+						solveModifiedPoisson_linearMGW(mg_engine,
+															 	 				 	 msource,
+															 	 				 	 mphi,
+															 	 				 	 mresidual,
+																				 	 merrorMG,
+																 				 	 dx,
+																 				 	 3. * Hconf(a, fourpiG, cosmo) / dtau_old,
+																			 	 	 sim.mg_phi_pre_smoothing,
+																			 	 	 sim.mg_phi_post_smoothing,
+																			 	 	 sim.mg_phi_cycle_number,
+																				 	 sim.mg_phi_gamma);
+						#else
 						COUT<< "Code not compiled with multigrid support, please recompile with -DMULTIGRID"<<endl;
 						parallel.abortForce();
-					#endif
+						#endif
+
+						for (x.first(); x.test(); x.next())source(x) *= dx*dx;
+					}
 				}
 			}
 		}

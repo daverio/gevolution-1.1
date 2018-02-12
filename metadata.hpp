@@ -189,6 +189,10 @@ struct metadata
 	char basename_restart[PARAM_MAX_LENGTH];
 
 	int phi_solver_type;
+	int mg_phi_pre_smoothing;
+	int mg_phi_post_smoothing;
+	int mg_phi_cycle_number;
+	int mg_phi_gamma; //1 for V cycle, 2 for W, ....
 };
 
 struct icsettings

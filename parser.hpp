@@ -1087,6 +1087,37 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			COUT << " Phi solver set to: " << COLORTEXT_CYAN << "Multigrid method" << COLORTEXT_RESET << endl;
 			sim.phi_solver_type=PHI_SOLVER_MG;
 
+			if (parseParameter(params, numparam, "MG phi pre-smoothing", sim.mg_phi_pre_smoothing)){;}
+			else
+			{
+				 COUT<<"Using Multigrid to solve phi, <MG phi pre-smoothing> not set, using default value: 1"<<endl;
+				 COUT<<"Using default value for multigrid might lead to not so accurate result!"<<endl;
+				 sim.mg_phi_pre_smoothing = 1;
+			}
+
+			if (parseParameter(params, numparam, "MG phi post-smoothing", sim.mg_phi_post_smoothing)){;}
+			else
+			{
+				 COUT<<"Using Multigrid to solve phi, <MG phi post-smoothing> not set, using default value: 4"<<endl;
+				 COUT<<"Using default value for multigrid might lead to not so accurate result!"<<endl;
+				 sim.mg_phi_post_smoothing = 4;
+			}
+
+			if (parseParameter(params, numparam, "MG phi cycle number", sim.mg_phi_cycle_number)){;}
+			else
+			{
+				 COUT<<"Using Multigrid to solve phi, <MG phi cycle number> not set, using default value: 1"<<endl;
+				 COUT<<"Using default value for multigrid might lead to not so accurate result!"<<endl;
+				 sim.mg_phi_cycle_number = 1;
+			}
+
+			if (parseParameter(params, numparam, "MG phi gamma", sim.mg_phi_gamma)){;}
+			else
+			{
+				 COUT<<"Using Multigrid to solve phi, <MG phi gamma> not set, using default value: 2 (W-cycle)"<<endl;
+				 sim.mg_phi_gamma = 2;
+			}
+
 			#ifndef MULTIGRID
 			COUT<< "Code not compiled with multigrid support, please recompile with -DMULTIGRID"<<endl;
 			parallel.abortForce();

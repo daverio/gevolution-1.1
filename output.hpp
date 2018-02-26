@@ -465,7 +465,7 @@ else
 //
 //////////////////////////
 
-void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const double a, const int pkcount, const int cycle, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm, Field<Real> * phi, Field<Real> * deltaR, Field<Real> * deltaT, Field<Real> * xi, Field<Real> * laplace_xi, Field<Real> * zeta, Field<Real> * chi, Field<Real> * Bi, Field<Real> * source, Field<Real> * Sij, Field<Cplx> * scalarFT, Field<Cplx> * BiFT, Field<Cplx> * SijFT, PlanFFT<Cplx> * plan_phi, PlanFFT<Cplx> * plan_deltaR, PlanFFT<Cplx> * plan_deltaT, PlanFFT<Cplx> * plan_xi, PlanFFT<Cplx> * plan_laplace_xi, PlanFFT<Cplx> * plan_zeta, PlanFFT<Cplx> * plan_phidot, PlanFFT<Cplx> * plan_chi, PlanFFT<Cplx> * plan_Bi, PlanFFT<Cplx> * plan_source, PlanFFT<Cplx> * plan_Sij, Field<Real> * Bi_check = NULL, Field<Cplx> * BiFT_check = NULL, PlanFFT<Cplx> * plan_Bi_check = NULL)
+void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const double a, const int pkcount, const int cycle, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm, Field<Real> * phi, Field<Real> * deltaR, Field<Real> * deltaT, Field<Real> * xi, Field<Real> * laplace_xi, Field<Real> * zeta, Field<Real> * chi, Field<Real> * Bi, Field<Real> * source, Field<Real> * Sij, Field<Cplx> * scalarFT, Field<Cplx> * BiFT, Field<Cplx> * SijFT, PlanFFT<Cplx> * plan_phi, PlanFFT<Cplx> * plan_deltaR, PlanFFT<Cplx> * plan_deltaT, PlanFFT<Cplx> * plan_xi, PlanFFT<Cplx> * plan_laplace_xi, PlanFFT<Cplx> * plan_zeta, PlanFFT<Cplx> * plan_phidot, PlanFFT<Cplx> * plan_lensing, PlanFFT<Cplx> * plan_chi, PlanFFT<Cplx> * plan_Bi, PlanFFT<Cplx> * plan_source, PlanFFT<Cplx> * plan_Sij, Field<Real> * Bi_check = NULL, Field<Cplx> * BiFT_check = NULL, PlanFFT<Cplx> * plan_Bi_check = NULL)
 {
 	char filename[2*PARAM_MAX_LENGTH+24];
 	char buffer[64];
@@ -636,6 +636,14 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 		extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, false, KTYPE_LINEAR);
 		sprintf(filename, "%s%s_%s%03d_laplace_xi.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 		writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI, filename, "power spectrum of laplace_xi", a, cycle);
+	}
+
+	if(sim.out_pk & MASK_LENSING)
+	{
+		plan_lensing->execute(FFT_FORWARD);
+		extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, false, KTYPE_LINEAR);
+		sprintf(filename, "%s%s_%s%03d_lensing.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
+		writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI, filename, "power spectrum of lensing", a, cycle);
 	}
 
 	if(sim.out_pk & MASK_ZETA)

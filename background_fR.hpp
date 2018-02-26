@@ -2,7 +2,7 @@
 // background_fR.hpp
 //////////////////////////
 //
-// code components related to background evolution for the F(R) model
+// code components related to background evolution for the f(R) model
 //
 // Author: David Daverio (Cambridge University)
 //         Lorenzo Reverberi (Cape Town University, Czech Academy of Sciences & CEICO, Prague)
@@ -65,7 +65,7 @@ inline double dot_R_initial_fR(const double a, const double H, const double four
 ///////////////////////////////////////////////////////////
 // Computing the background with RK4 solver
 //////////////////////////////////////////////////////////
-// System for F(R) background:
+// System for f(R) background:
 // a' = a_dot_RungeKutta(...)
 // H' = H_dot_RungeKutta(...)
 // R' = R_dot_RungeKutta(...)
@@ -97,13 +97,13 @@ double R_dot_RungeKutta(const double a,
 												const double eightpiG_rho_a2, // Actually 8 pi G * rho_background * a**2 -- TODO: Should this be T00_hom instead?
 												const metadata & sim)
 {
-	double frr = fRR(R, sim, 210);
-	double fr = fR(R, sim, 211);
-	double denom = 3. * frr * H;
+	double frr = fRR(R, sim, 210),
+				 fr = fR(R, sim, 211),
+				 denom = 3. * frr * H;
 
 	if(denom)
 	{
-		double rdot = (eightpiG_rho_a2 - 3.*H*H*(1. + fr) + 0.5*(fr * R - F(R, sim, 212))*a*a) / denom;
+		double rdot = (eightpiG_rho_a2 - 3.*H*H*(1. + fr) + 0.5*(fr * R - f(R, sim, 212))*a*a) / denom;
 		return rdot;
 	}
 	else
@@ -130,15 +130,15 @@ double Y_dot_RungeKutta_trace(const double a,
 															const cosmology & cosmo,
 															const metadata & sim)
 {
-	double res;
-	double f = F(R, sim, 310);
-	double fr = fR(R, sim, 311);
-	double frr = fRR(R, sim, 312);
-	double frrr = fRRR(R, sim, 313);
+	double res,
+				 f0 = f(R, sim, 310),
+				 fr = fR(R, sim, 311),
+				 frr = fRR(R, sim, 312),
+				 frrr = fRRR(R, sim, 313);
 
 	if(frr)
 	{
-		res = fr * R - 2.*f - R - 2. * fourpiG * Trace_hom;
+		res = fr * R - 2.*f0 - R - 2. * fourpiG * Trace_hom;
 		res *= a * a / 3.;
 		res -= frrr * Y * Y;
 		res /= frr;
@@ -155,7 +155,7 @@ double Y_dot_RungeKutta_trace(const double a,
 }
 
 ////////////////////////
-// Runge-Kutta (4) solver for F(R) background
+// Runge-Kutta (4) solver for f(R) background
 // TODO: more info here
 ////////////////////////
 double rungekutta_fR(double & a,
@@ -166,9 +166,9 @@ double rungekutta_fR(double & a,
 									   const double dtau,
 									   const metadata & sim)
 {
-	double a1, a2, a3, a4;
-	double H1, H2, H3, H4;
-	double R1, R2, R3, R4;
+	double a1, a2, a3, a4,
+			   H1, H2, H3, H4,
+				 R1, R2, R3, R4;
 
 	a1 = a_dot_RungeKutta(a, H);
 	H1 = H_dot_RungeKutta(a, H, R);
@@ -205,9 +205,9 @@ double rungekutta_fR(double & a,
 									   const double dtau,
 									   const metadata & sim)
 {
-	double a1, a2, a3, a4;
-	double H1, H2, H3, H4;
-	double R1, R2, R3, R4;
+	double a1, a2, a3, a4,
+			   H1, H2, H3, H4,
+				 R1, R2, R3, R4;
 
 	a1 = a_dot_RungeKutta(a, H);
 	H1 = H_dot_RungeKutta(a, H, R);
@@ -235,7 +235,7 @@ double rungekutta_fR(double & a,
 
 
 ////////////////////////
-// Runge-Kutta-Fehlberg solver for F(R) background
+// Runge-Kutta-Fehlberg solver for f(R) background
 // TODO: more info here
 ////////////////////////
 double rungekutta_fR_45(double & a,
@@ -246,11 +246,11 @@ double rungekutta_fR_45(double & a,
 									 const double dtau,
 									 const metadata & sim)
 {
-	double ac, af, Hc, Hf, Rc, Rf;
-	double a1, a2, a3, a4, a5, a6;
-	double H1, H2, H3, H4, H5, H6;
-	double R1, R2, R3, R4, R5, R6;
-	double s, dtau_temp = dtau;
+	double ac, af, a1, a2, a3, a4, a5, a6,
+				 Hc, Hf, H1, H2, H3, H4, H5, H6,
+				 Rc, Rf, R1, R2, R3, R4, R5, R6,
+				 s,
+				 dtau_temp = dtau;
 
 	a1 = dtau * a_dot_RungeKutta(a, H);
 	H1 = dtau * H_dot_RungeKutta(a, H, R);
@@ -300,11 +300,11 @@ double rungekutta_fR_45(double & a,
 									 const double dtau,
 									 const metadata & sim)
 {
-	double ac, af, Hc, Hf, Rc, Rf;
-	double a1, a2, a3, a4, a5, a6;
-	double H1, H2, H3, H4, H5, H6;
-	double R1, R2, R3, R4, R5, R6;
-	double s, dtau_temp = dtau;
+	double ac, af, a1, a2, a3, a4, a5, a6,
+				 Hc, Hf, H1, H2, H3, H4, H5, H6,
+				 Rc, Rf, R1, R2, R3, R4, R5, R6,
+				 s,
+				 dtau_temp = dtau;
 
 	a1 = dtau * a_dot_RungeKutta(a, H);
 	H1 = dtau * H_dot_RungeKutta(a, H, R);
@@ -355,10 +355,10 @@ double rungekutta_fR_trace(double & a,
 									         const double dtau,
 									         const metadata & sim)
 {
-	double a1, a2, a3, a4;
-	double H1, H2, H3, H4;
-	double R1, R2, R3, R4;
-	double Y1, Y2, Y3, Y4;
+	double a1, a2, a3, a4,
+				 H1, H2, H3, H4,
+				 R1, R2, R3, R4,
+				 Y1, Y2, Y3, Y4;
 
 	a1 = a_dot_RungeKutta_trace(a, H);
 	H1 = H_dot_RungeKutta_trace(a, H, R);
@@ -402,11 +402,11 @@ double rungekutta_fR_trace(double & a,
 									         const double dtau,
 									         const metadata & sim)
 {
-	double a1, a2, a3, a4;
-	double H1, H2, H3, H4;
-	double R1, R2, R3, R4;
-	double Y1, Y2, Y3, Y4;
-	double Tbar_0 = Tbar(a, cosmo);
+	double a1, a2, a3, a4,
+				 H1, H2, H3, H4,
+				 R1, R2, R3, R4,
+				 Y1, Y2, Y3, Y4,
+				 Tbar_0 = Tbar(a, cosmo);
 
 	a1 = a_dot_RungeKutta_trace(a, H);
 	H1 = H_dot_RungeKutta_trace(a, H, R);
@@ -435,13 +435,6 @@ double rungekutta_fR_trace(double & a,
 
 	return dtau;
 }
-
-
-
-
-
-
-
 
 
 

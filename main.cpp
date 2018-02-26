@@ -46,7 +46,7 @@
 #include "background.hpp"
 #include "Particles_gevolution.hpp"
 
-// F(R) headers
+// f(R) headers
 #include "fR_tools.hpp"
 #include "background_fR.hpp"
 
@@ -220,7 +220,8 @@ int main(int argc, char **argv)
 	latFT.initializeRealFFT(lat,0);
 
 	MultiGrid mg_engine;
-	mg_engine.initialize(&lat, 3, 8);
+	mg_engine.initialize(&lat, sim.multigrid_n_grids, 2);
+	sim.multigrid_n_grids = mg_engine.nl();
 
 	Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> pcls_cdm;
 	Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> pcls_b;
@@ -239,7 +240,7 @@ int main(int argc, char **argv)
 	Field<Cplx> SijFT;
 	Field<Cplx> BiFT;
 
-	//additional F(R) fields
+	//additional f(R) fields
 	Field<Real> xi;
 	Field<Real> xi_prev;
 	Field<Real> zeta;
@@ -248,22 +249,29 @@ int main(int argc, char **argv)
 	Field<Real> deltaR_prev;
 	Field<Real> eightpiG_deltaT;
 	Field<Real> phidot;
+	Field<Real> lensing;
 	Field<Real> xidot;
 	Field<Real> laplace_xi;
+	Field<Real> rhs;
 	Field<Real> residual;
 	Field<Real> err;
+	Field<Real> debug_field; // TODO: Just for debugging
+	Field<Real> debug_field2; // TODO: Just for debugging
+	Field<Real> debug_field3; // TODO: Just for debugging
 
 	// MultiFields
 	MultiField<Real> * mg_deltaR;
 	MultiField<Real> * mg_eightpiG_deltaT;
 	MultiField<Real> * mg_u;
 	MultiField<Real> * mg_diff_u;
+	MultiField<Real> * mg_rhs;
 	MultiField<Real> * mg_residual;
 	MultiField<Real> * mg_err;
 
   PlanFFT<Cplx> plan_source;
   PlanFFT<Cplx> plan_phi;
   PlanFFT<Cplx> plan_phidot;
+  PlanFFT<Cplx> plan_lensing;
   PlanFFT<Cplx> plan_chi;
   PlanFFT<Cplx> plan_zeta;
   PlanFFT<Cplx> plan_deltaR; // TODO: needed only to output power spectra
@@ -274,6 +282,11 @@ int main(int argc, char **argv)
 	PlanFFT<Cplx> plan_Bi;
   PlanFFT<Cplx> plan_Sij;
 
+	PlanFFT<Cplx> plan_debug_field; // TODO: Just for debugging
+	PlanFFT<Cplx> plan_debug_field2; // TODO: Just for debugging
+	PlanFFT<Cplx> plan_debug_field3; // TODO: Just for debugging
+
+
 	#ifdef CHECK_B
   PlanFFT<Cplx> plan_Bi_check;
 	#endif
@@ -281,7 +294,6 @@ int main(int argc, char **argv)
 
 	// TODO: For the moment, initialize and alloc everything. After debugging, only stuff that's needed
 	phi.initialize(lat,1);
-	phi.alloc();
 	chi.initialize(lat,1);
 	source.initialize(lat,1);
 	scalarFT.initialize(latFT,1);
@@ -295,27 +307,35 @@ int main(int argc, char **argv)
 	deltaR.initialize(lat,1);
 	dot_deltaR.initialize(lat, 1);
 	dot_deltaR.alloc();
-
 	residual.initialize(lat, 1);
 	residual.alloc();
 	err.initialize(lat, 1);
 	err.alloc();
+	rhs.initialize(lat, 1);
+	rhs.alloc();
+	debug_field.initialize(lat, 1);
+	debug_field2.initialize(lat, 1);
+	debug_field3.initialize(lat, 1);
 
 	deltaR_prev.initialize(lat,1);
 	eightpiG_deltaT.initialize(lat,1);
 	phidot.initialize(lat,1);
+	lensing.initialize(lat,1);
 	plan_source.initialize(&source, &scalarFT);
 	plan_phi.initialize(&phi, &scalarFT);
 	plan_phidot.initialize(&phidot, &scalarFT);
+	plan_lensing.initialize(&lensing, &scalarFT);
 	plan_chi.initialize(&chi, &scalarFT);
 	plan_xi.initialize(&xi, &scalarFT);
-
 	plan_laplace_xi.initialize(&laplace_xi, &scalarFT);
-
 	plan_deltaR.initialize(&deltaR, &scalarFT);
 	plan_deltaR_prev.initialize(&deltaR_prev, &scalarFT);
 	plan_eightpiG_deltaT.initialize(&eightpiG_deltaT, &scalarFT);
 	plan_zeta.initialize(&zeta, &scalarFT);
+	plan_debug_field.initialize(&debug_field, &scalarFT);
+	plan_debug_field2.initialize(&debug_field2, &scalarFT);
+	plan_debug_field3.initialize(&debug_field3, &scalarFT);
+
 	Bi.initialize(lat,3);
 	BiFT.initialize(latFT,3);
 	plan_Bi.initialize(&Bi, &BiFT);
@@ -330,6 +350,7 @@ int main(int argc, char **argv)
 	mg_engine.initialize_Field(&eightpiG_deltaT, mg_eightpiG_deltaT);
 	mg_engine.initialize_Field(&residual, mg_residual);
 	mg_engine.initialize_Field(&err, mg_err);
+	mg_engine.initialize_Field(&rhs, mg_rhs);
 
 	#ifdef CHECK_B
 	Field<Real> Bi_check;
@@ -351,7 +372,7 @@ int main(int argc, char **argv)
 	update_ncdm_fields[1] = &chi;
 	update_ncdm_fields[2] = &Bi;
 
-	//f(R) background description and gsl spline
+	//f(R) background description
 	double Hubble;
 	double Rbar;
 	double dot_Rbar;
@@ -361,11 +382,12 @@ int main(int argc, char **argv)
 	double temp1, temp2, temp3; // TODO: Temp variables, remove after debugging
 	double coeffm2;
 
-	gsl_spline * a_spline;
-	gsl_spline * H_spline;
-	gsl_spline * Rbar_spline;
-	gsl_interp_accel * gsl_inpl_acc = gsl_interp_accel_alloc();
-	const gsl_interp_type *gsl_inpl_type = gsl_interp_linear;
+	// gsl spline
+	// gsl_spline * a_spline;
+	// gsl_spline * H_spline;
+	// gsl_spline * Rbar_spline;
+	// gsl_interp_accel * gsl_inpl_acc = gsl_interp_accel_alloc();
+	// const gsl_interp_type *gsl_inpl_type = gsl_interp_linear;
 
 	Site x(lat);
 	rKSite kFT(latFT);
@@ -398,7 +420,7 @@ int main(int argc, char **argv)
 		if(!sim.lcdm_background)
 		{
 			Rbar = R_initial_fR(a, fourpiG, cosmo);
-			fbar = F(Rbar, sim, 100);
+			fbar = f(Rbar, sim, 100);
 			fRbar = fR(Rbar, sim, 101);
 			fRRbar = fRR(Rbar, sim, 102);
 			Hubble = H_initial_fR(a, Hconf(a, fourpiG, cosmo), Rbar, fbar, fRbar,	6. * fourpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * fRRbar / a / a / a); // TODO: Check Omega_m term
@@ -421,7 +443,7 @@ int main(int argc, char **argv)
 		{
 			Hubble = Hconf(a, fourpiG, cosmo);
 			Rbar = 2. * fourpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a + 4.*cosmo.Omega_Lambda );
-			fbar = F(Rbar, sim, 200);
+			fbar = f(Rbar, sim, 200);
 			fRbar = fR(Rbar, sim, 201);
 			fRRbar = fRR(Rbar, sim, 202);
 			if(sim.Cf * dx < sim.steplimit / Hconf(a, fourpiG, cosmo)) dtau = sim.Cf * dx;
@@ -493,7 +515,7 @@ int main(int argc, char **argv)
 				{
 					dtau = rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, dtau, sim);
 				}
-				fbar = F(Rbar, sim, 300);
+				fbar = f(Rbar, sim, 300);
 				fRbar = fR(Rbar, sim, 301);
 				fRRbar = fRR(Rbar, sim, 302);
 				tau += dtau; // TODO: CHECK
@@ -535,7 +557,7 @@ int main(int argc, char **argv)
 			cycle++;
 		}
 
-		// Write last step for F(R)
+		// Write last step for f(R)
 		if(parallel.rank() == 0)
 		{
 			if(sim.mg_flag == FR)
@@ -566,7 +588,7 @@ int main(int argc, char **argv)
 		{
 				readIC(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, Hubble, Rbar, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &xi, &xi_prev, &zeta, &deltaR, &deltaR_prev, &dot_deltaR, &eightpiG_deltaT, &phidot, &xidot, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount, settingsfile_bin);
 
-				fbar = F(Rbar, sim, 400);
+				fbar = f(Rbar, sim, 400);
 				fRbar = fR(Rbar, sim, 401);
 				fRRbar = fRR(Rbar, sim, 402);
 		}
@@ -677,20 +699,9 @@ int main(int argc, char **argv)
 		// TODO: Remove this, most likely
 		if(1./a - 1. < sim.z_switch_fR_background && sim.mg_flag == FR && sim.lcdm_background)
 		{
-			COUT << "\n                              ----- Beginning full F(R) background evolution at z = " << 1./a - 1. << " -----\n";
+			COUT << "\n                              ----- Beginning full f(R) background evolution at z = " << 1./a - 1. << " -----\n";
 			cosmo.Omega_Lambda = 0.;
 			sim.lcdm_background = 0;
-		}
-
-		// Check fields if option loaded
-		if(cycle % sim.CYCLE_INFO_INTERVAL == 0 && sim.check_fields)
-		{
-			COUT << endl;
-			check_field(phi, "phi", numpts3d);
-			check_field(deltaR, "deltaR", numpts3d);
-			check_field(eightpiG_deltaT, "eightpiG_deltaT", numpts3d);
-			check_field(zeta, "zeta", numpts3d);
-			check_field(xi, "xi", numpts3d);
 		}
 
 		#ifdef BENCHMARK
@@ -775,7 +786,17 @@ int main(int argc, char **argv)
 		ref_time = MPI_Wtime();
 		#endif
 
-		// EVOLUTION FOR GR or F(R) -- NEWTONIAN GRAVITY LATER
+		// Computes 8piG*deltaT = 8piG( (T00 + T11 + T22 + T33) - (-rho_backg + 3P_backg) ), to be stored in {eightpiG_deltaT}
+		// At the moment: {source} = -a^3*T00, {Sij} = a^3*Tij
+		computeTtrace(eightpiG_deltaT, source, Sij, a*a*a, -cosmo.Omega_m/a/a/a, fourpiG); // TODO: Should this include the explicit Lambda term?
+		if(sim.mg_flag != FR) // in GR/Newton, deltaR tracks exactly eightpiG_deltaT
+		{
+			copy_field(eightpiG_deltaT, deltaR, -1.);
+		}
+		// Start building phidot + psidot = 2*phidot - chidot on {lensing}
+		copy_field(phi, lensing); // just to keep phi_old
+
+		// EVOLUTION FOR GR or f(R) -- NEWTONIAN GRAVITY LATER
 		if(sim.gr_flag > 0)
 		{
 			T00_hom = 0.;
@@ -787,7 +808,6 @@ int main(int argc, char **argv)
 				Tii_hom += Sij(x,0,0) + Sij(x,1,1) + Sij(x,2,2); // Sij = a^3 Tij
 				phi_hom += phi(x);
 			}
-
 			parallel.sum<Real>(T00_hom);
 			parallel.sum<Real>(Tii_hom);
 			parallel.sum<Real>(phi_hom);
@@ -799,58 +819,35 @@ int main(int argc, char **argv)
 			Tii_hom /= a*a*a; // same for Tii
 			Trace_hom = T00_hom + Tii_hom; // same for Trace
 
-			// Computes 8piG*deltaT = 8piG( (T00 + T11 + T22 + T33) - (-rho_backg + 3P_backg) ), to be stored in {eightpiG_deltaT}
-			// At the moment: {source} = -a^3*T00, {Sij} = a^3*Tij
-			computeTtrace(eightpiG_deltaT, source, Sij, a*a*a, -cosmo.Omega_m/a/a/a, fourpiG); // TODO: Should this include the explicit Lambda term?
-
-			if(sim.mg_flag != FR) // in GR/Newton, deltaR tracks exactly eightpiG_deltaT
-			{
-				copy_field(eightpiG_deltaT, deltaR, -1.);
-			}
-
-			if(cycle % sim.CYCLE_INFO_INTERVAL == 0) // output some info
-			{
-				COUT << "\n cycle " << cycle << ", background information:" << endl
-				     << "                z = " << (1./a) - 1. << endl
-				     << "                H = " << Hubble << endl
-				     << "             Rbar = " << Rbar << endl
-				     << "            fRbar = " << fRbar << endl
-				     << "           fRRbar = " << fRRbar << endl
-						 << " background model = " << cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo) << endl
-						 << " avg/rescaled T00 = " << T00_hom*a*a*a << " / " << T00_hom_rescaled_a3 << endl
-						 << "          phi_hom = " << phi_hom << endl;
-			}
 
 			//////////////////////////////////////////////////////////////////
 			////////////////////////////////////////////////////////////////// EVOLVE deltaR, zeta, xi
 			//////////////////////////////////////////////////////////////////
+			// TODO: just for debugging
+			copy_field(zeta, debug_field);
+			copy_field(deltaR, debug_field2);
+
 			if(sim.mg_flag == FR)
 			{
 				if(sim.back_to_GR) // If back_to_GR, assign deltaR = eightpiG_deltaT, zeta = 0, xi = 0 at all times
 				{
-					flip_fields(deltaR, deltaR_prev, zeta);
 					copy_field(eightpiG_deltaT, deltaR, -1.);
-					if(cycle)
-					{
-						add_fields(deltaR, 1./dtau_old, deltaR_prev, -1./dtau_old, dot_deltaR); // Computes dot_deltaR at time (t-1/2)
-					}
-
-					flip_fields(xi, xi_prev);
-					copy_field(xi, xi, 0.); // Sets xi = 0.
-					copy_field(zeta, zeta, 0.); // Sets zeta = 0.
 				}
 				else if(sim.fR_type == FR_TYPE_R2) // First let's work out the R + R^2 case
 				{
 					coeffm2 = a * a / 6. / sim.fR_params[0];
 					if(sim.quasi_static)
 					{
-						copy_field(eightpiG_deltaT, zeta, coeffm2); // Writes source term in {zeta}
-						plan_zeta.execute(FFT_FORWARD); // Fourier space, {zeta} -> {scalarFT}
-						// Solve wave-like equation transformed into Poisson-like
+						// Writes source term in {zeta}, then to Fourier space, {zeta} -> {scalarFT}
+						copy_field(eightpiG_deltaT, zeta, coeffm2);
+						plan_zeta.execute(FFT_FORWARD);
+						// Solve wave-like equation transformed into Poisson-like then back to real space, {scalarFT} -> {zeta}
 						solveModifiedPoissonFT(scalarFT, scalarFT, 1., coeffm2); // TODO CHECK
-						plan_zeta.execute(FFT_BACKWARD); // Back to real space, {scalarFT} -> {zeta}
+						plan_zeta.execute(FFT_BACKWARD);
+						// deltaR_prev <-- deltaR, Writes deltaR <-- zeta, zeta <-- deltaR + eightpiG_deltaT
 						flip_fields(deltaR, deltaR_prev, zeta);
 						add_fields(deltaR, eightpiG_deltaT, zeta);
+						// Writes old and new xi
 						copy_field(xi, xi_prev);
 						convert_deltaR_to_xi(xi, deltaR, Rbar, fRbar, sim); // Needs value of deltaR
 					}
@@ -860,12 +857,12 @@ int main(int argc, char **argv)
 						{
 							eightpiG_deltaT.updateHalo();
 							prepareFTsource_leapfrog_R2(eightpiG_deltaT, zeta, dx);
-							plan_zeta.execute(FFT_FORWARD); // Fourier space, {zeta} -> {scalarFT}
-							// Solve wave-like equation transformed into Poisson-like
+							plan_zeta.execute(FFT_FORWARD);
+							// Solve wave-like equation transformed into Poisson-like, then back to real space, {scalarFT} -> {zeta}
 							solveModifiedPoissonFT(scalarFT, scalarFT, 1., coeffm2); // TODO CHECK
-							plan_zeta.execute(FFT_BACKWARD); // Back to real space, {scalarFT} -> {zeta}
+							plan_zeta.execute(FFT_BACKWARD);
 							flip_fields(deltaR, deltaR_prev);
-							add_fields(zeta, 1., eightpiG_deltaT, -1., deltaR);
+							subtract_fields(zeta, eightpiG_deltaT, deltaR);
 						}
 						else // Else builds deltaR_i from deltaR_{i-1} and dot_deltaR_{i-1/2}, for i >= 2
 						{
@@ -874,10 +871,12 @@ int main(int argc, char **argv)
 						// Done at each step:
 						copy_field(xi, xi_prev);// TODO: is this needed?
 						convert_deltaR_to_xi(xi, deltaR, Rbar, fRbar, sim); // Needs value of deltaR
-						if(cycle == 1) // Builds dot_deltaR_{1/2} from deltaR_1 and deltaR_0
+						// Builds dot_deltaR_{1/2} from deltaR_1 and deltaR_0 (only first step!)
+						if(cycle == 1)
 						{
 							add_fields(deltaR, 1./dtau_old, deltaR_prev, -1./dtau_old, dot_deltaR);
 						}
+						// Actual leapfrog step (not for initial cycle)
 						if(cycle)
 						{
 							deltaR.updateHalo();
@@ -885,47 +884,58 @@ int main(int argc, char **argv)
 						}
 					}
 				}
-				else if(sim.quasi_static) // Generic F(R) model (not R + R^2), quasi-static
+				else if(sim.quasi_static) // Generic f(R) model (not R + R^2), quasi-static
 				{
-					if(cycle <= 1) // Initial conditions are deltaR = - eightpiG_deltaT
+					if(!cycle) // Initial conditions are deltaR = - eightpiG_deltaT
 					{
-						copy_field(deltaR, deltaR_prev);
-						copy_field(xi, xi_prev);
 						copy_field(eightpiG_deltaT, deltaR, -1.);
 						convert_deltaR_to_xi(xi, deltaR, Rbar, fRbar, sim);
-						if(cycle == 1) // Builds xidot_{1/2} from xi_1 and xi_0
-						{
-							add_fields(xi, 1./dtau_old, xi_prev, -1./dtau_old, xidot);
-						}
 					}
 					else
 					{
-						if(sim.fR_relax_method == METHOD_U)
+						// TODO: REMOVE AFTER SOLVING THE RELAXATION ISSUES
+						if(1./a - 1 > 12) sim.relaxation_method = METHOD_MULTIGRID_U;
+						else sim.relaxation_method = METHOD_FMG;
+						// Build initial guess for deltaR and u -- common to all methods!
+						// copy_field(eightpiG_deltaT, deltaR, -1.);
+						copy_field(xi, xi_prev); // Copy old value of xi on xi_prev
+						copy_field(eightpiG_deltaT, deltaR, -1.);
+						convert_deltaR_to_xi(xi, deltaR, Rbar, fRbar, sim);
+						build_laplacian(xi, laplace_xi, dx);
+						copy_field(laplace_xi, zeta, 3./a/a);
+						subtract_fields(zeta, eightpiG_deltaT, deltaR);
+						convert_deltaR_to_u(xi, deltaR, Rbar, fRbar, sim);
+
+						if(sim.relaxation_method == METHOD_U)
 						{
-							temp1 = relax_u(xi, laplace_xi, deltaR, eightpiG_deltaT, zeta, a, dx, Rbar, fRbar, sim);
+							temp1 = relaxation_u(xi, laplace_xi, deltaR, eightpiG_deltaT, zeta, residual, a, dx, Rbar, fRbar, sim);
 						}
-						else if(sim.fR_relax_method == METHOD_FFT_U)
+						else if(sim.relaxation_method == METHOD_MULTIGRID_U)
 						{
-							temp1 = relax_u_FFT(xi, deltaR, zeta, eightpiG_deltaT, source, scalarFT, &plan_source, &plan_xi, a, dx, Rbar, fRbar, sim);
-						}
-						else if(sim.fR_relax_method == METHOD_MULTIGRID_U)
-						{
-							// Copy regular fields on their MultiGrid counterparts (necessary?)
-							if(parallel.layer(mg_engine.player(0)).isPartLayer())
+							while(1)
 							{
-								convert_xi_to_u(xi, xi, fRbar);
-								copy_field(xi, mg_u[0]);
-								mg_u[0].updateHalo();
-								build_diff_u(mg_u[0], mg_diff_u[0], dx, fRbar);
-								copy_field(eightpiG_deltaT, mg_eightpiG_deltaT[0]);
+								temp1 = multigrid_u(mg_u, mg_diff_u, mg_deltaR, mg_eightpiG_deltaT, mg_rhs, mg_residual, mg_err, mg_engine, a, dx, Rbar, fbar, fRbar, sim);
+								if(temp1 < sim.relaxation_error) break;
 							}
-							temp1 = MultiGrid_relax_u(mg_u, mg_diff_u, mg_deltaR, mg_eightpiG_deltaT, mg_residual, mg_err, mg_engine, zeta, a, dx, Rbar, fRbar, sim);
 						}
+						else if(sim.relaxation_method == METHOD_FMG)
+						{
+							while(true)
+							{
+								temp1 = multigrid_FMG(mg_u, mg_diff_u, mg_deltaR, mg_eightpiG_deltaT, mg_rhs, mg_residual, mg_err, mg_engine, a, dx, Rbar, fbar, fRbar, sim);
+								if(temp1 < sim.relaxation_error) break;
+							}
+						}
+
 						// Build zeta from deltaR and eightpiG_deltaT
 						add_fields(deltaR, eightpiG_deltaT, zeta);
+						// Convert back to xi
+						convert_u_to_xi(xi, xi, fRbar);
+
+						sim.multigrid_check_shape = 0; // Just check the first time
 					}
 				}
-				else // Generic F(R) model (not R + R^2), all time derivatives
+				else // Generic f(R) model (not R + R^2), all time derivatives
 				{
 					if(cycle < 2) // Initial conditions are deltaR = - eightpiG_deltaT
 					{
@@ -950,12 +960,13 @@ int main(int argc, char **argv)
 
 					if(cycle) // Update xidot
 					{
-						xi.updateHalo();
+						xi.updateHalo(); // TODO: Avoid updating the halo twice (see later)
 						leapfrog_dotxi(xi, zeta, xidot, xidot, Hubble, a*a, dtau_old, dtau, dx*dx);
 					}
 				}
 
-				// Build laplacian
+				// TODO: Avoid updating the halo twice (see later)
+				// Build laplacian of xi
 				xi.updateHalo(); // TODO: Find a way to do this only once (see a few lines above)
 				build_laplacian(xi, laplace_xi, dx);
 			}
@@ -968,13 +979,12 @@ int main(int argc, char **argv)
 				if(sim.mg_flag == FR)
 				{
 					// Write source term for the 00 equation in {source}
-					// prepareFTsource_S00<Real>(source, phi, chi, xi, xi_prev, deltaR, source, -(cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo))/a/a/a, dx*dx, dtau_old, Hubble, a, fourpiG / a, Rbar, fbar, fRbar, sim);
+					prepareFTsource_S00<Real>(source, phi, chi, xi, xi_prev, deltaR, source, cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo), dx*dx, dtau_old, Hubble, a, fourpiG / a, Rbar, fbar, fRbar, sim);
 
-
-					// ONLY FOR DEBUGGING:
-					prepareFTsource<Real>(phi, chi, source, cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo), source, 3. * Hconf(a, fourpiG, cosmo) * dx * dx / dtau_old, fourpiG * dx * dx / a, 3. * Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) * dx * dx);  // prepare nonlinear source for phi update
+					// TODO: ONLY FOR DEBUGGING:
+					// prepareFTsource<Real>(phi, chi, source, cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo), source, 3. * Hconf(a, fourpiG, cosmo) * dx * dx / dtau_old, fourpiG * dx * dx / a, 3. * Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) * dx * dx);  // prepare nonlinear source for phi update
 				}
-				else if(sim.gr_flag)
+				else
 				{
 					prepareFTsource<Real>(phi, chi, source, cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo), source, 3. * Hconf(a, fourpiG, cosmo) * dx * dx / dtau_old, fourpiG * dx * dx / a, 3. * Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) * dx * dx);  // prepare nonlinear source for phi update
 				}
@@ -1004,15 +1014,13 @@ int main(int argc, char **argv)
 				plan_phidot.execute(FFT_BACKWARD);
 				flip_fields(phi, phidot); // Now {phi} contains phi_new, {phidot} contains phi_old
 				add_fields(phi, 1./dtau_old, phidot, -1./dtau_old, phidot); // Computes phidot = (phi_new - phi_old)/dtau
-				// Update halos for phi and phidot
 
 				#ifdef BENCHMARK
 				fft_time += MPI_Wtime() - ref2_time;
 				fft_count++;
 				#endif
 			}
-
-			// Finished evolving deltaR, xi, phi in GR or F(R)
+			// Finished evolving deltaR, xi, phi in GR or f(R)
 		}
 		else // Newtonian Evolution
 		{
@@ -1035,9 +1043,58 @@ int main(int argc, char **argv)
 			fft_time += MPI_Wtime() - ref2_time;
 			fft_count++;
 			#endif
-			phi.updateHalo();  // communicate halo values
 		}
 
+		phi.updateHalo();  // communicate halo values
+		// phidot
+		add_fields(phi, 1./dtau_old, lensing, -1./dtau_old, phidot);
+		// lensing --  so far = 2*phidot + chi_old/dtau_old
+		add_fields(phidot, 2., chi, 1./dtau, lensing);
+
+		if(cycle % sim.CYCLE_INFO_INTERVAL == 0) // output some info
+		{
+			COUT << endl << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" << endl
+					 << " cycle " << cycle << ", background information:" << endl
+					 << "                z = " << (1./a) - 1. << endl
+					 << "                H = " << Hubble << endl
+					 << "             Rbar = " << Rbar << endl
+					 << "            fRbar = " << fRbar << endl
+					 << "           fRRbar = " << fRRbar << endl
+					 << " background model = " << cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo) << endl
+					 << " avg/rescaled T00 = " << T00_hom*a*a*a << " / " << T00_hom_rescaled_a3 << endl
+					 << "          phi_hom = " << phi_hom << endl;
+		}
+
+		if(sim.back_to_GR)
+		{
+			copy_field(xi, xidot);
+			convert_deltaR_to_xi(xi, deltaR, Rbar, fRbar, sim);
+			subtract_fields(xi, xidot, xidot);
+			xi.updateHalo();
+			copy_field(laplace_xi, zeta);
+			build_laplacian(xi, laplace_xi, dx);
+			copy_field(laplace_xi, laplace_xi, 3./a/a);
+			subtract_fields(laplace_xi, zeta, zeta);
+			zero_field(zeta);
+		}
+
+		// Check fields if option loaded
+		if(cycle % sim.CYCLE_INFO_INTERVAL == 0 && sim.check_fields)
+		{
+			COUT << endl;
+			check_field(phi, "phi", numpts3d);
+			check_field(chi, "chi", numpts3d);
+			check_field(eightpiG_deltaT, "eightpiG_deltaT", numpts3d);
+			check_field(deltaR, "deltaR", numpts3d);
+			check_field(zeta, "zeta", numpts3d);
+			check_field(xi, "xi", numpts3d);
+			subtract_fields(zeta, debug_field, debug_field);
+			subtract_fields(deltaR, debug_field2, debug_field2);
+			copy_field(debug_field, debug_field, 1./dtau_old);
+			copy_field(debug_field2, debug_field2, 1./dtau_old);
+			check_field(debug_field, "zeta_dot", numpts3d);
+			check_field(debug_field2, "deltaR_dot", numpts3d);
+		}
 
 		// record background data
 		if(kFT.setCoord(0, 0, 0))
@@ -1114,14 +1171,16 @@ int main(int argc, char **argv)
 		fft_count++;
 		#endif
 
-		if(sim.mg_flag == FR && cycle) // TODO: check if it should be done only after the 0th time step
+		if(sim.mg_flag == FR && cycle) // TODO: check if it should be done only after the 0th time step or not
 		{
 			add_fields(chi, xi, chi);
 		}
 
 		chi.updateHalo();  // communicate halo values
+		// lensing: 2*phidot - chidot
+		add_fields(lensing, 1., chi, -1./dtau_old, lensing);
 
-		if(sim.vector_flag == VECTOR_ELLIPTIC) // solve B using elliptic constraint; TODO: check for F(R) -- should be the same
+		if(sim.vector_flag == VECTOR_ELLIPTIC) // solve B using elliptic constraint; TODO: check for f(R) -- should be the same
 		{
 			#ifdef BENCHMARK
 			ref2_time = MPI_Wtime();
@@ -1190,9 +1249,9 @@ int main(int argc, char **argv)
 			COUT << COLORTEXT_CYAN << " writing power spectra" << COLORTEXT_RESET << " at z = " << ((1./a) - 1.) <<  " (cycle " << cycle << "), tau/boxsize = " << tau << endl;
 
 			#ifdef CHECK_B
-			writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_phidot, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, &Bi_check, &BiFT_check, &plan_Bi_check);
+			writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_phidot, &plan_lensing, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, &Bi_check, &BiFT_check, &plan_Bi_check);
 			#else
-			writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_phidot, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
+			writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_phidot, &plan_lensing, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
 			#endif
 			pkcount++;
 		}
@@ -1243,9 +1302,9 @@ int main(int argc, char **argv)
 
 		numsteps_bg = 1;
 
-		if(sim.mg_flag == FR && !sim.lcdm_background) // set timesteps for F(R) background evolution
+		if(sim.mg_flag == FR && !sim.lcdm_background) // set timesteps for f(R) background evolution
 		{
-			dtau_bg = sim.fR_epsilon_bg * sqrt(3. * fRRbar) / a; // This would be the "ideal" timestep to evolve the F(R) background
+			dtau_bg = sim.fR_epsilon_bg * sqrt(3. * fRRbar) / a; // This would be the "ideal" timestep to evolve the f(R) background
 			if(dtau >= 2. * dtau_bg)// numsteps_bg must be even -- we split the background evolution in two steps of dtau/2 each
 			{
 				numsteps_bg = (int) (dtau / dtau_bg / 2.);
@@ -1376,7 +1435,7 @@ int main(int argc, char **argv)
 					Hubble = Hconf(a, fourpiG, cosmo);
 					Rbar = 2. * fourpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a + 4. * cosmo.Omega_Lambda);
 				}
-				else if(sim.background_trace) // F(R) gravity, non-LCDM background, trace equation
+				else if(sim.background_trace) // f(R) gravity, non-LCDM background, trace equation
 				{
 					if(numsteps_bg == 1)
 					{
@@ -1389,11 +1448,11 @@ int main(int argc, char **argv)
 							rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, dtau_bg, sim);
 						}
 					}
-					fbar = F(Rbar, sim, 500);
+					fbar = f(Rbar, sim, 500);
 					fRbar = fR(Rbar, sim, 501);
 					fRRbar = fRR(Rbar, sim, 502);
 				}
-				else // F(R) gravity, non-LCDM background, Friedmann equation
+				else // f(R) gravity, non-LCDM background, Friedmann equation
 				{
 					if(numsteps_bg == 1)
 					{
@@ -1406,7 +1465,7 @@ int main(int argc, char **argv)
 							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, dtau_bg, sim);
 						}
 					}
-					fbar = F(Rbar, sim, 500);
+					fbar = f(Rbar, sim, 500);
 					fRbar = fR(Rbar, sim, 501);
 					fRRbar = fRR(Rbar, sim, 502);
 				}
@@ -1449,7 +1508,7 @@ int main(int argc, char **argv)
 					Hubble = Hconf(a, fourpiG, cosmo);
 					Rbar = 2. * fourpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a + 4. * cosmo.Omega_Lambda);
 				}
-				else if(sim.background_trace) // F(R) gravity, non-LCDM background, trace equation
+				else if(sim.background_trace) // f(R) gravity, non-LCDM background, trace equation
 				{
 					if(numsteps_bg == 1)
 					{
@@ -1462,11 +1521,11 @@ int main(int argc, char **argv)
 							rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, dtau_bg, sim);
 						}
 					}
-					fbar = F(Rbar, sim, 600);
+					fbar = f(Rbar, sim, 600);
 					fRbar = fR(Rbar, sim, 601);
 					fRRbar = fRR(Rbar, sim, 602);
 				}
-				else // F(R) gravity, non-LCDM background, Friedmann equation
+				else // f(R) gravity, non-LCDM background, Friedmann equation
 				{
 					if(numsteps_bg == 1)
 					{
@@ -1479,7 +1538,7 @@ int main(int argc, char **argv)
 							rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, dtau_bg, sim);
 						}
 					}
-					fbar = F(Rbar, sim, 600);
+					fbar = f(Rbar, sim, 600);
 					fRbar = fR(Rbar, sim, 601);
 					fRRbar = fRR(Rbar, sim, 602);
 				}
@@ -1514,7 +1573,7 @@ int main(int argc, char **argv)
 				Hubble = Hconf(a, fourpiG, cosmo);
 				Rbar = 2. * fourpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a + 4. * cosmo.Omega_Lambda);
 			}
-			else if(sim.background_trace) // F(R) gravity, non-LCDM background, trace equation
+			else if(sim.background_trace) // f(R) gravity, non-LCDM background, trace equation
 			{
 				if(numsteps_bg == 1)
 				{
@@ -1527,11 +1586,11 @@ int main(int argc, char **argv)
 						rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, dtau_bg, sim);
 					}
 				}
-				fbar = F(Rbar, sim, 700);
+				fbar = f(Rbar, sim, 700);
 				fRbar = fR(Rbar, sim, 701);
 				fRRbar = fRR(Rbar, sim, 702);
 			}
-			else // F(R) gravity, non-LCDM background, Friedmann equation
+			else // f(R) gravity, non-LCDM background, Friedmann equation
 			{
 				if(numsteps_bg == 1)
 				{
@@ -1544,7 +1603,7 @@ int main(int argc, char **argv)
 						rungekutta_fR_45(a, Hubble, Rbar, fourpiG, cosmo, dtau_bg, sim);
 					}
 				}
-				fbar = F(Rbar, sim, 700);
+				fbar = f(Rbar, sim, 700);
 				fRbar = fR(Rbar, sim, 701);
 				fRRbar = fRR(Rbar, sim, 702);
 			}
@@ -1647,7 +1706,7 @@ int main(int argc, char **argv)
 			restartcount++;
 		}
 
-		if(sim.mg_flag == FR) // set new dtau in F(R) gravity
+		if(sim.mg_flag == FR) // set new dtau in f(R) gravity
 		{
 			dtau_old_2 = dtau_old;
 			dtau_old = dtau;

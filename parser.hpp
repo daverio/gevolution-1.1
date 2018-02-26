@@ -664,6 +664,8 @@ bool parseFieldSpecifiers(parameter * & params, const int numparam, const char *
 					pvalue |= MASK_DELTA;
 				else if(strcmp(item, "delta_N") == 0 || strcmp(item, "deltaN") == 0)
 					pvalue |= MASK_DBARE;
+				else if(strcmp(item, "lensing") == 0 || strcmp(item, "Lensing") == 0)
+					pvalue |= MASK_LENSING;
 
 				start = comma+1;
 				while (*start == ' ' || *start == '\t') start++;
@@ -705,6 +707,8 @@ bool parseFieldSpecifiers(parameter * & params, const int numparam, const char *
 				pvalue |= MASK_DELTA;
 			else if(strcmp(start, "delta_N") == 0 || strcmp(start, "deltaN") == 0)
 				pvalue |= MASK_DBARE;
+			else if(strcmp(start, "lensing") == 0 || strcmp(start, "Lensing") == 0)
+				pvalue |= MASK_LENSING;
 
 			params[i].used = true;
 			return true;
@@ -1059,7 +1063,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	sim.fR_type = 0;
 	for (i = 0; i < MAX_FR_PARAMS; i++) sim.fR_params[i] = 0;
 	sim.num_fR_params = MAX_FR_PARAMS;
-	sim.S0i_mode = 2;
 
 	parseParameter(params, numparam, "CYCLE_INFO_INTERVAL", sim.CYCLE_INFO_INTERVAL); // Defaults to 10
 	parseParameter(params, numparam, "BACKGROUND_NUMPTS", sim.BACKGROUND_NUMPTS); // Defaults to 10
@@ -1323,6 +1326,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		{
 			COUT << " gravity theory set to: " << COLORTEXT_CYAN << "Newtonian" << COLORTEXT_RESET << endl;
 			sim.gr_flag = 0;
+			cosmo.Omega_Lambda = 1. - cosmo.Omega_m - cosmo.Omega_rad; //In Newton, set total Omega = 1
 			if(ic.pkfile[0] == '\0' && ic.tkfile[0] != '\0'
 #ifdef ICGEN_PREVOLUTION
 				&& ic.generator != ICGEN_PREVOLUTION
@@ -1500,10 +1504,20 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			parseParameter(params, numparam, "f(R) target precision", sim.fR_target_precision);
 			parseParameter(params, numparam, "f(R) count max", sim.fR_count_max);
 
-			if(parseParameter(params, numparam, "f(R) relaxation method", sim.fR_relax_method))
+			if(parseParameter(params, numparam, "relaxation method", sim.relaxation_method))
 			{
-				parseParameter(params, numparam, "f(R) relaxation error", sim.fR_relax_error);
-				parseParameter(params, numparam, "multigrid relax steps", sim.relax_steps);
+				parseParameter(params, numparam, "relaxation error", sim.relaxation_error);
+				parseParameter(params, numparam, "multigrid pre-smoothing", sim.multigrid_pre_smoothing);
+				parseParameter(params, numparam, "multigrid post-smoothing", sim.multigrid_post_smoothing);
+				parseParameter(params, numparam, "multigrid n-grids", sim.multigrid_n_grids);
+				if(parseParameter(params, numparam, "multigrid n_cycles", sim.multigrid_n_cycles));
+				else
+				{
+					COUT << " /!\\ Multigrid n_cycles set to default = 1" << endl;
+					sim.multigrid_n_cycles = 1;
+				}
+				parseParameter(params, numparam, "red black", sim.multigrid_red_black);
+				parseParameter(params, numparam, "check shape", sim.multigrid_check_shape);
 				if(parseParameter(params, numparam, "multigrid shape", par_string))
 				{
 					if(par_string[0] == 'V' || par_string[0] == 'v')
@@ -1514,13 +1528,25 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 					{
 						sim.multigrid_shape = MG_SHAPE_W;
 					}
-					else if(par_string[0] == 'F' || par_string[0] == 'f')
-					{
-						sim.multigrid_shape = MG_SHAPE_FMG;
-					}
-					if(!sim.multigrid_shape)
+					else
 					{
 						COUT << " /!\\ Multigrid shape not specified. Closing..." << endl;
+						parallel.abortForce();
+					}
+				}
+				if(parseParameter(params, numparam, "relaxation error method", par_string))
+				{
+					if(par_string[0] == 'M' || par_string[0] == 'm')
+					{
+						sim.relaxation_error_method = RELAXATION_ERROR_METHOD_MAX;
+					}
+					else if(par_string[0] == 'S' || par_string[0] == 's')
+					{
+						sim.relaxation_error_method = RELAXATION_ERROR_METHOD_SUM;
+					}
+					else
+					{
+						COUT << " /!\\ Multigrid error method not specified. Closing..." << endl;
 						parallel.abortForce();
 					}
 				}
@@ -1545,7 +1571,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		parseParameter(params, numparam, "check pause", sim.check_pause);
 	}
 	parseParameter(params, numparam, "check redshift", sim.z_check);
-	parseParameter(params, numparam, "S0i mode", sim.S0i_mode);
 	parseParameter(params, numparam, "time step limit", sim.steplimit);
 
 	parseFieldSpecifiers(params, numparam, "snapshot outputs", sim.out_snapshot);

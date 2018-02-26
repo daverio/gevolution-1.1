@@ -61,6 +61,7 @@
 #define MASK_DELTAR	     65536
 #define MASK_DELTAT		   131072
 #define MASK_LAPLACE_XI  262144
+#define MASK_LENSING     524288
 
 #define ICFLAG_CORRECT_DISPLACEMENT 1
 #define ICFLAG_KSPHERE              2
@@ -131,13 +132,16 @@
 
 // Relaxation methods
 #define METHOD_U 1
-#define METHOD_FFT_U 2
-#define METHOD_MULTIGRID_U 3
+#define METHOD_MULTIGRID_U 2
+#define METHOD_FMG 3
 
 // Multigrid shapes
 #define MG_SHAPE_V 1
 #define MG_SHAPE_W 2
-#define MG_SHAPE_FMG 3
+
+// Relaxation error methods
+#define RELAXATION_ERROR_METHOD_MAX 1 // Max error at each point cannot exceed relaxation_error
+#define RELAXATION_ERROR_METHOD_SUM 2 // sum of errors (divided by numpts3d) cannot exceed relaxation_error
 
 // color escape sequences for terminal highlighting (enable with -DCOLORTERMINAL)
 #ifdef COLORTERMINAL
@@ -182,8 +186,8 @@ struct gadget2_header
 
 struct metadata
 {
-	int CYCLE_INFO_INTERVAL = 10; // Previously fixed. #define CYCLE_INFO_INTERVAL = 10
-	int BACKGROUND_NUMPTS = 10;
+	int CYCLE_INFO_INTERVAL; // Previously fixed. #define CYCLE_INFO_INTERVAL = 10
+	int BACKGROUND_NUMPTS;
 	int numpts;
 	int downgrade_factor;
 	long numpcl[MAX_PCL_SPECIES];
@@ -201,17 +205,16 @@ struct metadata
 	int num_snapshot;
 	int num_restart;
 	int num_fR_params;
-	int quasi_static = 0;
-	int background_only = 0;
-	int background_trace = 0;
-	double bg_initial_redshift = 100.;
-	double bg_final_redshift = 0.;
-	int lcdm_background = 0;
+	int quasi_static;
+	int background_only;
+	int background_trace;
+	double bg_initial_redshift;
+	double bg_final_redshift;
+	int lcdm_background;
 
-	int S0i_mode;// TODO remove after FULL debugging
-	int back_to_GR = 0;
-	int check_fields = 0;
-	int check_pause = 1;
+	int back_to_GR;
+	int check_fields;
+	int check_pause;
 
 	double Cf;
 	double fR_params[MAX_FR_PARAMS];
@@ -219,16 +222,22 @@ struct metadata
 	double fR_epsilon_fields;
 	double fR_target_precision;
 	double fR_count_max;
-	double fR_relax_error;
-	int fR_relax_method = 0;
-	int multigrid_shape = 0;
-	int relax_steps = 0;
+	double relaxation_error;
+	int relaxation_method;
+	int relaxation_error_method;
+	int multigrid_shape;
+	int multigrid_n_grids;
+	int multigrid_n_cycles;
+	int multigrid_pre_smoothing;
+	int multigrid_post_smoothing;
+	int multigrid_check_shape;
+	int multigrid_red_black;
 	double movelimit;
 	double steplimit;
 	double boxsize;
 	double wallclocklimit;
 	double z_in;
-	double z_check = -1; // TODO: Remove after debugging
+	double z_check; // TODO: Remove after debugging
 	double z_snapshot[MAX_OUTPUTS];
 	double z_pk[MAX_OUTPUTS];
 	double z_restart[MAX_OUTPUTS];
@@ -282,7 +291,6 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "bg_final_redshift: " << sim.bg_final_redshift << "\n";
 	os << "lcdm_background: " << sim.lcdm_background << "\n";
 
-	os << "S0i_mode: " << sim.S0i_mode << "\n";
 	os << "back_to_GR: " << sim.back_to_GR << "\n";
 	os << "check_fields: " << sim.check_fields << "\n";
 	os << "check_pause: " << sim.check_pause << "\n";
@@ -296,7 +304,11 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "fR_epsilon_bg: " << sim.fR_epsilon_bg << "\n";
 	os << "fR_epsilon_fields: " << sim.fR_epsilon_fields << "\n";
 	os << "fR_target_precision: " << sim.fR_target_precision << "\n";
-	os << "fR_relax_error: " << sim.fR_relax_error << "\n";
+	os << "multigrid_shape: " << sim.multigrid_shape << "\n";
+	os << "multigrid_pre_smoothing: " << sim.multigrid_pre_smoothing << "\n";
+	os << "multigrid_post_smoothing: " << sim.multigrid_post_smoothing << "\n";
+	os << "relaxation_error: " << sim.relaxation_error << "\n";
+	os << "relaxation_error_method: " << sim.relaxation_error_method << "\n";
 	os << "movelimit: " << sim.movelimit << "\n";
 	os << "steplimit: " << sim.steplimit << "\n";
 	os << "boxsize: " << sim.boxsize << "\n";

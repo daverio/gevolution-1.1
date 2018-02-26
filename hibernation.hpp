@@ -684,7 +684,6 @@ void writeRestartSettings(metadata & sim,
 				fprintf(outfile, "f(R) epsilon background     = %f\n",sim.fR_epsilon_bg);
 				fprintf(outfile, "f(R) epsilon fields         = %f\n",sim.fR_epsilon_fields);
 				fprintf(outfile, "f(R) target precision       = %f\n",sim.fR_target_precision);
-				fprintf(outfile, "S0i mode                    = %d\n",sim.S0i_mode);
 				fprintf(outfile, "back to GR                  = %d\n",sim.back_to_GR);
 				fprintf(outfile, "check fields                = %d\n",sim.check_fields);
 				fprintf(outfile, "check pause                 = %d\n",sim.check_pause);

@@ -148,22 +148,22 @@ void prepareFTsource(Field<FieldType> & phi, Field<FieldType> & Tij, Field<Field
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
-void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
+void prepareFTsource_S00(Field<FieldType> & minus_a3_T00, // -a^3 * T00
 												 Field<FieldType> & phi,
 												 Field<FieldType> & chi,
 												 Field<FieldType> & xi_new,
                          Field<FieldType> & xi_old,
                          Field<FieldType> & deltaR,
 												 Field<FieldType> & source, //
-												 const double T00_hom, //  background T00
+												 const double minus_a3_T00_hom, //  background T00
 												 const double dx2,
 												 const double dtau,
 												 const double Hubble,
 												 const double a,
 												 const double fourpiG_over_a,
 												 const double Rbar,
-												 const double Fbar,
-												 const double FRbar,
+												 const double fbar,
+												 const double fRbar,
 												 const metadata & sim)
 {
 	Site x(phi.lattice());
@@ -172,7 +172,6 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
   Site y(phi.lattice());
 	double laplace = 0.;
   double a2 = a*a;
-  double a3_T00_hom = a*a*a*T00_hom;
   double threeH2 = 3. * Hubble * Hubble;
 	double grad[3];
   int i = 0;
@@ -181,7 +180,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
   {
     for (x.first(); x.test(); x.next())
     {
-      source(x) = fourpiG_over_a * (a3T00(x) + a3_T00_hom);// 4piG * (-a^3*T00 + a^3*Tbar00) = -4piG * a^3 * dT00
+      source(x) = fourpiG_over_a * (minus_a3_T00(x) - minus_a3_T00_hom);// 4piG * (-a^3*T00 + a^3*Tbar00) = -4piG * a^3 * dT00
       for(i=0; i<3; i++)
       {
         xn = x+i;
@@ -189,7 +188,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
         grad[i] = phi(xn) - phi(xp);
         grad[i] *= grad[i];
       }
-      source(x) *= 1. - 4.*phi(x);
+      source(x) *= 1. - 4. * phi(x);
       source(x) += threeH2 * (phi(x) - chi(x));
       source(x) -= 3. * Hubble * phi(x) / dtau;
   		source(x) *= dx2; // Multiply by dx^2 all terms not containing derivatives
@@ -201,8 +200,13 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
   {
     for (x.first(); x.test(); x.next())
     {
-      source(x) = fourpiG_over_a * (a3T00(x) + a3_T00_hom);// 4piG * (-a^3*T00 + a^3*Tbar00) = -4piG * a^3 * dT00
-      for(i=0; i<3; i++)
+      source(x) = fourpiG_over_a * (minus_a3_T00(x) - minus_a3_T00_hom);// 4piG * (-a^3*T00 + a^3*Tbar00) / a = -4piG * a^2 * dT00
+			source(x) *= 1. - 4. * phi(x);
+			source(x) += threeH2 * (phi(x) - chi(x));
+			source(x) -= 3. * Hubble * phi(x) / dtau; //TODO: Do we want to keep this in the Quasi-static limit?
+
+			laplace = 0.;
+			for(i=0; i<3; i++)
       {
         xn = x+i;
         xp = x-i;
@@ -210,13 +214,16 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
         grad[i] = phi(xn) - phi(xp);
         grad[i] *= grad[i];
       }
-      laplace -= 6.*xi_new(x);
-      source(x) = (source(x) + 0.5 * laplace / dx2) * (1. - 4.*phi(x) + 0.5 * (xi_new(x) + FRbar));
-      source(x) += threeH2 * (phi(x) - chi(x) - 0.5 * xi_new(x));
-      source(x) -= 1.5 * Hubble * (2. * phi(x) + xi_new(x) - xi_old(x)) / dtau;//TODO: Do we want to keep this in the Quasi-static limit?
+      laplace -= 6. * xi_new(x);
+			laplace /= dx2;
 
-      // F(R) terms
-      source(x) += 0.25 * a2 * (Rbar * xi_new(x) + Fbar - F(Rbar + deltaR(x), sim, 110));
+      // F(R) terms --  TODO: Optimize this, e.g. combining with the previous terms
+			source(x) -= fourpiG_over_a * (minus_a3_T00(x) - minus_a3_T00_hom) * (xi_new(x) + fRbar) / 2.;
+			source(x) += laplace * (1. - 4. * phi(x) - (xi_new(x) + fRbar) / 2.);
+			source(x) -= 1.5 * Hubble * (xi_new(x) - xi_old(x)) / dtau; //TODO: Do we want to keep this in the Quasi-static limit?
+			source(x) -= threeH2 * xi_new(x) / 2.;
+      source(x) += 0.25 * a2 * (Rbar * xi_new(x) + fbar - f(Rbar + deltaR(x), sim, 110));
+
       // Rescaling with dx^2 (Needed! To be done before adding gradient squared)
       source(x) *= dx2;
 
@@ -228,7 +235,7 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
   {
     for (x.first(); x.test(); x.next())
     {
-      source(x) = fourpiG_over_a * (a3T00(x) + a3_T00_hom);// 4piG * (-a^3*T00 + a^3*Tbar00) = -4piG * a^3 * dT00
+      source(x) = fourpiG_over_a * (minus_a3_T00(x) - minus_a3_T00_hom);// 4piG * (-a^3*T00 + a^3*Tbar00) = -4piG * a^3 * dT00
       for(i=0; i<3; i++)
       {
         xn = x+i;
@@ -238,12 +245,12 @@ void prepareFTsource_S00(Field<FieldType> & a3T00, // -a^3 * T00
         grad[i] *= grad[i];
       }
       laplace -= 6.*xi_new(x);
-      source(x) = (source(x) + 0.5 * laplace / dx2) * (1. - 4.*phi(x) + 0.5 * (xi_new(x) + FRbar));
+      source(x) = (source(x) + 0.5 * laplace / dx2) * (1. - 4.*phi(x) + 0.5 * (xi_new(x) + fRbar));
       source(x) += threeH2 * (phi(x) - chi(x) - 0.5 * xi_new(x));
       source(x) -= 1.5 * Hubble * (2. * phi(x) + xi_new(x) - xi_old(x)) / dtau;//TODO: check that this is the right interpolation
 
       // F(R) terms
-      source(x) += 0.25 * a2 * (Rbar * xi_new(x) + Fbar - F(Rbar + deltaR(x), sim, 111));
+      source(x) += 0.25 * a2 * (Rbar * xi_new(x) + fbar - f(Rbar + deltaR(x), sim, 111));
       source(x) *= dx2; // Multiply by dx^2 all terms not containing derivatives
 
       // gradient squared
@@ -370,7 +377,7 @@ void prepareFTsource(Field<FieldType> & phi,
 		result(x) = coeff2 * (source(x) - bgmodel);
 
 #ifdef PHINONLINEAR
-#ifdef ORIGINALMETRIC // TODO: impose that F(R) works only for ORIGINALMETRIC
+#ifdef ORIGINALMETRIC
 		result(x) *= 1. - 4. * phi(x);
 		result(x) -= 0.375 * (phi(x-0) - phi(x+0)) * (phi(x-0) - phi(x+0));
 		result(x) -= 0.375 * (phi(x-1) - phi(x+1)) * (phi(x-1) - phi(x+1));

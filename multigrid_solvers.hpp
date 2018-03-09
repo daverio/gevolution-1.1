@@ -14,20 +14,30 @@ void relax_modifiedPoisson(MultiGrid & mg_engine,
     SiteRedBlack3d x(source[level].lattice());
     for(x.first();x.test();x.next())
     {
-      phi[level](x) = phi[level](x) +
-                      (phi[level](x+0)+phi[level](x-0)
-                      +phi[level](x+1)+phi[level](x-1)
-                      +phi[level](x+2)+phi[level](x-2)
-                      - 6.0*phi[level](x) )*dt/dx2
-                      - modif*phi[level](x)*dt - source[level](x)*dt;
       if(std::isnan(phi[level](x) ))
       {
         cout<<"phi[level](x) is nan! level: "<< level
             <<" modif*phi[level](x)*dt :" << modif*phi[level](x)*dt
             <<" source[level](x)*dt :" << source[level](x)*dt
             <<endl;
-
+        parallel.abortForce();
       }
+      if(std::isinf(phi[level](x) ))
+      {
+        cout<<"phi[level](x) is inf! level: "<< level
+            <<" modif*phi[level](x)*dt :" << modif*phi[level](x)*dt
+            <<" source[level](x)*dt :" << source[level](x)*dt
+            <<endl;
+        parallel.abortForce();
+      }
+
+      phi[level](x) = phi[level](x) +
+                      (phi[level](x+0)+phi[level](x-0)
+                      +phi[level](x+1)+phi[level](x-1)
+                      +phi[level](x+2)+phi[level](x-2)
+                      - 6.0*phi[level](x) )*dt/dx2
+                      - modif*phi[level](x)*dt - source[level](x)*dt;
+
     }
   }
 }
@@ -72,7 +82,7 @@ void get_residual(MultiGrid & mg_engine,
         xmaxlap = x;
       }
     }
-    //parallel.layer(mg_engine.player(level)).max(maxres);
+    parallel.layer(mg_engine.player(level)).max(maxres);
     //if(parallel.layer(mg_engine.player(level)).isRoot())
     //    cout<<"get_residual maxres: "<<maxres
     //        << xmaxlap
@@ -119,53 +129,57 @@ void solveCL(MultiGrid & mg_engine,
     for(x.first();x.test();x.next())
     {
       phi[level](x) = -source[level](x)/modif;
+      //cout<<x<<" "<< phi[level](x)<<endl;
     }
-
-    while(error>wp)
+    if(phi[level].lattice().size(0)>2)
     {
-      relax_modifiedPoisson(mg_engine,source,phi,dx2,modif,level);
-      error = 0.0;
-      for(x.first();x.test();x.next())
+      while(error>wp)
       {
-        temp = abs(source[level](x)
-               -(phi[level](x+0)+phi[level](x-0)
-               +phi[level](x+1)+phi[level](x-1)
-               +phi[level](x+2)+phi[level](x-2) - phi[level](x)*6.0) * overdx2
-               + modif * phi[level](x));
+        relax_modifiedPoisson(mg_engine,source,phi,dx2,modif,level);
+        error = 0.0;
+        for(x.first();x.test();x.next())
+        {
+          temp = abs(source[level](x)
+                 -(phi[level](x+0)+phi[level](x-0)
+                 +phi[level](x+1)+phi[level](x-1)
+                 +phi[level](x+2)+phi[level](x-2) - phi[level](x)*6.0) * overdx2
+                 + modif * phi[level](x));
 
-        //if(phi[level](x)!=0)temp /= abs(phi[level](x));
+          //if(phi[level](x)!=0)temp /= abs(phi[level](x));
 
-        if(temp>error)error=temp;
+          if(temp>error)error=temp;
 
-        lap = (phi[level](x+0)+phi[level](x-0)
-              +phi[level](x+1)+phi[level](x-1)
-              +phi[level](x+2)+phi[level](x-2)
-              - phi[level](x)*6.0)  * overdx2;
-        src = source[level](x);
-        modt = modif * phi[level](x);
-        res = src - lap + modt;
-        ph = phi[level](x);
+          lap = (phi[level](x+0)+phi[level](x-0)
+                +phi[level](x+1)+phi[level](x-1)
+                +phi[level](x+2)+phi[level](x-2)
+                - phi[level](x)*6.0)  * overdx2;
+          src = source[level](x);
+          modt = modif * phi[level](x);
+          res = src - lap + modt;
+          ph = phi[level](x);
 
+        }
+        parallel.layer(mg_engine.player(level)).max(error);
+
+        //if(count%1000000==0 && parallel.layer(mg_engine.player(level)).isRoot())
+        //    cout<<"SolveCL count: "<<count<< " error: "<<error
+        //    <<" lap: "<<lap
+        //    <<" modt: "<<modt
+        //    <<" src: "<<src
+        //    <<" res: "<<res
+        //    <<" ph: "<<ph
+        //    <<endl;
+        //count++;
       }
-      parallel.layer(mg_engine.player(level)).max(error);
-
-      //if(count%1000000==0 && parallel.layer(mg_engine.player(level)).isRoot())
-      //    cout<<"SolveCL count: "<<count<< " error: "<<error
+      //cout<<"SolveCL count: "<<count<< endl;
       //    <<" lap: "<<lap
       //    <<" modt: "<<modt
       //    <<" src: "<<src
       //    <<" res: "<<res
       //    <<" ph: "<<ph
       //    <<endl;
-      //count++;
     }
-    //cout<<"SolveCL count: "<<count<< endl;
-    //    <<" lap: "<<lap
-    //    <<" modt: "<<modt
-    //    <<" src: "<<src
-    //    <<" res: "<<res
-    //    <<" ph: "<<ph
-    //    <<endl;
+
 
   }
 }
@@ -250,17 +264,19 @@ void solveModifiedPoisson_linearGammaCycle(MultiGrid & mg_engine,
                                            const int gamma = 1,
                                            const int lvl = 0)
 {
+  //COUT<< "Relaxing level: "<< lvl
+  //    << " restricting to level: "<< lvl+1 << endl;
+
   for(int i=0;i<preRelNum;i++)relax_modifiedPoisson(mg_engine,source,phi,dx2[lvl],modif,lvl);
   get_residual(mg_engine,source,phi,residual,1.0/dx2[lvl],modif,lvl);
   mg_engine.restrict(residual,source,lvl);
   fill0(mg_engine,phi,lvl+1);
-  //COUT<< "Relaxing level: "<< lvl
-  //    << " restricting to level: "<< lvl+1 << endl;
 
   if(lvl+1 == mg_engine.nl()-1)
   {
-    solveCL(mg_engine,source,phi,dx2[mg_engine.nl()-1],modif,1.0e-15);
     //COUT<< "solving level: "<< lvl+1 <<endl;
+    solveCL(mg_engine,source,phi,dx2[mg_engine.nl()-1],modif,1.0e-15);
+
   }
   else
   {

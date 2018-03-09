@@ -6,7 +6,7 @@ LIB          := -lfftw3 -lm -lhdf5 -lgsl -lgslcblas
 # target and source
 EXEC         := gevolution
 SOURCE       := main.cpp
-HEADERS      := $(wildcard *.hpp)
+HEADERS      := $(wildcard *.hpp ../LATfield2/*.hpp)
 
 # mandatory compiler settings (LATfield2)
 DLATFIELD2   := -DFFT3D -DHDF5 -DMULTIGRID

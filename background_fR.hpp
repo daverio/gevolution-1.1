@@ -52,15 +52,24 @@ inline double R_initial_fR(const double a, const double fourpiG, const cosmology
 	return 2. * fourpiG * ( cosmo.Omega_m / a / a / a + 4. * (1. - cosmo.Omega_m - cosmo.Omega_rad) );
 }
 
+inline double Rbar_GR(const double a, const double fourpiG, const cosmology & cosmo)
+{
+	return 2. * fourpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a + 4. * cosmo.Omega_Lambda);
+}
+
 inline double dot_R_initial_fR(const double a, const double H, const double fourpiG, const cosmology & cosmo, const metadata & sim)
 {
 	// Corresponds to background as computed using the modified Friedmann equation:
 	// return R_dot_RungeKutta(a, H, R_initial_fR(a, fourpiG, cosmo), 2.*fourpiG*a*a*rho(a, cosmo), sim);
 
 	// GR value:
-	return -6. * fourpiG * H * cosmo.Omega_m / a / a / a;
+	return -6. * fourpiG * H * cosmo.Omega_m / a / a / a; // TODO: add ncdm species
 }
 
+inline double dot_Rbar_GR(const double a, const double H, const double fourpiG, const cosmology & cosmo)
+{
+	return -6. * fourpiG * H * cosmo.Omega_m / a / a / a; // TODO: add ncdm species
+}
 
 ///////////////////////////////////////////////////////////
 // Computing the background with RK4 solver

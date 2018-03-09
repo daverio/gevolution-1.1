@@ -770,6 +770,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	ic.restart_a = -1.;
 	ic.restart_Hubble = -1.;
 	ic.restart_Rbar = -1.;
+	ic.restart_dot_Rbar = -1.;
 
 	parseParameter(params, numparam, "seed", ic.seed);
 
@@ -985,9 +986,9 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		parseParameter(params, numparam, "metric file", pptr, i);
 		if(parseParameter(params, numparam, "gevolution version", ic.restart_version))
 		{
-			if(ic.restart_version - GEVOLUTION_VERSION > 0.0001)
+			if(ic.restart_version - FREVOLUTION_VERSION > 0.0001)
 			{
-				COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": version number of settings file (" << ic.restart_version << ") is higher than version of executable (" << GEVOLUTION_VERSION << ")!" << endl;
+				COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": version number of settings file (" << ic.restart_version << ") is higher than version of executable (" << FREVOLUTION_VERSION << ")!" << endl;
 			}
 		}
 	}
@@ -1065,7 +1066,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	sim.num_fR_params = MAX_FR_PARAMS;
 
 	parseParameter(params, numparam, "CYCLE_INFO_INTERVAL", sim.CYCLE_INFO_INTERVAL); // Defaults to 10
-	parseParameter(params, numparam, "BACKGROUND_NUMPTS", sim.BACKGROUND_NUMPTS); // Defaults to 10
+	parseParameter(params, numparam, "BACKGROUND_NUMPTS", sim.BACKGROUND_NUMPTS);
 
 	if(parseParameter(params, numparam, "vector method", par_string))
 	{
@@ -1283,7 +1284,11 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	}
 
 	// Background-only mode
-	parseParameter(params, numparam, "background only", sim.background_only);
+	if(!parseParameter(params, numparam, "background only", sim.background_only))
+	{
+		sim.background_only = 0;
+	}
+
 	if(sim.background_only)
 	{
 		if(parseParameter(params, numparam, "background initial redshift", sim.bg_initial_redshift))
@@ -1294,29 +1299,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 		parseParameter(params, numparam, "background final redshift", sim.bg_final_redshift);
 		COUT << "                       Final redshift = " << sim.bg_final_redshift << "\n";
-	}
-
-	parseParameter(params, numparam, "lcdm background", sim.lcdm_background);
-	if(sim.lcdm_background)
-	{
-		if(sim.background_only)
-		{
-			COUT << " /!\\ LCDM Background option ignored\n";
-			sim.lcdm_background = 0;
-		}
-		else
-		{
-			COUT << " Background is LCDM.\n";
-			parseParameter(params, numparam, "switch to f(R) redshift", sim.z_switch_fR_background);
-			if(sim.z_switch_fR_background > 0. && sim.z_switch_fR_background < sim.z_in)
-			{
-				COUT << " Full f(R) background expansion computed after z = " << sim.z_switch_fR_background << endl;
-			}
-			else
-			{
-				sim.z_switch_fR_background = -100.;
-			}
-		}
 	}
 
 	// Parse Gravity Theory
@@ -1356,10 +1338,38 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 				parseParameter(params, numparam, "scale_factor", ic.restart_a);
 				parseParameter(params, numparam, "Hubble", ic.restart_Hubble);
 				parseParameter(params, numparam, "Rbar", ic.restart_Rbar);
+				parseParameter(params, numparam, "dot_Rbar", ic.restart_dot_Rbar);
 			}
 
 			sim.gr_flag = 1;
 			sim.mg_flag = FR;
+
+			if(!parseParameter(params, numparam, "lcdm background", sim.lcdm_background))
+			{
+				sim.lcdm_background = 0;
+			}
+
+			if(sim.lcdm_background)
+			{
+				if(sim.background_only)
+				{
+					COUT << " /!\\ background only mode: ON. LCDM Background option ignored\n";
+					sim.lcdm_background = 0;
+				}
+				else
+				{
+					COUT << " Background is LCDM.\n";
+					parseParameter(params, numparam, "switch to f(R) redshift", sim.z_switch_fR_background);
+					if(sim.z_switch_fR_background > 0. && sim.z_switch_fR_background < sim.z_in)
+					{
+						COUT << " Full f(R) background expansion computed after z = " << sim.z_switch_fR_background << endl;
+					}
+					else
+					{
+						sim.z_switch_fR_background = -100.;
+					}
+				}
+			}
 
 			//TODO: read f(R) params and type
 			parseParameter(params, numparam, "f(R) parameters", sim.fR_params, sim.num_fR_params);
@@ -1481,14 +1491,18 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		sim.gr_flag = 1;
 	}
 
+	if(!parseParameter(params, numparam, "multigrid n-grids", sim.multigrid_n_grids))
+	{
+		sim.multigrid_n_grids = 1; //  TODO: Must default to 1 otherwise it gives malloc() errors
+	}
+
+	if(!parseParameter(params, numparam, "back to GR", sim.back_to_GR))
+	{
+		sim.back_to_GR = 0;
+	}
+
 	if(sim.mg_flag == FR)
 	{
-		parseParameter(params, numparam, "background trace", sim.background_trace);
-		if(sim.background_trace)
-		{
-			COUT << " Background for f(R) gravity computed using the trace equation.\n";
-		}
-		parseParameter(params, numparam, "back to GR", sim.back_to_GR);
 		parseParameter(params, numparam, "quasi-static", sim.quasi_static);
 		if(sim.back_to_GR)
 		{
@@ -1506,10 +1520,13 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 			if(parseParameter(params, numparam, "relaxation method", sim.relaxation_method))
 			{
+				if(sim.relaxation_method == METHOD_FMG)
+				{
+					COUT << " Multigrid: FMG mode" << endl;
+				}
 				parseParameter(params, numparam, "relaxation error", sim.relaxation_error);
 				parseParameter(params, numparam, "multigrid pre-smoothing", sim.multigrid_pre_smoothing);
 				parseParameter(params, numparam, "multigrid post-smoothing", sim.multigrid_post_smoothing);
-				parseParameter(params, numparam, "multigrid n-grids", sim.multigrid_n_grids);
 				if(parseParameter(params, numparam, "multigrid n_cycles", sim.multigrid_n_cycles));
 				else
 				{
@@ -1523,10 +1540,12 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 					if(par_string[0] == 'V' || par_string[0] == 'v')
 					{
 						sim.multigrid_shape = MG_SHAPE_V;
+						COUT << " Multigrid: gamma-cycle shape : V" << endl;
 					}
 					else if(par_string[0] == 'W' || par_string[0] == 'w')
 					{
 						sim.multigrid_shape = MG_SHAPE_W;
+						COUT << " Multigrid: gamma-cycle shape : W" << endl;
 					}
 					else
 					{
@@ -1565,10 +1584,16 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		}
 		parseParameter(params, numparam, "f(R) epsilon background", sim.fR_epsilon_bg);// TODO: put some of these only for f(R)
 	}
-	parseParameter(params, numparam, "check fields", sim.check_fields);
+	if(!parseParameter(params, numparam, "check fields", sim.check_fields))
+	{
+		sim.check_fields = 0;
+	}
 	if(sim.check_fields)
 	{
-		parseParameter(params, numparam, "check pause", sim.check_pause);
+		if(!parseParameter(params, numparam, "check pause", sim.check_pause))
+		{
+			sim.check_pause = 0;
+		}
 	}
 	parseParameter(params, numparam, "check redshift", sim.z_check);
 	parseParameter(params, numparam, "time step limit", sim.steplimit);
@@ -1587,29 +1612,19 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		{
 			if(sim.background_only)
 			{
-				if(sim.background_trace)
-				{
-					strcpy(sim.basename_generic, "fR_trace");
-				}
-				else
-				{
-					strcpy(sim.basename_generic, "fR");
-				}
+				strcpy(sim.basename_generic, "fR_background_only");
 			}
 			else if(sim.quasi_static)
 			{
-				if(sim.background_trace) strcpy(sim.basename_generic, "fR_quasi-static_trace");
-				else strcpy(sim.basename_generic, "fR_quasi-static");
+				strcpy(sim.basename_generic, "fR_quasi-static");
 			}
 			else if(sim.back_to_GR)
 			{
-				if(sim.background_trace) strcpy(sim.basename_generic, "fR_back-to-GR_trace");
-				else strcpy(sim.basename_generic, "fR_back-to-GR");
+				strcpy(sim.basename_generic, "fR_back-to-GR");
 			}
 			else
 			{
-				if(sim.background_trace) strcpy(sim.basename_generic, "fR_trace");
-				else strcpy(sim.basename_generic, "fR");
+				strcpy(sim.basename_generic, "fR");
 			}
 		}
 		else if(sim.gr_flag) strcpy(sim.basename_generic, "lcdm");

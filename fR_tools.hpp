@@ -14,6 +14,12 @@
 #ifndef FR_TOOLS_HEADER
 #define FR_TOOLS_HEADER
 
+void hold()
+{
+	COUT << "Press ENTER to continue..." << std::flush;
+	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
+
 
 ///////////////////// f(R) FUNCTIONS /////////////////////
 
@@ -171,14 +177,14 @@ Real fRR(const double R, const metadata & sim, int code)
 	else if(!output)
 	{
 		cout << " fRR Evaluated to 0 (code " << code << ").\n"
-		     << " R = " << R << ", Rpow = " << Rpow << ", fRR = " << output << "\n Closing...\n";
-		parallel.abortForce();
+		     << " R = " << R << ", Rpow = " << Rpow << ", fRR = " << output << endl;
+		return output;
 	}
 	else if(std::isnan(output))
 	{
 		cout << " fRR Evaluated to NaN (code " << code << ").\n"
-		     << " R = " << R << ", Rpow = " << Rpow << ", fRR = " << output << "\n Closing...\n";
-		parallel.abortForce();
+		     << " R = " << R << ", Rpow = " << Rpow << ", fRR = " << output << endl;
+		return output;
 	}
 }
 
@@ -302,8 +308,10 @@ template <class FieldType>
 double check_field(Field<FieldType> & field, string field_name, long n3, string message = "") // TODO: correct lattice size
 {
   Site x(field.lattice());
-	ios::fmtflags f(cout.flags());
-  double max = 0.,
+	std::ios oldState(nullptr);
+	oldState.copyfmt(std::cout);
+
+	double max = 0.,
 				 hom = 0.,
 				 sum = 0.,
 				 temp;
@@ -331,7 +339,8 @@ double check_field(Field<FieldType> & field, string field_name, long n3, string 
        << "  Max = " << setw(prec + 3) << max
        << "  hom = " << setw(prec + 3) << hom
        << endl;
-	cout.flags(f);
+
+	std::cout.copyfmt(oldState);
 
 	return max;
 }
@@ -346,7 +355,8 @@ template <class FieldType>
 void check_vector_field(Field<FieldType> & field, string field_name, long n3, string message = "") // TODO: correct lattice size
 {
   Site x(field.lattice());
-	ios::fmtflags f( cout.flags() );
+	std::ios oldState(nullptr);
+	oldState.copyfmt(std::cout);
   double max[3] = {0.,0.,0.},
 				 hom[3] = {0.,0.,0.},
 				 temp;
@@ -374,7 +384,7 @@ void check_vector_field(Field<FieldType> & field, string field_name, long n3, st
        << "  hom = " << setw(9) << hom[i]
        << endl;
   }
-	cout.flags(f);
+	std::cout.copyfmt(oldState);
 
 	return;
 }
@@ -861,7 +871,14 @@ double convert_u_to_deltaR(Field<FieldType> & eightpiG_deltaT,
 			for(x.first(); x.test(); x.next())
 			{
 				R_temp = m2 / c2 * ( sqrt(-c1 * exp(-u(x)) / fRbar ) - 1.);
-				fRR_temp = fabs(fRR(R_temp, sim, 5913));
+				fRR_temp = fRR(R_temp, sim, 5913);
+				if(std::isnan(fRR_temp) || !fRR_temp)
+				{
+					cout << " u(x) = " << u(x) << "\n R_temp = " << R_temp << "\n fRR_temp = " << fRR_temp << endl;
+					hold();
+				}
+
+				fRR_temp = fabs(fRR_temp);
 				if(max_fRR < fRR_temp)
 				{
 					max_fRR = fRR_temp;

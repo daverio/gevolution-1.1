@@ -55,35 +55,35 @@
 //
 //////////////////////////
 
-void readIC(metadata & sim,
-						icsettings & ic,
-						cosmology & cosmo,
-						const double fourpiG,
-						double & a,
-						double & tau,
-						double & dtau,
-						double & dtau_old,
-						Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm,
-						Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b,
-						Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm,
-						double * maxvel,
-						Field<Real> * phi,
-						Field<Real> * chi,
-						Field<Real> * Bi,
-						Field<Real> * source,
-						Field<Real> * Sij,
-						Field<Cplx> * scalarFT,
-						Field<Cplx> * BiFT,
-						Field<Cplx> * SijFT,
-						PlanFFT<Cplx> * plan_phi,
-						PlanFFT<Cplx> * plan_chi,
-						PlanFFT<Cplx> * plan_Bi,
-						PlanFFT<Cplx> * plan_source,
-						PlanFFT<Cplx> * plan_Sij,
-						int & cycle,
-						int & snapcount,
-						int & pkcount,
-						int & restartcount)
+void readIC_GR(metadata & sim,
+							 icsettings & ic,
+							 cosmology & cosmo,
+							 const double fourpiG,
+							 double & a,
+							 double & tau,
+							 double & dtau,
+							 double & dtau_old,
+							 Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm,
+							 Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b,
+							 Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm,
+							 double * maxvel,
+							 Field<Real> * phi,
+							 Field<Real> * chi,
+							 Field<Real> * Bi,
+							 Field<Real> * source,
+							 Field<Real> * Sij,
+							 Field<Cplx> * scalarFT,
+							 Field<Cplx> * BiFT,
+							 Field<Cplx> * SijFT,
+							 PlanFFT<Cplx> * plan_phi,
+							 PlanFFT<Cplx> * plan_chi,
+							 PlanFFT<Cplx> * plan_Bi,
+							 PlanFFT<Cplx> * plan_source,
+							 PlanFFT<Cplx> * plan_Sij,
+							 int & cycle,
+							 int & snapcount,
+							 int & pkcount,
+							 int & restartcount)
 {
 	part_simple_info pcls_cdm_info;
 	part_simple_dataType pcls_cdm_dataType;
@@ -112,15 +112,16 @@ void readIC(metadata & sim,
 	projection_init(phi);
 
 	if (ic.z_ic > -1.)
+	{
 		a = 1. / (1. + ic.z_ic);
+	}
 
 	strcpy(pcls_cdm_info.type_name, "part_simple");
 	pcls_cdm_info.mass = 0.;
 	pcls_cdm_info.relativistic = false;
-
 	pcls_cdm->initialize(pcls_cdm_info, pcls_cdm_dataType, &(phi->lattice()), boxSize);
 
-	if ((ext = strstr(ic.pclfile[0], ".h5")) != NULL)
+	if((ext = strstr(ic.pclfile[0], ".h5")) != NULL)
 	{
 		filename.assign(ic.pclfile[0], ext-ic.pclfile[0]);
 		get_fileDsc_global(filename + ".h5", fd);
@@ -128,8 +129,10 @@ void readIC(metadata & sim,
 		dummy1 = (Real *) malloc(3 * fd.numProcPerFile * sizeof(Real));
 		dummy2 = (Real *) malloc(3 * fd.numProcPerFile * sizeof(Real));
 		get_fileDsc_local(filename + ".h5", numpcl, dummy1, dummy2, fd.numProcPerFile);
-		for (i = 0; i < fd.numProcPerFile; i++)
+		for(i = 0; i < fd.numProcPerFile; i++)
+		{
 			sim.numpcl[0] += numpcl[i];
+		}
 		pcls_cdm->loadHDF5(filename, 1);
 		free(numpcl);
 		free(dummy1);
@@ -137,6 +140,7 @@ void readIC(metadata & sim,
 	}
 	else
 	{
+		pcls_cdm->initialize(pcls_cdm_info, pcls_cdm_dataType, &(phi->lattice()), boxSize);
 		i = 0;
 		do
 		{
@@ -153,16 +157,22 @@ void readIC(metadata & sim,
 			{
 				ext = ic.pclfile[0];
 				while (strchr(ext, (int) '.') != NULL)
+				{
 					ext = strchr(ext, (int) '.');
+				}
 				sprintf(ext+1, "%d", i);
 			}
 		}
-		while (i < hdr.num_files);
+		while(i < hdr.num_files);
 
-		if (sim.baryon_flag == 1)
+		if(sim.baryon_flag == 1)
+		{
 			pcls_cdm->parts_info()->mass = cosmo.Omega_cdm / (Real) sim.numpcl[0];
+		}
 		else
+		{
 			pcls_cdm->parts_info()->mass = (cosmo.Omega_cdm + cosmo.Omega_b) / (Real) sim.numpcl[0];
+		}
 	}
 
 	COUT << " " << sim.numpcl[0] << " cdm particles read successfully." << endl;
@@ -222,7 +232,9 @@ void readIC(metadata & sim,
 		maxvel[1] = pcls_b->updateVel(update_q, 0., &phi, 1, &a);
 	}
 	else
+	{
 		sim.baryon_flag = 0;
+	}
 
 	for (p = 0; p < cosmo.num_ncdm; p++)
 	{
@@ -304,9 +316,9 @@ void readIC(metadata & sim,
 
 	if (ic.restart_cycle >= 0)
 	{
-#ifndef CHECK_B
+		#ifndef CHECK_B
 		if (sim.vector_flag == VECTOR_PARABOLIC)
-#endif
+		#endif
 		{
 			filename.assign(ic.metricfile[2*sim.gr_flag]);
 			Bi->loadHDF5(filename);
@@ -409,7 +421,9 @@ void readIC(metadata & sim,
 		projection_init(Bi);
 		projection_T0i_project(pcls_cdm, Bi, phi);
 		if (sim.baryon_flag)
+		{
 			projection_T0i_project(pcls_b, Bi, phi);
+		}
 		projection_T0i_comm(Bi);
 		plan_Bi->execute(FFT_FORWARD);
 		projectFTvector(*BiFT, *BiFT, fourpiG / (double) sim.numpts / (double) sim.numpts);
@@ -418,7 +432,10 @@ void readIC(metadata & sim,
 
 		projection_init(Sij);
 		projection_Tij_project(pcls_cdm, Sij, a, phi);
-		if (sim.baryon_flag) projection_Tij_project(pcls_b, Sij, a, phi);
+		if (sim.baryon_flag)
+		{
+			projection_Tij_project(pcls_b, Sij, a, phi);
+		}
 		projection_Tij_comm(Sij);
 
 		prepareFTsource<Real>(*phi, *Sij, *Sij, 2. * fourpiG / a / (double) sim.numpts / (double) sim.numpts);
@@ -429,29 +446,47 @@ void readIC(metadata & sim,
 	}
 
 	if (ic.restart_tau > 0.)
+	{
 		tau = ic.restart_tau;
+	}
 	else
+	{
 		particleHorizon(a, fourpiG, cosmo);
+	}
 
 	if (ic.restart_dtau > 0.)
+	{
 		dtau_old = ic.restart_dtau;
+	}
 
 	if (sim.Cf / (double) sim.numpts < sim.steplimit / Hconf(a, fourpiG, cosmo))
+	{
 		dtau = sim.Cf / (double) sim.numpts;
+	}
 	else
+	{
 		dtau = sim.steplimit / Hconf(a, fourpiG, cosmo);
+	}
 
 	if (ic.restart_cycle >= 0)
+	{
 		cycle = ic.restart_cycle + 1;
+	}
 
 	while (snapcount < sim.num_snapshot && 1. / a < sim.z_snapshot[snapcount] + 1.)
+	{
 		snapcount++;
+	}
 
 	while (pkcount < sim.num_pk && 1. / a < sim.z_pk[pkcount] + 1.)
+	{
 		pkcount++;
+	}
 
 	while (restartcount < sim.num_restart && 1. / a < sim.z_restart[restartcount] + 1.)
+	{
 		restartcount++;
+	}
 }
 
 
@@ -459,53 +494,51 @@ void readIC(metadata & sim,
 /////////////////////////////////////////////////
 /////////////////////////////////////////////////
 /////////////////////////////////////////////////
-/////////////////////////////////////////////////
-/////////////////////////////////////////////////
-/////////////////////////////////////////////////
-/////////////////////////////////////////////////
-/////////////////////////////////////////////////
-void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
-						const double fourpiG,
-						double & a,
-						double & tau,
-						double & dtau,
-						double & dtau_old,
-						double & dtau_old_2,
-						double & dtau_osci,
-						double & dtau_bg,
-						double & Hubble,
-						double & Rbar,
-						Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm,
-						Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b,
-						Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm,
-						double * maxvel,
-						Field<Real> * phi,
-						Field<Real> * chi,
-						Field<Real> * Bi,
-						Field<Real> * xi,
-						Field<Real> * xi_prev,
-						Field<Real> * zeta,
-						Field<Real> * deltaR,
-						Field<Real> * deltaR_prev,
-						Field<Real> * dot_deltaR,
-						Field<Real> * deltaT,
-						Field<Real> * phidot,
-						Field<Real> * xidot,
-						Field<Real> * source,
-						Field<Real> * Sij,
-						Field<Cplx> * scalarFT,
-						Field<Cplx> * BiFT,
-						Field<Cplx> * SijFT,
-						PlanFFT<Cplx> * plan_phi,
-						PlanFFT<Cplx> * plan_chi,
-						PlanFFT<Cplx> * plan_Bi,
-						PlanFFT<Cplx> * plan_source,
-						PlanFFT<Cplx> * plan_Sij,
-						int & cycle,
-						int & snapcount,
-						int & pkcount,
-						int & restartcount,
-						string filename_bin)
+void readIC_fR(metadata & sim,
+							 icsettings & ic,
+							 cosmology & cosmo,
+							 const double fourpiG,
+							 double & a,
+							 double & tau,
+							 double & dtau,
+							 double & dtau_old,
+							 double & dtau_old_2,
+							 double & dtau_osci,
+							 double & dtau_bg,
+							 double & Hubble,
+							 double & Rbar,
+							 double & dot_Rbar,
+							 Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm,
+							 Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b,
+							 Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm,
+							 double * maxvel,
+							 Field<Real> * phi,
+							 Field<Real> * chi,
+							 Field<Real> * Bi,
+							 Field<Real> * xi,
+							 Field<Real> * xi_prev,
+							 Field<Real> * zeta,
+							 Field<Real> * deltaR,
+							 Field<Real> * deltaR_prev,
+							 Field<Real> * dot_deltaR,
+							 Field<Real> * deltaT,
+							 Field<Real> * phidot,
+							 Field<Real> * xidot,
+							 Field<Real> * source,
+							 Field<Real> * Sij,
+							 Field<Cplx> * scalarFT,
+							 Field<Cplx> * BiFT,
+							 Field<Cplx> * SijFT,
+							 PlanFFT<Cplx> * plan_phi,
+							 PlanFFT<Cplx> * plan_chi,
+							 PlanFFT<Cplx> * plan_Bi,
+							 PlanFFT<Cplx> * plan_source,
+							 PlanFFT<Cplx> * plan_Sij,
+							 int & cycle,
+							 int & snapcount,
+							 int & pkcount,
+							 int & restartcount,
+							 string filename_bin)
 {
 	part_simple_info pcls_cdm_info;
 	part_simple_dataType pcls_cdm_dataType;
@@ -551,9 +584,15 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo,
 		file_bin.read((char*) & dtemp, sizeof(double));
 		dtau_old_2 = dtemp;
 		file_bin.read((char*) & dtemp, sizeof(double));
+		dtau_osci = dtemp;
+		file_bin.read((char*) & dtemp, sizeof(double));
+		dtau_bg = dtemp;
+		file_bin.read((char*) & dtemp, sizeof(double));
 		Hubble = dtemp;
 		file_bin.read((char*) & dtemp, sizeof(double));
 		Rbar = dtemp;
+		file_bin.read((char*) & dtemp, sizeof(double));
+		dot_Rbar = dtemp;
 		file_bin.read((char*) & mdtemp, sizeof(metadata));
 		sim = mdtemp;
 		file_bin.read((char*) & cosmotemp, sizeof(cosmology));

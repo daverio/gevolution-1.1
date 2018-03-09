@@ -34,36 +34,24 @@ void build_diff_u(Field<FieldType> & u,
 }
 
 //////////////////////////
-// Computes the error (locally)
-//////////////////////////
-inline double error_u(const double err, const double val)
-{
-  if(val)
-  {
-    return fabs(err/val);
-  }
-  else return 1.;
-}
-
-
-//////////////////////////
 // in-place calculation of residual Y
 // of equation Y[u] == 0
 // TODO: Details here
 //////////////////////////
-inline double residual(const double diff_u,
-                       const double u,
-                       const double deltaR,
-                       const double rhs,
-                       const double coeff1,
-                       const double Rbar,
-                       const double fbar,
-                       const double fRbar,
-                       const metadata & sim
-                       )
+double residual(const double diff_u,
+                const double u,
+                const double deltaR,
+                const double rhs,
+                const double coeff1,
+                const double Rbar,
+                const double fbar,
+                const double fRbar,
+                const metadata & sim
+                )
 {
   double R = Rbar + deltaR,
          temp;
+
   temp = deltaR;
   // Additional terms
   temp = temp * (1 - fR(R, sim, 885)) + 2. * (f(R, sim, 884) - fbar) - Rbar * fRbar * (exp(u) - 1.);
@@ -85,48 +73,125 @@ inline double dresidual_du(const double diff_u,
                            )
 {
   double temp,
+         temp2,
          R = Rbar + deltaR;
-  temp = fR(R, sim, 737);
+
+  temp2 = fR(R, sim, 737);
+  temp = temp2/fRR(R, sim, 738);
   // Additional terms
-  temp *= (1. + temp)/fRR(R, sim, 738) - deltaR;
-  temp -= Rbar * fRbar * exp(u);
+  temp = temp * (1. + temp2) - temp2 * deltaR - Rbar * fRbar * exp(u);
 
   return diff_u - coeff1 * temp;
 }
 
+//////////////////////////
+// Euclidean Norm
+//////////////////////////
+template <class FieldType>
+double Euclidean_norm(Field<FieldType> & field,
+                     MultiGrid & engine,
+                     const int level,
+                     const long numpts3d)
+{
+  double error = 0,
+         temp;
+  Site x(field.lattice());
+  if(engine.isPartLayer(level))
+  {
+    for(x.first(); x.test(); x.next())
+    {
+      temp = field(x);
+      error += temp*temp;
+    }
+  }
+  parallel.layer(engine.player(level)).sum(error);
+  error = sqrt(error)/numpts3d;
+
+  return error;
+}
 
 
 //////////////////////////
 //
 //////////////////////////
 template <class FieldType>
-double compute_residual_u(Field<FieldType> & diff_u,
-                          Field<FieldType> & u,
-                          Field<FieldType> & deltaR,
-                          Field<FieldType> & rhs,
-                          MultiGrid & engine,
-                          const double coeff1,
-                          const double Rbar,
-                          const double fbar,
-                          const double fRbar,
-                          const metadata & sim,
-                          const int level)
+double compute_error(Field<FieldType> & diff_u,
+                     Field<FieldType> & u,
+                     Field<FieldType> & deltaR,
+                     Field<FieldType> & rhs,
+                     MultiGrid & engine,
+                     const double coeff1,
+                     const double Rbar,
+                     const double fbar,
+                     const double fRbar,
+                     const metadata & sim,
+                     const int level,
+                     const long numpts3d)
 {
   double temp,
          error = 0.;
-  Site x(diff_u.lattice());
+  Site x(u.lattice());
 
-  for(x.first(); x.test(); x.next())
+  if(sim.relaxation_error_method == RELAXATION_ERROR_METHOD_SUM) // Euclidean Norm
   {
-    temp = residual(diff_u(x), u(x), deltaR(x), rhs(x), coeff1, Rbar, fbar, fRbar, sim);
-    temp = error_u(temp, coeff1 * Rbar);
-    if(temp > error)
+    if(engine.isPartLayer(level))
     {
-      error = temp;
+      for(x.first(); x.test(); x.next())
+      {
+        temp = residual(diff_u(x), u(x), deltaR(x), rhs(x), coeff1, Rbar, fbar, fRbar, sim);
+        error += temp*temp;
+      }
+    }
+    parallel.layer(engine.player(level)).sum(error);
+    error = sqrt(error)/numpts3d;
+  }
+  else if(sim.relaxation_error_method == RELAXATION_ERROR_METHOD_MAX) // TODO: Probably wrong, just an attempt
+  {
+    for(x.first(); x.test(); x.next())
+    {
+      temp = residual(diff_u(x), u(x), deltaR(x), rhs(x), coeff1, Rbar, fbar, fRbar, sim);
+      temp = fabs(temp);
+      if(temp > error)
+      {
+        error = temp;
+      }
+      parallel.layer(engine.player(level)).max(error);
     }
   }
-  parallel.layer(engine.player(level)).max(error);
+
   return error;
+}
+
+
+//////////////////////////
+//
+//////////////////////////
+template <class FieldType>
+void build_residual_u(Field<FieldType> & diff_u,
+                      Field<FieldType> & u,
+                      Field<FieldType> & deltaR,
+                      Field<FieldType> & rhs,
+                      Field<FieldType> & destination_for_residual,
+                      MultiGrid & engine,
+                      const double coeff1,
+                      const double Rbar,
+                      const double fbar,
+                      const double fRbar,
+                      const metadata & sim,
+                      const int level)
+{
+  double temp,
+         error = 0.;
+  Site x(u.lattice());
+
+  if(engine.isPartLayer(level))
+  {
+    for(x.first(); x.test(); x.next())
+    {
+      destination_for_residual(x) = residual(diff_u(x), u(x), deltaR(x), rhs(x), coeff1, Rbar, fbar, fRbar, sim);
+    }
+  }
+  return;
 }
 
 
@@ -155,7 +220,7 @@ void update_u(Field<FieldType> & u,
     Y = residual(diff_u(x), u(x), deltaR(x), rhs(x), coeff1, Rbar, fbar, fRbar, sim);
     dY = dresidual_du(diff_u(x), u(x), deltaR(x), coeff1, Rbar, fRbar, sim);
     temp = dY ? Y/dY : 0.;
-    temp = Y/dY;
+    temp = 1.5 * Y/dY;
     u(x) -= temp;
   }
   return;
@@ -249,36 +314,58 @@ double multigrid_u(MultiField<FieldType> * u,
                    const double fRbar,
                    const metadata & sim)
 {
-  int i,
-      mg_gamma = sim.multigrid_shape,
-      n_grids = engine.nl(); // Min between chosen # of grids and maximum allowed by engine
-  long numpts3d[n_grids];
-  double dx[n_grids],
-         coeff1 = a*a/3.;
+  int i;
+  long numpts3d[sim.multigrid_n_grids];
+  double dx[sim.multigrid_n_grids],
+         coeff1 = a*a/3.,
+         error,
+         trunc_error;
 
   numpts3d[0] = (long) sim.numpts * sim.numpts * sim.numpts;
   dx[0] = DX;
-  for(i=1; i<n_grids; i++)
+  for(i=1; i<sim.multigrid_n_grids; i++)
   {
     numpts3d[i] = (long) numpts3d[i-1] / 8;
     dx[i] = dx[i-1]*2.;
   }
 
   // Build eightpiG_deltaT on each level (it will not change)
-  restrict_to_level(eightpiG_deltaT, engine, n_grids-1);
+  restrict_to_level(eightpiG_deltaT, engine, sim.multigrid_n_grids-1);
   copy_field(eightpiG_deltaT[0], rhs[0], coeff1);
+  // Compute initial error
+  // TODO: remove after debugging
+  u[0].updateHalo();
+  build_diff_u(u[0], diff_u[0], dx[0], fRbar);
+  error = compute_error(diff_u[0], u[0], deltaR[0], rhs[0], engine, coeff1, Rbar, fbar, fRbar, sim, 0, numpts3d[0]);
+  COUT << " z = " << 1./a - 1. << ", initial error = " << error << endl;
 
-  gamma_cycle(u, diff_u, deltaR, eightpiG_deltaT, rhs, temp, trunc, engine, a, dx, numpts3d, Rbar, fbar, fRbar, sim, mg_gamma, n_grids, 0);
+  // TODO: remove after debugging
+  check_field(diff_u[0], "diff_u", numpts3d[0]);
+  check_field(u[0], "u", numpts3d[0]);
+  check_field(deltaR[0], "deltaR", numpts3d[0]);
+  check_field(eightpiG_deltaT[0], "eightpiG_deltaT", numpts3d[0]);
+  check_field(rhs[0], "rhs", numpts3d[0]);
+
+  trunc_error = gamma_cycle(u, diff_u, deltaR, eightpiG_deltaT, rhs, temp, trunc, engine, a, dx, numpts3d, Rbar, fbar, fRbar, sim, 0) / 3.;
 
   u[0].updateHalo();
   build_diff_u(u[0], diff_u[0], dx[0], fRbar);
   convert_u_to_deltaR(eightpiG_deltaT[0], deltaR[0], u[0], Rbar, fRbar, sim);
   copy_field(eightpiG_deltaT[0], rhs[0], coeff1);
   //
-  double error = compute_residual_u(diff_u[0], u[0], deltaR[0], rhs[0], engine, coeff1, Rbar, fbar, fRbar, sim, 0);
-  COUT << " z = " << 1./a - 1. << ", error = " << error << endl;
+  error = compute_error(diff_u[0], u[0], deltaR[0], rhs[0], engine, coeff1, Rbar, fbar, fRbar, sim, 0, numpts3d[0]);
+  COUT << " z = " << 1./a - 1. << endl
+       << "              error = " << error << endl
+       << "(1/3) * trunc_error = " << trunc_error << endl;
 
-  return error;
+  // TODO: remove after debugging
+  check_field(diff_u[0], "diff_u", numpts3d[0]);
+  check_field(u[0], "u", numpts3d[0]);
+  check_field(deltaR[0], "deltaR", numpts3d[0]);
+  check_field(eightpiG_deltaT[0], "eightpiG_deltaT", numpts3d[0]);
+  check_field(rhs[0], "rhs", numpts3d[0]);
+
+  return error / trunc_error;
 }
 
 
@@ -304,27 +391,45 @@ double multigrid_FMG(MultiField<FieldType> * u,
 {
   int i,
       j,
-      mg_gamma = sim.multigrid_shape,
-      n_grids = engine.nl(), // Min between chosen # of grids and maximum allowed by engine
-      max_level = n_grids - 1;
-  long numpts3d[n_grids];
-  double dx[n_grids],
+      max_level = sim.multigrid_n_grids - 1; // Not exactly needed, but more redable this way
+  long numpts3d[sim.multigrid_n_grids];
+  double dx[sim.multigrid_n_grids],
          error,
          coeff1 = a*a/3.;
 
   numpts3d[0] = (long) sim.numpts * sim.numpts * sim.numpts;
   dx[0] = DX;
-  for(i=1; i<n_grids; i++)
+  for(i=1; i<sim.multigrid_n_grids; i++)
   {
-    numpts3d[i] = (long) numpts3d[i-1] / 8;
-    dx[i] = dx[i-1]*2.;
+    numpts3d[i] = (long) numpts3d[i-1] / 8.;
+    dx[i] = 2. * dx[i-1];
   }
+
 
   // // Build eightpiG_deltaT on each level (it will not change)
   restrict_to_level(eightpiG_deltaT, engine, max_level);
-  copy_field(eightpiG_deltaT[max_level], rhs[max_level], coeff1);
+  if(engine.isPartLayer(max_level))
+  {
+    copy_field(eightpiG_deltaT[max_level], rhs[max_level], coeff1);
+  }
+  copy_field(eightpiG_deltaT[0], rhs[0], coeff1);
   // build initial guess for u on coarsest grid
   restrict_to_level(u, engine, max_level);
+
+  // Compute initial error
+  // TODO: remove after debugging
+  u[0].updateHalo();
+  build_diff_u(u[0], diff_u[0], dx[0], fRbar);
+  error = compute_error(diff_u[0], u[0], deltaR[0], rhs[0], engine, coeff1, Rbar, fbar, fRbar, sim, 0, numpts3d[0]);
+  COUT << " z = " << 1./a - 1. << ", initial error = " << error << endl;
+
+  // TODO: remove after debugging
+  check_field(diff_u[0], "diff_u", numpts3d[0]);
+  check_field(u[0], "u", numpts3d[0]);
+  check_field(deltaR[0], "deltaR", numpts3d[0]);
+  check_field(eightpiG_deltaT[0], "eightpiG_deltaT", numpts3d[0]);
+  check_field(rhs[0], "rhs", numpts3d[0]);
+
   // solve problem on coarsest grid
   if(engine.isPartLayer(max_level))
   {
@@ -344,7 +449,7 @@ double multigrid_FMG(MultiField<FieldType> * u,
       u[max_level].updateHalo();
       build_diff_u(u[max_level], diff_u[max_level], dx[max_level], fRbar);
       convert_u_to_deltaR(eightpiG_deltaT[max_level], deltaR[max_level], u[max_level], Rbar, fRbar, sim);
-      error = compute_residual_u(diff_u[max_level], u[max_level], deltaR[max_level], rhs[max_level], engine, coeff1, Rbar, fbar, fRbar, sim, max_level);
+      error = compute_error(diff_u[max_level], u[max_level], deltaR[max_level], rhs[max_level], engine, coeff1, Rbar, fbar, fRbar, sim, max_level, numpts3d[max_level]);
 
       if(error < sim.relaxation_error)
       {
@@ -353,7 +458,7 @@ double multigrid_FMG(MultiField<FieldType> * u,
     }
   }
 
-  for(i=n_grids-2; i>=0; i--) // i is the starting level for the V or W mini-cycle
+  for(i=sim.multigrid_n_grids-2; i>=0; i--) // i is the starting level for the V or W mini-cycle
   {
     // prolong i+1 solution
     engine.prolong(u, i+1);
@@ -365,12 +470,11 @@ double multigrid_FMG(MultiField<FieldType> * u,
 
     for(j=0; j<sim.multigrid_n_cycles; j++)
     {
-      gamma_cycle(u, diff_u, deltaR, eightpiG_deltaT, rhs, temp, trunc, engine, a, dx, numpts3d, Rbar, fbar, fRbar, sim, mg_gamma, n_grids, i);
+      gamma_cycle(u, diff_u, deltaR, eightpiG_deltaT, rhs, temp, trunc, engine, a, dx, numpts3d, Rbar, fbar, fRbar, sim, i);
       if(sim.multigrid_check_shape && i && j == sim.multigrid_n_cycles-1)
       {
         for(int k=0; k<i; k++) COUT << "  ";
         COUT << i << endl;
-        // if()
         for(int k=0; k<i-1; k++) COUT << "  ";
         COUT << " /" << endl;
       }
@@ -381,8 +485,15 @@ double multigrid_FMG(MultiField<FieldType> * u,
   build_diff_u(u[0], diff_u[0], dx[0], fRbar);
   convert_u_to_deltaR(eightpiG_deltaT[0], deltaR[0], u[0], Rbar, fRbar, sim);
   copy_field(eightpiG_deltaT[0], rhs[0], coeff1);
-  error = compute_residual_u(diff_u[0], u[0], deltaR[0], rhs[0], engine, coeff1, Rbar, fbar, fRbar, sim, 0);
+  error = compute_error(diff_u[0], u[0], deltaR[0], rhs[0], engine, coeff1, Rbar, fbar, fRbar, sim, 0, numpts3d[0]);
   COUT << " z = " << 1./a - 1. << ", error = " << error << endl;
+
+  // TODO: remove after debugging
+  check_field(diff_u[0], "diff_u", numpts3d[0]);
+  check_field(u[0], "u", numpts3d[0]);
+  check_field(deltaR[0], "deltaR", numpts3d[0]);
+  check_field(eightpiG_deltaT[0], "eightpiG_deltaT", numpts3d[0]);
+  check_field(rhs[0], "rhs", numpts3d[0]);
 
   return error;
 }
@@ -407,13 +518,12 @@ double gamma_cycle(MultiField<FieldType> * u,
                    const double fbar,
                    const double fRbar,
                    const metadata & sim,
-                   const int mg_gamma,
-                   const int n_grids,
                    const int level)
 {
   double coeff1 = a*a/3.,
-         error;
-  int max_level = n_grids-1;
+         error = 0.,
+         trunc_error = 0.;
+  int max_level = sim.multigrid_n_grids-1;
 
   if(engine.isPartLayer(level))
   {
@@ -433,7 +543,7 @@ double gamma_cycle(MultiField<FieldType> * u,
       u[level].updateHalo();
       build_diff_u(u[level], diff_u[level], dx[level], fRbar);
     }
-    add_fields(diff_u[level], 1., deltaR[level], -coeff1, temp[level]);
+    build_residual_u(diff_u[level], u[level], deltaR[level], rhs[level], temp[level], engine, coeff1, Rbar, fbar, fRbar, sim, level);
   }
 
   // Restrict from level to level+1
@@ -454,18 +564,18 @@ double gamma_cycle(MultiField<FieldType> * u,
     u[level+1].updateHalo();
     build_diff_u(u[level+1], diff_u[level+1], dx[level+1], fRbar);
     convert_u_to_deltaR(eightpiG_deltaT[level+1], deltaR[level+1], u[level+1], Rbar, fRbar, sim);
-    add_fields(diff_u[level+1], 1., deltaR[level+1], -coeff1, trunc[level+1]);
+    build_residual_u(diff_u[level+1], u[level+1], deltaR[level+1], rhs[level+1], trunc[level+1], engine, coeff1, Rbar, fbar, fRbar, sim, level);
     subtract_fields(trunc[level+1], temp[level+1], trunc[level+1]);
     add_fields(rhs[level+1], trunc[level+1], rhs[level+1]);
   }
 
-  if(level+1 == n_grids-1) // Coarsest grid
+  if(level+1 == max_level) // Coarsest grid
   {
     if(engine.isPartLayer(max_level))
     {
-      u[max_level].updateHalo();
-      build_diff_u(u[max_level], diff_u[max_level], dx[max_level], fRbar);
-      convert_u_to_deltaR(eightpiG_deltaT[max_level], deltaR[max_level], u[max_level], Rbar, fRbar, sim);
+      // u[max_level].updateHalo();
+      // build_diff_u(u[max_level], diff_u[max_level], dx[max_level], fRbar);
+      // convert_u_to_deltaR(eightpiG_deltaT[max_level], deltaR[max_level], u[max_level], Rbar, fRbar, sim);
       while(true)
       {
         if(sim.multigrid_red_black)
@@ -479,7 +589,7 @@ double gamma_cycle(MultiField<FieldType> * u,
         u[max_level].updateHalo();
         build_diff_u(u[max_level], diff_u[max_level], dx[max_level], fRbar);
         convert_u_to_deltaR(eightpiG_deltaT[max_level], deltaR[max_level], u[max_level], Rbar, fRbar, sim);
-        error = compute_residual_u(diff_u[max_level], u[max_level], deltaR[max_level], rhs[max_level], engine, coeff1, Rbar, fbar, fRbar, sim, max_level);
+        error = compute_error(diff_u[max_level], u[max_level], deltaR[max_level], rhs[max_level], engine, coeff1, Rbar, fbar, fRbar, sim, max_level, numpts3d[max_level]);
 
         if(error < sim.relaxation_error)
         {
@@ -490,9 +600,9 @@ double gamma_cycle(MultiField<FieldType> * u,
   }
   else
   {
-    for(int j=0; j<mg_gamma; j++)
+    for(int j=0; j<sim.multigrid_shape; j++)
     {
-      gamma_cycle(u, diff_u, deltaR, eightpiG_deltaT, rhs, temp, trunc, engine, a, dx, numpts3d, Rbar, fbar, fRbar, sim, mg_gamma, n_grids, level+1);
+      gamma_cycle(u, diff_u, deltaR, eightpiG_deltaT, rhs, temp, trunc, engine, a, dx, numpts3d, Rbar, fbar, fRbar, sim, level+1);
     }
   }
 
@@ -533,6 +643,15 @@ double gamma_cycle(MultiField<FieldType> * u,
       convert_u_to_deltaR(eightpiG_deltaT[level], deltaR[level], u[level], Rbar, fRbar, sim);
     }
   }
+
+  if(!level)
+  {
+    // Compute truncation error
+    trunc_error = Euclidean_norm(trunc[level+1], engine, level+1, numpts3d[level+1]);
+  }
+
+  return trunc_error;
+
 }
 
 

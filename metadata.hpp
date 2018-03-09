@@ -16,7 +16,7 @@
 #ifndef METADATA_HEADER
 #define METADATA_HEADER
 
-#define GEVOLUTION_VERSION 1.1
+#define FREVOLUTION_VERSION 1.0
 
 #ifndef MAX_OUTPUTS
 #define MAX_OUTPUTS 32
@@ -42,26 +42,26 @@
 #define METRICFILE_LENGTH 20
 #endif
 
-#define MASK_PHI         1
-#define MASK_CHI         2
-#define MASK_POT         4
-#define MASK_B           8
-#define MASK_T00         16
-#define MASK_TIJ         32
-#define MASK_RBARE       64
-#define MASK_HIJ         128
-#define MASK_P           256
-#define MASK_GADGET      512
-#define MASK_PCLS        1024
-#define MASK_XSPEC       2048
-#define MASK_DELTA       4096
-#define MASK_DBARE       8192
-#define MASK_XI  		     16384
-#define MASK_ZETA        32768
-#define MASK_DELTAR	     65536
-#define MASK_DELTAT		   131072
-#define MASK_LAPLACE_XI  262144
-#define MASK_LENSING     524288
+#define MASK_PHI        1
+#define MASK_CHI        2
+#define MASK_POT        4
+#define MASK_B          8
+#define MASK_T00        16
+#define MASK_TIJ        32
+#define MASK_RBARE      64
+#define MASK_HIJ        128
+#define MASK_P          256
+#define MASK_GADGET     512
+#define MASK_PCLS       1024
+#define MASK_XSPEC      2048
+#define MASK_DELTA      4096
+#define MASK_DBARE      8192
+#define MASK_XI  		    16384
+#define MASK_ZETA       32768
+#define MASK_DELTAR	    65536
+#define MASK_DELTAT     131072
+#define MASK_LAPLACE_XI 262144
+#define MASK_LENSING    524288
 
 #define ICFLAG_CORRECT_DISPLACEMENT 1
 #define ICFLAG_KSPHERE              2
@@ -207,7 +207,6 @@ struct metadata
 	int num_fR_params;
 	int quasi_static;
 	int background_only;
-	int background_trace;
 	double bg_initial_redshift;
 	double bg_final_redshift;
 	int lcdm_background;
@@ -286,7 +285,6 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "num_fR_params: " << sim.num_fR_params << "\n";
 	os << "quasi_static: " << sim.quasi_static << "\n";
 	os << "background_only: " << sim.background_only << "\n";
-	os << "background_trace: " << sim.background_trace << "\n";
 	os << "bg_initial_redshift: " << sim.bg_initial_redshift << "\n";
 	os << "bg_final_redshift: " << sim.bg_final_redshift << "\n";
 	os << "lcdm_background: " << sim.lcdm_background << "\n";
@@ -372,7 +370,7 @@ struct icsettings
 	double n_s;
 	double k_pivot;
 
-	///f(R) restart
+	// f(R) restart
 	double restart_dtau_old;
 	double restart_dtau_old_2;
 	double restart_dtau_osci;
@@ -380,6 +378,7 @@ struct icsettings
 	double restart_a;
 	double restart_Hubble;
 	double restart_Rbar;
+	double restart_dot_Rbar;
 };
 
 struct cosmology

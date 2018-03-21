@@ -1752,6 +1752,7 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 			gsl_spline_init(nbspline, tk_t1->x, temp2, tk_t1->size);
 		}
 
+
 		pkspline = gsl_spline_alloc(gsl_interp_cspline, tk_d1->size);
 		gsl_spline_init(pkspline, tk_d1->x, temp1, tk_d1->size);
 		gsl_spline_free(tk_d1);
@@ -2028,6 +2029,7 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 		generateDisplacementField(*scalarFT, 0., tk_d1, (unsigned int) ic.seed, ic.flags & ICFLAG_KSPHERE);
 		gsl_spline_free(tk_d1);
 	}
+
 
 	plan_chi->execute(FFT_BACKWARD);
 	chi->updateHalo();	// chi now contains the CDM displacement

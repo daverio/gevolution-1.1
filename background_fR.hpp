@@ -5,7 +5,7 @@
 // code components related to background evolution for the f(R) model
 //
 // Author: David Daverio (Cambridge University)
-//         Lorenzo Reverberi (Cape Town University, Czech Academy of Sciences & CEICO, Prague)
+//         Lorenzo Reverberi (CEICO - Czech Academy of Sciences, Prague)
 //
 // Last modified: February 2016
 //

@@ -5,7 +5,7 @@
 // code components related to f(R)
 //
 // Authors: David Daverio (Cambridge University)
-//          Lorenzo Reverberi (Cape Town University)
+//          Lorenzo Reverberi (CEICO - Czech Academy of Sciences, Prague)
 //
 // Last modified: February 2016
 //
@@ -17,6 +17,7 @@
 void hold()
 {
 	COUT << "Press ENTER to continue..." << std::flush;
+	MPI_Barrier(MPI_COMM_WORLD);
 	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
 
@@ -310,7 +311,7 @@ double check_field(Field<FieldType> & field, string field_name, long n3, string 
   Site x(field.lattice());
 	std::ios oldState(nullptr);
 	oldState.copyfmt(std::cout);
-
+	int prec = 16;
 	double max = 0.,
 				 hom = 0.,
 				 sum = 0.,
@@ -332,10 +333,8 @@ double check_field(Field<FieldType> & field, string field_name, long n3, string 
   sum /= n3;
   hom /= n3;
 
-	int prec = 16;
-	COUT << scientific << setprecision(prec);
-  COUT << message
-       << setw(17)   << field_name
+	COUT << message << scientific << setprecision(prec)
+			 << setw(17) << field_name
        << "  Max = " << setw(prec + 3) << max
        << "  hom = " << setw(prec + 3) << hom
        << endl;
@@ -357,15 +356,14 @@ void check_vector_field(Field<FieldType> & field, string field_name, long n3, st
   Site x(field.lattice());
 	std::ios oldState(nullptr);
 	oldState.copyfmt(std::cout);
+	int prec = 16;
   double max[3] = {0.,0.,0.},
 				 hom[3] = {0.,0.,0.},
 				 temp;
-  int i;
 
-  COUT << message;
-	COUT << scientific << setprecision(6);
+	COUT << message << scientific << setprecision(prec);
 
-  for(i=0; i<3; i++)
+  for(int i=0; i<3; i++)
   {
     for(x.first(); x.test(); x.next())
     {
@@ -379,16 +377,30 @@ void check_vector_field(Field<FieldType> & field, string field_name, long n3, st
   parallel.max(max[i]);
 	hom[i] /= n3;
 
-  COUT << setw(14)    << field_name << "[" << i << "]"
-       << "  Max = " << setw(9) << max[i]
-       << "  hom = " << setw(9) << hom[i]
+  COUT << setw(14) << field_name << "[" << i << "]"
+       << "  Max = " << setw(prec + 3) << max[i]
+       << "  hom = " << setw(prec + 3) << hom[i]
        << endl;
   }
+
 	std::cout.copyfmt(oldState);
 
 	return;
 }
 
+
+void check_particles(metadata sim,
+										 Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm
+										 )
+{
+	int i, num[8] = {0, 262143, 1, 26, 30000, 180024, 220023, 262142};
+
+	for(i=0; i<2; i++)
+	{
+		pcls_cdm->coutPart(num[i]);
+	}
+	MPI_Barrier(MPI_COMM_WORLD);
+}
 
 // Compute max of fRR
 // TODO Add description

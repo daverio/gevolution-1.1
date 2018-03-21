@@ -59,7 +59,8 @@ void writeRestartSettings_fR(metadata & sim,
 		sprintf(buffer_bin, "%s%s.ini.bin", sim.restart_path, sim.basename_restart);
 	}
 
-	outfile_bin.open(buffer_bin,ios::out|ios::trunc|ios::binary);
+	outfile_bin.open(buffer_bin, ios::out | ios::trunc | ios::binary);
+
 	if(outfile_bin.is_open())
 	{
 		outfile_bin.write((char*) & a, sizeof(double));
@@ -74,6 +75,7 @@ void writeRestartSettings_fR(metadata & sim,
 		outfile_bin.write((char*) & dot_Rbar, sizeof(double));
 		outfile_bin.write((char*) & sim, sizeof(metadata));
 		outfile_bin.write((char*) & cosmo, sizeof(cosmology));
+
 		outfile_bin.close();
 	}
 	else
@@ -82,6 +84,7 @@ void writeRestartSettings_fR(metadata & sim,
 	}
 
 	outfile = fopen(buffer, "w");
+
 	if(outfile == NULL)
 	{
 		cout << " error opening file for restart settings!" << endl;
@@ -97,8 +100,9 @@ void writeRestartSettings_fR(metadata & sim,
 		{
 			fprintf(outfile, "requested ");
 		}
+
 		fprintf(outfile, "at redshift z=%f\n\n", (1./a)-1.);
-		fprintf(outfile, "# info related to IC generation\n\n");
+		fprintf(outfile, "\n#=========================== IC generation ===========================#\n");
 		fprintf(outfile, "IC generator       = restart\n");
 		if(restartcount >= 0)
 		{
@@ -108,60 +112,60 @@ void writeRestartSettings_fR(metadata & sim,
 		{
 			buffer[0] = '\0';
 		}
-		fprintf(outfile, "particle file      = %s%s%s_cdm.h5", sim.restart_path, sim.basename_restart, buffer);
-		if(sim.baryon_flag)
-		{
-			fprintf(outfile, ", %s%s%s_b.h5", sim.restart_path, sim.basename_restart, buffer);
-		}
-		for(i = 0; i < cosmo.num_ncdm; i++)
-		{
-			fprintf(outfile, ", %s%s%s_ncdm%d.h5", sim.restart_path, sim.basename_restart, buffer, i);
-		}
-		fprintf(outfile, "\n");
-		if(sim.gr_flag > 0)
-		{
-			fprintf(outfile, "metric file        = %s%s%s_phi.h5", sim.restart_path, sim.basename_restart, buffer);
-			fprintf(outfile, ", %s%s%s_chi.h5", sim.restart_path, sim.basename_restart, buffer);
 
-			if(sim.vector_flag == VECTOR_PARABOLIC)
-			{
-				fprintf(outfile, ", %s%s%s_B.h5", sim.restart_path, sim.basename_restart, buffer);
-			}
-			else
-			{
-				#ifdef CHECK_B
-				fprintf(outfile, ", %s%s%s_B_check.h5", sim.restart_path, sim.basename_restart, buffer);
-				#else
-				fprintf(outfile, ", B_unused.h5");
-				#endif
-			}
-			if(sim.mg_flag == FR)
-			{
-				fprintf(outfile, ", %s%s%s_xi.h5", sim.restart_path, sim.basename_restart, buffer);
-				fprintf(outfile, ", %s%s%s_xi_prev.h5", sim.restart_path, sim.basename_restart, buffer);
-				fprintf(outfile, ", %s%s%s_zeta.h5", sim.restart_path, sim.basename_restart, buffer);
-				fprintf(outfile, ", %s%s%s_deltaR.h5", sim.restart_path, sim.basename_restart, buffer);
-				fprintf(outfile, ", %s%s%s_deltaR_prev.h5", sim.restart_path, sim.basename_restart, buffer);
-				fprintf(outfile, ", %s%s%s_dot_deltaR.h5", sim.restart_path, sim.basename_restart, buffer);
-				fprintf(outfile, ", %s%s%s_eightpiG_deltaT.h5", sim.restart_path, sim.basename_restart, buffer);
-				fprintf(outfile, ", %s%s%s_phidot.h5", sim.restart_path, sim.basename_restart, buffer);
-				fprintf(outfile, ", %s%s%s_xidot.h5", sim.restart_path, sim.basename_restart, buffer);
-				fprintf(outfile, ", %s%s%s_laplace_xi.h5", sim.restart_path, sim.basename_restart, buffer);
-			}
-			fprintf(outfile, "\n");
-		}
-		else if(sim.vector_flag == VECTOR_PARABOLIC)
+		if(sim.hibernation_save_mode == HIB_SAVE_HDF5)
 		{
-			fprintf(outfile, "metric file        = %s%s%s_B.h5\n", sim.restart_path, sim.basename_restart, buffer);
+			fprintf(outfile, "particle file      = %s%s%s_cdm.h5", sim.restart_path, sim.basename_restart, buffer);
+			if(sim.baryon_flag)
+			{
+				fprintf(outfile, ", %s%s%s_b.h5", sim.restart_path, sim.basename_restart, buffer);
+			}
+			for(i=0; i<cosmo.num_ncdm; i++)
+			{
+				fprintf(outfile, ", %s%s%s_ncdm%d.h5", sim.restart_path, sim.basename_restart, buffer, i);
+			}
 		}
-		#ifdef CHECK_B
 		else
 		{
-			fprintf(outfile, "metric file        = %s%s%s_B_check.h5\n", sim.restart_path, sim.basename_restart, buffer);
+			fprintf(outfile, "particle file      = %s%s%s_cdm", sim.restart_path, sim.basename_restart, buffer);
+			if(sim.baryon_flag)
+			{
+				fprintf(outfile, ", %s%s%s_b", sim.restart_path, sim.basename_restart, buffer);
+			}
+			for(i=0; i<cosmo.num_ncdm; i++)
+			{
+				fprintf(outfile, ", %s%s%s_ncdm%d", sim.restart_path, sim.basename_restart, buffer, i);
+			}
 		}
-		#endif
 
-		// TODO: check what goes only in f(R)
+		fprintf(outfile, "\n");
+		fprintf(outfile, "metric file        = %s%s%s_phi.h5", sim.restart_path, sim.basename_restart, buffer);
+		fprintf(outfile, ", %s%s%s_chi.h5", sim.restart_path, sim.basename_restart, buffer);
+
+		if(sim.vector_flag == VECTOR_PARABOLIC)
+		{
+			fprintf(outfile, ", %s%s%s_B.h5", sim.restart_path, sim.basename_restart, buffer);
+		}
+		else
+		{
+			#ifdef CHECK_B
+				fprintf(outfile, ", %s%s%s_B_check.h5", sim.restart_path, sim.basename_restart, buffer);
+			#else
+				fprintf(outfile, ", B_unused.h5");
+			#endif
+		}
+
+		fprintf(outfile, ", %s%s%s_xi.h5", sim.restart_path, sim.basename_restart, buffer);
+		fprintf(outfile, ", %s%s%s_xi_prev.h5", sim.restart_path, sim.basename_restart, buffer);
+		fprintf(outfile, ", %s%s%s_zeta.h5", sim.restart_path, sim.basename_restart, buffer);
+		fprintf(outfile, ", %s%s%s_deltaR.h5", sim.restart_path, sim.basename_restart, buffer);
+		fprintf(outfile, ", %s%s%s_deltaR_prev.h5", sim.restart_path, sim.basename_restart, buffer);
+		fprintf(outfile, ", %s%s%s_dot_deltaR.h5", sim.restart_path, sim.basename_restart, buffer);
+		fprintf(outfile, ", %s%s%s_eightpiG_deltaT.h5", sim.restart_path, sim.basename_restart, buffer);
+		fprintf(outfile, ", %s%s%s_phidot.h5", sim.restart_path, sim.basename_restart, buffer);
+		fprintf(outfile, ", %s%s%s_xidot.h5", sim.restart_path, sim.basename_restart, buffer);
+		fprintf(outfile, "\n");
+		// TODO: check what is necessary
 		fprintf(outfile, "restart redshift    = %f\n", (1./a) - 1.);
 		fprintf(outfile, "cycle               = %d\n", cycle);
 		fprintf(outfile, "tau                 = %e\n", tau);
@@ -176,19 +180,22 @@ void writeRestartSettings_fR(metadata & sim,
 		fprintf(outfile, "dot_Rbar            = %e\n", dot_Rbar);
 		fprintf(outfile, "fRevolution version = %g\n", FREVOLUTION_VERSION); //
 		fprintf(outfile, "seed                = %d\n", ic.seed);
+
 		if(ic.flags & ICFLAG_KSPHERE)
 		{
-			fprintf(outfile, "k-domain           = sphere\n");
+			fprintf(outfile, "k-domain            = sphere\n");
 		}
 		else
 		{
-			fprintf(outfile, "k-domain           = cube\n");
+			fprintf(outfile, "k-domain            = cube\n");
 		}
-		fprintf(outfile, "\n\n############################ primordial power spectrum ############################\n");
+
+		fprintf(outfile, "\n#=========================== primordial power spectrum ===========================#\n");
 		fprintf(outfile, "k_pivot = %lg\n", ic.k_pivot);
 		fprintf(outfile, "A_s     = %lg\n", ic.A_s);
 		fprintf(outfile, "n_s     = %lg\n", ic.n_s);
-		fprintf(outfile, "\n\n############################ cosmological parameters ############################\n");
+
+		fprintf(outfile, "\n#=========================== cosmological parameters ===========================#\n");
 		fprintf(outfile, "h         = %lg\n", cosmo.h);
 		fprintf(outfile, "Omega_cdm = %.15le\n", cosmo.Omega_cdm);
 		fprintf(outfile, "Omega_b   = %.15le\n", cosmo.Omega_b);
@@ -198,29 +205,31 @@ void writeRestartSettings_fR(metadata & sim,
 		if(cosmo.num_ncdm > 0)
 		{
 			fprintf(outfile, "m_cdm     = ");
-			for(i = 0; i < cosmo.num_ncdm - 1; i++)
+			for(i=0; i<cosmo.num_ncdm - 1; i++)
 			{
 				fprintf(outfile, "%9lf, ", cosmo.m_ncdm[i]);
 			}
 			fprintf(outfile, "%9lf\n", cosmo.m_ncdm[i]);
 			fprintf(outfile, "T_cdm     = ");
-			for(i = 0; i < cosmo.num_ncdm - 1; i++)
+			for(i=0; i<cosmo.num_ncdm - 1; i++)
 			{
 				fprintf(outfile, "%9lf, ", cosmo.T_ncdm[i]);
 			}
 			fprintf(outfile, "%9lf\n", cosmo.T_ncdm[i]);
 			fprintf(outfile, "deg_cdm   = ");
-			for(i = 0; i < cosmo.num_ncdm - 1; i++)
+			for(i=0; i<cosmo.num_ncdm - 1; i++)
 			{
 				fprintf(outfile, "%lf, ", cosmo.deg_ncdm[i]);
 			}
 			fprintf(outfile, "%lg\n", cosmo.deg_ncdm[i]);
 		}
-		fprintf(outfile, "\n\n############################ simulation settings ############################\n");
+
+		fprintf(outfile, "\n#=========================== simulation settings ===========================#\n");
 		if(sim.baryon_flag > 0)
 		{
 			fprintf(outfile, "baryon treatment    = sample\n");
 		}
+
 		if(sim.radiation_flag > 0)
 		{
 			fprintf(outfile, "radiation treatment = CLASS\n");
@@ -228,7 +237,7 @@ void writeRestartSettings_fR(metadata & sim,
 			if(cosmo.num_ncdm > 0)
 			{
 				fprintf(outfile, "switch delta_ncdm   = ");
-				for(i = 0; i < cosmo.num_ncdm - 1; i++)
+				for(i=0; i<cosmo.num_ncdm-1; i++)
 				{
 					fprintf(outfile, "%lf, ", sim.z_switch_deltancdm[i]);
 				}
@@ -258,88 +267,78 @@ void writeRestartSettings_fR(metadata & sim,
 		fprintf(outfile, "check fields        = %d\n", sim.check_fields);
 		fprintf(outfile, "CYCLE_INFO_INTERVAL = %d\n", sim.CYCLE_INFO_INTERVAL);
 		fprintf(outfile, "BACKGROUND_NUMPTS   = %d\n", sim.BACKGROUND_NUMPTS);
+		fprintf(outfile, "gravity theory      = fr\n");
 
-		if(sim.gr_flag > 0)
+		fprintf(outfile, "\n#=========================== f(R) settings ===========================#\n");
+		if(sim.fR_type == FR_TYPE_RN || sim.fR_type == FR_TYPE_R2)
 		{
-			if(sim.mg_flag == GENREL)
+			if(sim.fR_type == FR_TYPE_R2)
 			{
-				fprintf(outfile, "gravity theory      = GR\n");
+				fprintf(outfile, "# WARNING: f(R) parameters for R + R^2 model hav already been rescaled. See fR_tools.hpp for additional information.\n");
 			}
-			else if(sim.mg_flag == FR)
-			{
-				fprintf(outfile, "gravity theory      = fr\n");
-				fprintf(outfile, "\n\n############################ f(R) settings ############################\n");
-				if(sim.fR_type == FR_TYPE_RN || sim.fR_type == FR_TYPE_R2)
-				{
-					if(sim.fR_type == FR_TYPE_R2)
-					{
-						fprintf(outfile, "# WARNING: f(R) parameters for R + R^2 model hav already been rescaled. See FR_tools.hpp for additional information.\n");
-					}
-					fprintf(outfile, "f(R) type                   = RN\n");
-					fprintf(outfile, "f(R) parameters             = %e, %f\n", sim.fR_params[0], sim.fR_params[1]);
-				}
-				else if(sim.fR_type == FR_TYPE_DELTA)
-				{
-					fprintf(outfile, "f(R) type                   = DE\n");
-					fprintf(outfile, "f(R) parameters             = %e, %f\n", sim.fR_params[0], sim.fR_params[1]);
-				}
-				else if(sim.fR_type == FR_TYPE_HU_SAWICKI)
-				{
-					fprintf(outfile, "# WARNING: f(R) parameters for Hu-Sawicki model have already been rescaled. See FR_tools.hpp for additional information.\n");
-					fprintf(outfile, "f(R) type                   = HS\n");
-					fprintf(outfile, "f(R) parameters             = %f, %f, %f, %f\n",sim.fR_params[0], sim.fR_params[1], sim.fR_params[2], sim.fR_params[3]);
-				}
-				else
-				{
-					COUT << " error f(R) type not recognized!" << endl;
-				}
-
-				fprintf(outfile, "f(R) epsilon background     = %e\n", sim.fR_epsilon_bg);
-				fprintf(outfile, "f(R) epsilon fields         = %e\n", sim.fR_epsilon_fields);
-				fprintf(outfile, "f(R) target precision       = %e\n", sim.fR_target_precision);
-				fprintf(outfile, "back to GR                  = %d\n", sim.back_to_GR);
-				fprintf(outfile, "check pause                 = %d\n", sim.check_pause);
-				fprintf(outfile, "background only             = %d\n", sim.background_only);
-				fprintf(outfile, "background initial redshift = %e\n", sim.bg_initial_redshift);
-				fprintf(outfile, "background final redshift   = %e\n", sim.bg_final_redshift);
-				fprintf(outfile, "lcdm background             = %d\n", sim.lcdm_background);
-				fprintf(outfile, "switch to f(R) redshift     = %e\n", sim.z_switch_fR_background);
-				fprintf(outfile, "quasi-static                = %d\n", sim.quasi_static);
-				fprintf(outfile, "check redshift              = %e\n", sim.z_check);
-				fprintf(outfile, "\n\n############################ Multigrid and relaxation ############################\n");
-				fprintf(outfile, "relaxation method           = %d\n", sim.relaxation_method);
-				fprintf(outfile, "multigrid pre-smoothing     = %d\n", sim.multigrid_pre_smoothing);
-				fprintf(outfile, "multigrid post-smoothing    = %d\n", sim.multigrid_post_smoothing);
-				fprintf(outfile, "multigrid n-grids           = %d\n", sim.multigrid_n_grids);
-				fprintf(outfile, "multigrid n_cycles          = %d\n", sim.multigrid_n_cycles);
-				fprintf(outfile, "relaxation error            = %e\n", sim.relaxation_error);
-				fprintf(outfile, "red black                   = %d\n", sim.multigrid_red_black);
-				fprintf(outfile, "check shape                 = %d\n", sim.multigrid_check_shape);
-				if(sim.multigrid_shape == MG_SHAPE_V)
-				{
-					fprintf(outfile, "multigrid shape             = V\n");
-				}
-				else if(sim.multigrid_shape == MG_SHAPE_W)
-				{
-					fprintf(outfile, "multigrid shape             = W\n");
-				}
-
-				if(sim.relaxation_error_method == RELAXATION_ERROR_METHOD_SUM)
-				{
-					fprintf(outfile, "relaxation error method     = SUM\n");
-				}
-				else if(sim.relaxation_error_method == RELAXATION_ERROR_METHOD_MAX)
-				{
-					fprintf(outfile, "relaxation error method     = MAX\n");
-				}
-			}
+			fprintf(outfile, "f(R) type                   = RN\n");
+			fprintf(outfile, "f(R) parameters             = %e, %f\n", sim.fR_params[0], sim.fR_params[1]);
+		}
+		else if(sim.fR_type == FR_TYPE_DELTA)
+		{
+			fprintf(outfile, "f(R) type                   = DE\n");
+			fprintf(outfile, "f(R) parameters             = %e, %f\n", sim.fR_params[0], sim.fR_params[1]);
+		}
+		else if(sim.fR_type == FR_TYPE_HU_SAWICKI)
+		{
+			fprintf(outfile, "# WARNING: f(R) parameters for Hu-Sawicki model have already been rescaled. See fR_tools.hpp for additional information.\n");
+			fprintf(outfile, "f(R) type                   = HS\n");
+			fprintf(outfile, "f(R) parameters             = %f, %f, %f, %f\n",sim.fR_params[0], sim.fR_params[1], sim.fR_params[2], sim.fR_params[3]);
 		}
 		else
 		{
-			fprintf(outfile, "gravity theory      = N\n");
+			COUT << " error f(R) type not recognized!" << endl;
 		}
 
-		fprintf(outfile, "\n############################ output ############################\n\n");
+		fprintf(outfile, "f(R) epsilon background     = %e\n", sim.fR_epsilon_bg);
+		fprintf(outfile, "f(R) epsilon fields         = %e\n", sim.fR_epsilon_fields);
+		fprintf(outfile, "f(R) target precision       = %e\n", sim.fR_target_precision);
+		fprintf(outfile, "back to GR                  = %d\n", sim.back_to_GR);
+		fprintf(outfile, "check pause                 = %d\n", sim.check_pause);
+		fprintf(outfile, "background only             = %d\n", sim.background_only);
+		if(sim.background_only)
+		{
+			fprintf(outfile, "background initial redshift = %lg\n", sim.bg_initial_redshift);
+			fprintf(outfile, "background final redshift   = %lg\n", sim.bg_final_redshift);
+		}
+		fprintf(outfile, "lcdm background             = %d\n", sim.lcdm_background);
+		fprintf(outfile, "switch to f(R) redshift     = %f\n", sim.z_switch_fR_background);
+		fprintf(outfile, "quasi-static                = %d\n", sim.quasi_static);
+		fprintf(outfile, "check redshift              = %f\n", sim.z_check);
+
+		fprintf(outfile, "\n#=========================== Multigrid and relaxation ===========================#\n");
+		fprintf(outfile, "relaxation method           = %d\n", sim.relaxation_method);
+		fprintf(outfile, "multigrid pre-smoothing     = %d\n", sim.multigrid_pre_smoothing);
+		fprintf(outfile, "multigrid post-smoothing    = %d\n", sim.multigrid_post_smoothing);
+		fprintf(outfile, "multigrid n-grids           = %d\n", sim.multigrid_n_grids);
+		fprintf(outfile, "multigrid n-cycles          = %d\n", sim.multigrid_n_cycles);
+		fprintf(outfile, "relaxation error            = %e\n", sim.relaxation_error);
+		fprintf(outfile, "red black                   = %d\n", sim.multigrid_red_black);
+		fprintf(outfile, "check shape                 = %d\n", sim.multigrid_check_shape);
+		if(sim.multigrid_shape == MG_SHAPE_V)
+		{
+			fprintf(outfile, "multigrid shape             = V\n");
+		}
+		else if(sim.multigrid_shape == MG_SHAPE_W)
+		{
+			fprintf(outfile, "multigrid shape             = W\n");
+		}
+
+		if(sim.relaxation_error_method == RELAXATION_ERROR_METHOD_SUM)
+		{
+			fprintf(outfile, "relaxation error method     = SUM\n");
+		}
+		else if(sim.relaxation_error_method == RELAXATION_ERROR_METHOD_MAX)
+		{
+			fprintf(outfile, "relaxation error method     = MAX\n");
+		}
+
+		fprintf(outfile, "\n#=========================== output ===========================#\n");
 		fprintf(outfile, "output path        = %s\n", sim.output_path);
 		fprintf(outfile, "generic file base  = %s\n", sim.basename_generic);
 		fprintf(outfile, "snapshot file base = %s\n", sim.basename_snapshot);
@@ -347,12 +346,13 @@ void writeRestartSettings_fR(metadata & sim,
 		if(sim.num_snapshot > 0)
 		{
 			fprintf(outfile, "snapshot redshifts = ");
-			for(i = 0; i < sim.num_snapshot - 1; i++)
+			for(i=0; i<sim.num_snapshot - 1; i++)
 			{
 				fprintf(outfile, "%lg, ", sim.z_snapshot[i]);
 			}
 			fprintf(outfile, "%lg\n", sim.z_snapshot[i]);
 		}
+
 		if(sim.out_snapshot)
 		{
 			fprintf(outfile, "snapshot outputs   = ");
@@ -364,6 +364,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_CHI)
 			{
 				fprintf(outfile, "chi");
@@ -372,6 +373,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_POT)
 			{
 				fprintf(outfile, "psiN");
@@ -380,6 +382,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_B)
 			{
 				fprintf(outfile, "B");
@@ -388,6 +391,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_T00)
 			{
 				fprintf(outfile, "T00");
@@ -396,6 +400,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_TIJ)
 			{
 				fprintf(outfile, "Tij");
@@ -404,6 +409,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_RBARE)
 			{
 				fprintf(outfile, "rhoN");
@@ -412,6 +418,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_HIJ)
 			{
 				fprintf(outfile, "hij");
@@ -420,6 +427,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_P)
 			{
 				fprintf(outfile, "p");
@@ -428,6 +436,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_GADGET)
 			{
 				fprintf(outfile, "Gadget2");
@@ -436,6 +445,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_PCLS)
 			{
 				fprintf(outfile, "particles");
@@ -444,6 +454,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_DELTA)
 			{
 				fprintf(outfile, "delta");
@@ -452,6 +463,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_DBARE)
 			{
 				fprintf(outfile, "deltaN");
@@ -460,6 +472,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_XI)
 			{
 				fprintf(outfile, "xi");
@@ -468,6 +481,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_ZETA)
 			{
 				fprintf(outfile, "zeta");
@@ -476,6 +490,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_DELTAR)
 			{
 				fprintf(outfile, "deltaR");
@@ -484,6 +499,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_DELTAT)
 			{
 				fprintf(outfile, "eightpiG_deltaT");
@@ -492,6 +508,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_LAPLACE_XI)
 			{
 				fprintf(outfile, "laplace_xi");
@@ -502,25 +519,28 @@ void writeRestartSettings_fR(metadata & sim,
 		if(sim.out_snapshot & MASK_GADGET)
 		{
 			fprintf(outfile, "tracer factor      = %d", sim.tracer_factor[0]);
-			for(i = 1; i <= sim.baryon_flag + cosmo.num_ncdm; i++)
+			for(i=1; i <= sim.baryon_flag + cosmo.num_ncdm; i++)
 			{
 				fprintf(outfile, ", %d", sim.tracer_factor[i]);
 			}
 			fprintf(outfile, "\n");
 		}
+
 		if(sim.downgrade_factor > 1)
 		{
 			fprintf(outfile, "downgrade factor   = %d", sim.downgrade_factor);
 		}
+
 		if(sim.num_pk > 0)
 		{
 			fprintf(outfile, "Pk redshifts       = ");
-			for(i = 0; i < sim.num_pk - 1; i++)
+			for(i=0; i<sim.num_pk-1; i++)
 			{
 				fprintf(outfile, "%lg, ", sim.z_pk[i]);
 			}
 			fprintf(outfile, "%lg\n", sim.z_pk[i]);
 		}
+
 		if(sim.out_pk)
 		{
 			fprintf(outfile, "Pk outputs         = ");
@@ -532,6 +552,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_CHI)
 			{
 				fprintf(outfile, "chi");
@@ -540,6 +561,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_POT)
 			{
 				fprintf(outfile, "psiN");
@@ -548,6 +570,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_B)
 			{
 				fprintf(outfile, "B");
@@ -556,6 +579,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_T00)
 			{
 				fprintf(outfile, "T00");
@@ -564,6 +588,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_TIJ)
 			{
 				fprintf(outfile, "Tij");
@@ -572,6 +597,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_RBARE)
 			{
 				fprintf(outfile, "rhoN");
@@ -580,6 +606,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_HIJ)
 			{
 				fprintf(outfile, "hij");
@@ -588,6 +615,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_P)
 			{
 				fprintf(outfile, "p");
@@ -596,6 +624,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_XSPEC)
 			{
 				fprintf(outfile, "X-spectra");
@@ -604,6 +633,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_DELTA)
 			{
 				fprintf(outfile, "delta");
@@ -612,6 +642,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_DBARE)
 			{
 				fprintf(outfile, "deltaN");
@@ -620,6 +651,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_XI)
 			{
 				fprintf(outfile, "xi");
@@ -628,6 +660,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_ZETA)
 			{
 				fprintf(outfile, "zeta");
@@ -636,6 +669,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_DELTAR)
 			{
 				fprintf(outfile, "deltaR");
@@ -644,6 +678,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_DELTAT)
 			{
 				fprintf(outfile, "eightpiG_deltaT");
@@ -652,6 +687,7 @@ void writeRestartSettings_fR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_LAPLACE_XI)
 			{
 				fprintf(outfile, "laplace_xi");
@@ -660,25 +696,37 @@ void writeRestartSettings_fR(metadata & sim,
 		}
 
 		fprintf(outfile, "Pk bins            = %d\n", sim.numbins);
-		fprintf(outfile, "\n\n############################ hibernations ############################\n");
+
+		fprintf(outfile, "\n#=========================== hibernation ===========================#\n");
 		if(sim.num_restart > 0)
 		{
 			fprintf(outfile, "hibernation redshifts       = ");
-			for(i = 0; i < sim.num_restart - 1; i++)
+			for(i=0; i<sim.num_restart - 1; i++)
 			{
 				fprintf(outfile, "%lg, ", sim.z_restart[i]);
 			}
 			fprintf(outfile, "%lg\n", sim.z_restart[i]);
 		}
+
 		if(sim.wallclocklimit > 0.)
 		{
 			fprintf(outfile, "hibernation wallclock limit = %lg\n", sim.wallclocklimit);
 		}
+
 		if(sim.restart_path[0] != '\0')
 		{
 			fprintf(outfile, "hibernation path            = %s\n", sim.restart_path);
 		}
+
 		fprintf(outfile, "hibernation file base       = %s\n", sim.basename_restart);
+		if(sim.hibernation_save_mode == HIB_SAVE_HDF5)
+		{
+			fprintf(outfile, "particle save mode          = hdf5\n");
+		}
+		else if(sim.hibernation_save_mode == HIB_SAVE_GADGET2)
+		{
+			fprintf(outfile, "particle save mode          = gadget2\n");
+		}
 
 		fclose(outfile);
 	}
@@ -749,10 +797,10 @@ void writeRestartSettings_GR(metadata & sim,
 		{
 			fprintf(outfile, "requested ");
 		}
+
 		fprintf(outfile, "at redshift z=%f\n\n", (1./a)-1.);
 		fprintf(outfile, "# info related to IC generation\n\n");
 		fprintf(outfile, "IC generator       = restart\n");
-
 		if(restartcount >= 0)
 		{
 			sprintf(buffer, "%03d", restartcount);
@@ -761,15 +809,34 @@ void writeRestartSettings_GR(metadata & sim,
 		{
 			buffer[0] = '\0';
 		}
-		fprintf(outfile, "particle file      = %s%s%s_cdm.h5", sim.restart_path, sim.basename_restart, buffer);
-		if(sim.baryon_flag)
+
+		if(sim.hibernation_save_mode == HIB_SAVE_HDF5)
 		{
-			fprintf(outfile, ", %s%s%s_b.h5", sim.restart_path, sim.basename_restart, buffer);
+			fprintf(outfile, "particle file      = %s%s%s_cdm.h5", sim.restart_path, sim.basename_restart, buffer);
+			if(sim.baryon_flag)
+			{
+				fprintf(outfile, ", %s%s%s_b.h5", sim.restart_path, sim.basename_restart, buffer);
+			}
+
+			for(i=0; i<cosmo.num_ncdm; i++)
+			{
+				fprintf(outfile, ", %s%s%s_ncdm%d.h5", sim.restart_path, sim.basename_restart, buffer, i);
+			}
 		}
-		for(i = 0; i < cosmo.num_ncdm; i++)
+		else
 		{
-			fprintf(outfile, ", %s%s%s_ncdm%d.h5", sim.restart_path, sim.basename_restart, buffer, i);
+			fprintf(outfile, "particle file      = %s%s%s_cdm", sim.restart_path, sim.basename_restart, buffer);
+			if(sim.baryon_flag)
+			{
+				fprintf(outfile, ", %s%s%s_b", sim.restart_path, sim.basename_restart, buffer);
+			}
+
+			for(i=0; i<cosmo.num_ncdm; i++)
+			{
+				fprintf(outfile, ", %s%s%s_ncdm%d", sim.restart_path, sim.basename_restart, buffer, i);
+			}
 		}
+
 		fprintf(outfile, "\n");
 		if(sim.gr_flag > 0)
 		{
@@ -782,9 +849,9 @@ void writeRestartSettings_GR(metadata & sim,
 			else
 			{
 				#ifdef CHECK_B
-				fprintf(outfile, ", %s%s%s_B_check.h5\n", sim.restart_path, sim.basename_restart, buffer);
+					fprintf(outfile, ", %s%s%s_B_check.h5\n", sim.restart_path, sim.basename_restart, buffer);
 				#else
-				fprintf(outfile, "\n");
+					fprintf(outfile, "\n");
 				#endif
 			}
 		}
@@ -793,10 +860,10 @@ void writeRestartSettings_GR(metadata & sim,
 			fprintf(outfile, "metric file        = %s%s%s_B.h5\n", sim.restart_path, sim.basename_restart, buffer);
 		}
 		#ifdef CHECK_B
-		else
-		{
-			fprintf(outfile, "metric file        = %s%s%s_B_check.h5\n", sim.restart_path, sim.basename_restart, buffer);
-		}
+			else
+			{
+				fprintf(outfile, "metric file        = %s%s%s_B_check.h5\n", sim.restart_path, sim.basename_restart, buffer);
+			}
 		#endif
 
 		fprintf(outfile, "restart redshift    = %.15lf\n", (1./a) - 1.);
@@ -807,12 +874,13 @@ void writeRestartSettings_GR(metadata & sim,
 		fprintf(outfile, "seed                = %d\n", ic.seed);
 		if(ic.flags & ICFLAG_KSPHERE)
 		{
-			fprintf(outfile, "k-domain           = sphere\n");
+			fprintf(outfile, "k-domain            = sphere\n");
 		}
 		else
 		{
-			fprintf(outfile, "k-domain           = cube\n");
+			fprintf(outfile, "k-domain            = cube\n");
 		}
+
 		fprintf(outfile, "\n\n# primordial power spectrum\n\n");
 		fprintf(outfile, "k_pivot = %lg\n", ic.k_pivot);
 		fprintf(outfile, "A_s     = %lg\n", ic.A_s);
@@ -827,29 +895,31 @@ void writeRestartSettings_GR(metadata & sim,
 		if(cosmo.num_ncdm > 0)
 		{
 			fprintf(outfile, "m_cdm     = ");
-			for(i = 0; i < cosmo.num_ncdm - 1; i++)
+			for(i=0; i<cosmo.num_ncdm - 1; i++)
 			{
 				fprintf(outfile, "%9lf, ", cosmo.m_ncdm[i]);
 			}
 			fprintf(outfile, "%9lf\n", cosmo.m_ncdm[i]);
 			fprintf(outfile, "T_cdm     = ");
-			for(i = 0; i < cosmo.num_ncdm - 1; i++)
+			for(i=0; i<cosmo.num_ncdm - 1; i++)
 			{
 				fprintf(outfile, "%9lf, ", cosmo.T_ncdm[i]);
 			}
 			fprintf(outfile, "%9lf\n", cosmo.T_ncdm[i]);
 			fprintf(outfile, "deg_cdm   = ");
-			for(i = 0; i < cosmo.num_ncdm - 1; i++)
+			for(i=0; i<cosmo.num_ncdm - 1; i++)
 			{
 				fprintf(outfile, "%lf, ", cosmo.deg_ncdm[i]);
 			}
 			fprintf(outfile, "%lg\n", cosmo.deg_ncdm[i]);
 		}
+
 		fprintf(outfile, "\n\n# simulation settings\n\n");
 		if(sim.baryon_flag > 0)
 		{
 			fprintf(outfile, "baryon treatment    = sample\n");
 		}
+
 		if(sim.radiation_flag > 0)
 		{
 			fprintf(outfile, "radiation treatment = CLASS\n");
@@ -857,7 +927,7 @@ void writeRestartSettings_GR(metadata & sim,
 			if(cosmo.num_ncdm > 0)
 			{
 				fprintf(outfile, "switch delta_ncdm   = ");
-				for(i = 0; i < cosmo.num_ncdm - 1; i++)
+				for(i=0; i<cosmo.num_ncdm - 1; i++)
 				{
 					fprintf(outfile, "%lf, ", sim.z_switch_deltancdm[i]);
 				}
@@ -865,6 +935,7 @@ void writeRestartSettings_GR(metadata & sim,
 			}
 			fprintf(outfile, "switch linear chi   = %lf\n", sim.z_switch_linearchi);
 		}
+
 		if(sim.gr_flag > 0)
 		{
 			fprintf(outfile, "gravity theory      = GR\n");
@@ -873,6 +944,7 @@ void writeRestartSettings_GR(metadata & sim,
 		{
 			fprintf(outfile, "gravity theory      = N\n");
 		}
+
 		if(sim.vector_flag == VECTOR_ELLIPTIC)
 		{
 			fprintf(outfile, "vector method       = elliptic\n");
@@ -903,12 +975,13 @@ void writeRestartSettings_GR(metadata & sim,
 		if(sim.num_snapshot > 0)
 		{
 			fprintf(outfile, "snapshot redshifts = ");
-			for(i = 0; i < sim.num_snapshot - 1; i++)
+			for(i=0; i<sim.num_snapshot - 1; i++)
 			{
 				fprintf(outfile, "%lg, ", sim.z_snapshot[i]);
 			}
 			fprintf(outfile, "%lg\n", sim.z_snapshot[i]);
 		}
+
 		if(sim.out_snapshot)
 		{
 			fprintf(outfile, "snapshot outputs   = ");
@@ -920,6 +993,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_CHI)
 			{
 				fprintf(outfile, "chi");
@@ -928,6 +1002,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_POT)
 			{
 				fprintf(outfile, "psiN");
@@ -936,6 +1011,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_B)
 			{
 				fprintf(outfile, "B");
@@ -944,6 +1020,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_T00)
 			{
 				fprintf(outfile, "T00");
@@ -952,6 +1029,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_TIJ)
 			{
 				fprintf(outfile, "Tij");
@@ -960,6 +1038,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_RBARE)
 			{
 				fprintf(outfile, "rhoN");
@@ -968,6 +1047,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_HIJ)
 			{
 				fprintf(outfile, "hij");
@@ -976,6 +1056,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_P)
 			{
 				fprintf(outfile, "p");
@@ -984,6 +1065,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_GADGET)
 			{
 				fprintf(outfile, "Gadget2");
@@ -992,6 +1074,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_PCLS)
 			{
 				fprintf(outfile, "particles");
@@ -1000,6 +1083,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_DELTA)
 			{
 				fprintf(outfile, "delta");
@@ -1008,34 +1092,39 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_snapshot & MASK_DBARE)
 			{
 				fprintf(outfile, "deltaN");
 			}
 			fprintf(outfile, "\n");
 		}
+
 		if(sim.out_snapshot & MASK_GADGET)
 		{
 			fprintf(outfile, "tracer factor      = %d", sim.tracer_factor[0]);
-			for(i = 1; i <= sim.baryon_flag + cosmo.num_ncdm; i++)
+			for(i=1; i <= sim.baryon_flag + cosmo.num_ncdm; i++)
 			{
 				fprintf(outfile, ", %d", sim.tracer_factor[i]);
 			}
 			fprintf(outfile, "\n");
 		}
+
 		if(sim.downgrade_factor > 1)
 		{
 			fprintf(outfile, "downgrade factor   = %d", sim.downgrade_factor);
 		}
+
 		if(sim.num_pk > 0)
 		{
 			fprintf(outfile, "Pk redshifts       = ");
-			for(i = 0; i < sim.num_pk - 1; i++)
+			for(i=0; i<sim.num_pk-1; i++)
 			{
 				fprintf(outfile, "%lg, ", sim.z_pk[i]);
 			}
 			fprintf(outfile, "%lg\n", sim.z_pk[i]);
 		}
+
 		if(sim.out_pk)
 		{
 			fprintf(outfile, "Pk outputs         = ");
@@ -1047,6 +1136,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_CHI)
 			{
 				fprintf(outfile, "chi");
@@ -1055,6 +1145,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_POT)
 			{
 				fprintf(outfile, "psiN");
@@ -1063,6 +1154,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_B)
 			{
 				fprintf(outfile, "B");
@@ -1071,6 +1163,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_T00)
 			{
 				fprintf(outfile, "T00");
@@ -1079,6 +1172,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_TIJ)
 			{
 				fprintf(outfile, "Tij");
@@ -1087,6 +1181,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_RBARE)
 			{
 				fprintf(outfile, "rhoN");
@@ -1095,6 +1190,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_HIJ)
 			{
 				fprintf(outfile, "hij");
@@ -1103,6 +1199,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_P)
 			{
 				fprintf(outfile, "p");
@@ -1111,6 +1208,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_XSPEC)
 			{
 				fprintf(outfile, "X-spectra");
@@ -1119,6 +1217,7 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_DELTA)
 			{
 				fprintf(outfile, "delta");
@@ -1127,32 +1226,48 @@ void writeRestartSettings_GR(metadata & sim,
 					fprintf(outfile, ", ");
 				}
 			}
+
 			if(sim.out_pk & MASK_DBARE)
 			{
 				fprintf(outfile, "deltaN");
 			}
 			fprintf(outfile, "\n");
 		}
+
 		fprintf(outfile, "Pk bins            = %d\n", sim.numbins);
-		fprintf(outfile, "\n\n# hibernations\n\n");
+
+		fprintf(outfile, "\n\n# multigrid\n\n");
+		fprintf(outfile, "multigrid n-grids = %d\n", sim.multigrid_n_grids);// TODO Maybe also something else, this is necessary to initialize the Multigrid engine
+
+		fprintf(outfile, "\n\n# hibernation\n\n");
 		if(sim.num_restart > 0)
 		{
 			fprintf(outfile, "hibernation redshifts       = ");
-			for(i = 0; i < sim.num_restart - 1; i++)
+			for(i=0; i<sim.num_restart - 1; i++)
 			{
 				fprintf(outfile, "%lg, ", sim.z_restart[i]);
 			}
 			fprintf(outfile, "%lg\n", sim.z_restart[i]);
 		}
+
 		if(sim.wallclocklimit > 0.)
 		{
 			fprintf(outfile, "hibernation wallclock limit = %lg\n", sim.wallclocklimit);
 		}
+
 		if(sim.restart_path[0] != '\0')
 		{
 			fprintf(outfile, "hibernation path            = %s\n", sim.restart_path);
 		}
 		fprintf(outfile, "hibernation file base       = %s\n", sim.basename_restart);
+		if(sim.hibernation_save_mode == HIB_SAVE_HDF5)
+		{
+			fprintf(outfile, "particle save mode          = hdf5\n");
+		}
+		else if(sim.hibernation_save_mode == HIB_SAVE_GADGET2)
+		{
+			fprintf(outfile, "particle save mode          = gadget2\n");
+		}
 
 		fclose(outfile);
 	}
@@ -1163,7 +1278,7 @@ void writeRestartSettings_GR(metadata & sim,
 
 
 //////////////////////////
-// hibernate
+// hibernate_GR
 //////////////////////////
 // Description:
 //   creates a hibernation point by writing snapshots of the simulation data and metadata
@@ -1192,9 +1307,10 @@ void writeRestartSettings_GR(metadata & sim,
 void hibernate_GR(metadata & sim,
 	 						 		icsettings & ic,
 							 		cosmology & cosmo,
-							 		Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm,
-							 		Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_b,
-							 		Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm,
+									gadget2_header & hdr,
+							 		Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm,
+							 		Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b,
+							 		Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm,
 							 		Field<Real> & phi,
 							 		Field<Real> & chi,
 							 		Field<Real> & Bi,
@@ -1220,9 +1336,9 @@ void hibernate_GR(metadata & sim,
 
 	writeRestartSettings_GR(sim, ic, cosmo, a, tau, dtau, cycle, restartcount);
 
-#ifndef CHECK_B
-	if(sim.vector_flag == VECTOR_PARABOLIC)
-#endif
+	#ifndef CHECK_B
+		if(sim.vector_flag == VECTOR_PARABOLIC)
+	#endif
 	for(x.first(); x.test(); x.next())
 	{
 		Bi(x,0) /= a * a * sim.numpts;
@@ -1230,88 +1346,163 @@ void hibernate_GR(metadata & sim,
 		Bi(x,2) /= a * a * sim.numpts;
 	}
 
-#ifdef EXTERNAL_IO
-	while(ioserver.openOstream()== OSTREAM_FAIL);
+	#ifdef EXTERNAL_IO
+		while(ioserver.openOstream()== OSTREAM_FAIL);
 
-	pcls_cdm->saveHDF5_server_open(h5filename + "_cdm");
-	if(sim.baryon_flag)
-	{
-		pcls_b->saveHDF5_server_open(h5filename + "_b");
-	}
-	for(i = 0; i < cosmo.num_ncdm; i++)
-	{
-		sprintf(buffer, "%d", i);
-		pcls_ncdm[i].saveHDF5_server_open(h5filename + "_ncdm" + buffer);
-	}
+		if(sim.hibernation_save_mode == HIB_SAVE_HDF5)
+		{
+			pcls_cdm->saveHDF5_server_open(h5filename + "_cdm");
+			if(sim.baryon_flag)
+			{
+				pcls_b->saveHDF5_server_open(h5filename + "_b");
+			}
+			for(i=0; i<cosmo.num_ncdm; i++)
+			{
+				sprintf(buffer, "%d", i);
+				pcls_ncdm[i].saveHDF5_server_open(h5filename + "_ncdm" + buffer);
+			}
+		}
 
-	if(sim.gr_flag > 0)
-	{
-		phi.saveHDF5_server_open(h5filename + "_phi");
-		chi.saveHDF5_server_open(h5filename + "_chi");
-	}
+		if(sim.gr_flag > 0)
+		{
+			phi.saveHDF5_server_open(h5filename + "_phi");
+			chi.saveHDF5_server_open(h5filename + "_chi");
+		}
 
-	if(sim.vector_flag == VECTOR_PARABOLIC)
-	{
-		Bi.saveHDF5_server_open(h5filename + "_B");
-	}
-	#ifdef CHECK_B
-	else
-	{
-		Bi.saveHDF5_server_open(h5filename + "_B_check");
-	}
-	#endif
+		if(sim.vector_flag == VECTOR_PARABOLIC)
+		{
+			Bi.saveHDF5_server_open(h5filename + "_B");
+		}
+		#ifdef CHECK_B
+			else
+			{
+				Bi.saveHDF5_server_open(h5filename + "_B_check");
+			}
+		#endif
 
-	pcls_cdm->saveHDF5_server_write();
-	if(sim.baryon_flag)
-	{
-		pcls_b->saveHDF5_server_write();
-	}
-	for(i = 0; i < cosmo.num_ncdm; i++)
-	{
-		pcls_ncdm[i].saveHDF5_server_write();
-	}
+		if(sim.hibernation_save_mode == HIB_SAVE_HDF5)
+		{
+			pcls_cdm->saveHDF5_server_write();
+			if(sim.baryon_flag)
+			{
+				pcls_b->saveHDF5_server_write();
+			}
+			for(i=0; i<cosmo.num_ncdm; i++)
+			{
+				pcls_ncdm[i].saveHDF5_server_write();
+			}
+		}
+		else
+		{
+			hdr.time = a;
+			hdr.redshift = (1./a) - 1.;
+			hdr.npart[1] = (unsigned int) (sim.numpcl[0] / sim.tracer_factor[0]);
+			hdr.npartTotal[1] = hdr.npart[1];
+			if(sim.baryon_flag)
+			{
+				hdr.mass[1] = (double) sim.tracer_factor[0] * C_RHO_CRIT * cosmo.Omega_cdm * sim.boxsize * sim.boxsize * sim.boxsize / sim.numpcl[0] / GADGET_MASS_CONVERSION;
+			}
+			else
+			{
+				hdr.mass[1] = (double) sim.tracer_factor[0] * C_RHO_CRIT * (cosmo.Omega_cdm + cosmo.Omega_b) * sim.boxsize * sim.boxsize * sim.boxsize / sim.numpcl[0] / GADGET_MASS_CONVERSION;
+			}
+			pcls_cdm->saveGadget2(h5filename + "_cdm", hdr, sim.tracer_factor[0]);
 
-	if(sim.gr_flag > 0)
-	{
-		phi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
-		chi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
-	}
+			if(sim.baryon_flag)
+			{
+				hdr.npart[1] = (unsigned int) (sim.numpcl[1] / sim.tracer_factor[1]);
+				hdr.npartTotal[1] = hdr.npart[1];
+				hdr.mass[1] = (double) sim.tracer_factor[1] * C_RHO_CRIT * cosmo.Omega_b * sim.boxsize * sim.boxsize * sim.boxsize / sim.numpcl[1] / GADGET_MASS_CONVERSION;
+				pcls_b->saveGadget2(h5filename + "_b", hdr, sim.tracer_factor[1]);
+			}
+			for (i=0; i<cosmo.num_ncdm; i++)
+			{
+				sprintf(buffer, "_ncdm%d", i);
+				hdr.npart[1] = (unsigned int) (sim.numpcl[i+1+sim.baryon_flag] / sim.tracer_factor[i+1+sim.baryon_flag]);
+				hdr.npartTotal[1] = hdr.npart[1];
+				hdr.mass[1] = (double) sim.tracer_factor[i+1+sim.baryon_flag] * C_RHO_CRIT * cosmo.Omega_ncdm[i] * sim.boxsize * sim.boxsize * sim.boxsize / sim.numpcl[i+1+sim.baryon_flag] / GADGET_MASS_CONVERSION;
+				pcls_ncdm[i].saveGadget2(h5filename + buffer, hdr, sim.tracer_factor[i+1+sim.baryon_flag]);
+			}
+		}
 
-#ifndef CHECK_B
-	if(sim.vector_flag == VECTOR_PARABOLIC)
-#endif
+		if(sim.gr_flag > 0)
+		{
+			phi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
+			chi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
+		}
+
+		#ifndef CHECK_B
+			if(sim.vector_flag == VECTOR_PARABOLIC)
+		#endif
+
 		Bi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
+		ioserver.closeOstream();
 
-	ioserver.closeOstream();
-#else
-	pcls_cdm->saveHDF5(h5filename + "_cdm", 1);
-	if(sim.baryon_flag)
-	{
-		pcls_b->saveHDF5(h5filename + "_b", 1);
-	}
-	for(i = 0; i < cosmo.num_ncdm; i++)
-	{
-		sprintf(buffer, "%d", i);
-		pcls_ncdm[i].saveHDF5(h5filename + "_ncdm" + buffer, 1);
-	}
+	#else // not EXTERNAL_IO
+		if(sim.hibernation_save_mode == HIB_SAVE_HDF5)
+		{
+			pcls_cdm->saveHDF5(h5filename + "_cdm", 1);
+			if(sim.baryon_flag)
+			{
+				pcls_b->saveHDF5(h5filename + "_b", 1);
+			}
+			for(i=0; i<cosmo.num_ncdm; i++)
+			{
+				sprintf(buffer, "%d", i);
+				pcls_ncdm[i].saveHDF5(h5filename + "_ncdm" + buffer, 1);
+			}
+		}
+		else
+		{
+			hdr.time = a;
+			hdr.redshift = (1./a) - 1.;
+			hdr.npart[1] = (unsigned int) (sim.numpcl[0] / sim.tracer_factor[0]);
+			hdr.npartTotal[1] = hdr.npart[1];
+			if(sim.baryon_flag)
+			{
+				hdr.mass[1] = (double) sim.tracer_factor[0] * C_RHO_CRIT * cosmo.Omega_cdm * sim.boxsize * sim.boxsize * sim.boxsize / sim.numpcl[0] / GADGET_MASS_CONVERSION;
+			}
+			else
+			{
+				hdr.mass[1] = (double) sim.tracer_factor[0] * C_RHO_CRIT * (cosmo.Omega_cdm + cosmo.Omega_b) * sim.boxsize * sim.boxsize * sim.boxsize / sim.numpcl[0] / GADGET_MASS_CONVERSION;
+			}
+			pcls_cdm->saveGadget2(h5filename + "_cdm", hdr, sim.tracer_factor[0]);
 
-	if(sim.gr_flag > 0)
-	{
-		phi.saveHDF5(h5filename + "_phi.h5");
-		chi.saveHDF5(h5filename + "_chi.h5");
-	}
+			if(sim.baryon_flag)
+			{
+				hdr.npart[1] = (unsigned int) (sim.numpcl[1] / sim.tracer_factor[1]);
+				hdr.npartTotal[1] = hdr.npart[1];
+				hdr.mass[1] = (double) sim.tracer_factor[1] * C_RHO_CRIT * cosmo.Omega_b * sim.boxsize * sim.boxsize * sim.boxsize / sim.numpcl[1] / GADGET_MASS_CONVERSION;
+				pcls_b->saveGadget2(h5filename + "_b", hdr, sim.tracer_factor[1]);
+			}
+			for (i=0; i<cosmo.num_ncdm; i++)
+			{
+				sprintf(buffer, "_ncdm%d", i);
+				hdr.npart[1] = (unsigned int) (sim.numpcl[i+1+sim.baryon_flag] / sim.tracer_factor[i+1+sim.baryon_flag]);
+				hdr.npartTotal[1] = hdr.npart[1];
+				hdr.mass[1] = (double) sim.tracer_factor[i+1+sim.baryon_flag] * C_RHO_CRIT * cosmo.Omega_ncdm[i] * sim.boxsize * sim.boxsize * sim.boxsize / sim.numpcl[i+1+sim.baryon_flag] / GADGET_MASS_CONVERSION;
+				pcls_ncdm[i].saveGadget2(h5filename + buffer, hdr, sim.tracer_factor[i+1+sim.baryon_flag]);
+			}
+		}
 
-	if(sim.vector_flag == VECTOR_PARABOLIC)
-	{
-		Bi.saveHDF5(h5filename + "_B.h5");
-	}
-#ifdef CHECK_B
-	else
-	{
-		Bi.saveHDF5(h5filename + "_B_check.h5");
-	}
-#endif
-#endif
+		if(sim.gr_flag > 0)
+		{
+			phi.saveHDF5(h5filename + "_phi.h5");
+			chi.saveHDF5(h5filename + "_chi.h5");
+		}
+
+		if(sim.vector_flag == VECTOR_PARABOLIC)
+		{
+			Bi.saveHDF5(h5filename + "_B.h5");
+		}
+		#ifdef CHECK_B
+			else
+			{
+				Bi.saveHDF5(h5filename + "_B_check.h5");
+			}
+		#endif
+
+	#endif
 }
 
 
@@ -1322,9 +1513,10 @@ void hibernate_GR(metadata & sim,
 void hibernate_fR(metadata & sim,
 	 						 		icsettings & ic,
 							 		cosmology & cosmo,
-							 		Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm,
-							 		Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_b,
-							 		Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm,
+									gadget2_header & hdr,
+							 		Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm,
+							 		Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b,
+							 		Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm,
 							 		Field<Real> & phi,
 							 		Field<Real> & chi,
 							 		Field<Real> & Bi,
@@ -1334,10 +1526,9 @@ void hibernate_fR(metadata & sim,
 						 	 		Field<Real> & deltaR,
 						 	 		Field<Real> & deltaR_prev,
 						 	 		Field<Real> & dot_deltaR,
-						 	 		Field<Real> & eightpiG_deltaT,
+									Field<Real> & eightpiG_deltaT,
 							 		Field<Real> & phidot,
 							 		Field<Real> & xidot,
-							 		Field<Real> & laplace_xi,
 							 		const double a,
 							 		const double tau,
 							 		const double dtau,
@@ -1368,7 +1559,7 @@ void hibernate_fR(metadata & sim,
 	writeRestartSettings_fR(sim, ic, cosmo, a, tau, dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, Hubble, Rbar, dot_Rbar, cycle, restartcount);
 
 	#ifndef CHECK_B
-	if(sim.vector_flag == VECTOR_PARABOLIC)
+		if(sim.vector_flag == VECTOR_PARABOLIC)
 	#endif
 	for(x.first(); x.test(); x.next())
 	{
@@ -1377,18 +1568,20 @@ void hibernate_fR(metadata & sim,
 		Bi(x,2) /= a * a * sim.numpts;
 	}
 
-	#ifdef EXTERNAL_IO
+#ifdef EXTERNAL_IO
 	while (ioserver.openOstream() == OSTREAM_FAIL);
-
-	pcls_cdm->saveHDF5_server_open(h5filename + "_cdm");
-	if(sim.baryon_flag)
+	if(sim.hibernation_save_mode == HIB_SAVE_HDF5)
 	{
-		pcls_b->saveHDF5_server_open(h5filename + "_b");
-	}
-	for(i = 0; i < cosmo.num_ncdm; i++)
-	{
-		sprintf(buffer, "%d", i);
-		pcls_ncdm[i].saveHDF5_server_open(h5filename + "_ncdm" + buffer);
+		pcls_cdm->saveHDF5_server_open(h5filename + "_cdm");
+		if(sim.baryon_flag)
+		{
+			pcls_b->saveHDF5_server_open(h5filename + "_b");
+		}
+		for(i=0; i<cosmo.num_ncdm; i++)
+		{
+			sprintf(buffer, "%d", i);
+			pcls_ncdm[i].saveHDF5_server_open(h5filename + "_ncdm" + buffer);
+		}
 	}
 
 	if(sim.gr_flag > 0)
@@ -1402,10 +1595,10 @@ void hibernate_fR(metadata & sim,
 		Bi.saveHDF5_server_open(h5filename + "_B");
 	}
 	#ifdef CHECK_B
-	else
-	{
-		Bi.saveHDF5_server_open(h5filename + "_B_check");
-	}
+		else
+		{
+			Bi.saveHDF5_server_open(h5filename + "_B_check");
+		}
 	#endif
 
 	if(sim.mg_flag == FR)
@@ -1415,21 +1608,55 @@ void hibernate_fR(metadata & sim,
 		zeta.saveHDF5_server_open(h5filename + "_zeta.h5");
 		deltaR.saveHDF5_server_open(h5filename + "_deltaR.h5");
 		deltaR_prev.saveHDF5_server_open(h5filename + "_deltaR_prev.h5");
-		deltaR_prev.saveHDF5_server_open(h5filename + "_dot_deltaR.h5");
+		dot_deltaR.saveHDF5_server_open(h5filename + "_dot_deltaR.h5");
 		eightpiG_deltaT.saveHDF5_server_open(h5filename + "_eightpiG_deltaT.h5");
 		phidot.saveHDF5_server_open(h5filename + "_phidot.h5");
 		xidot.saveHDF5_server_open(h5filename + "_xidot.h5");
-		laplace_xi.saveHDF5_server_open(h5filename + "_laplace_xi.h5");
 	}
 
-	pcls_cdm->saveHDF5_server_write();
-	if(sim.baryon_flag)
+	if(sim.hibernation_save_mode == HIB_SAVE_HDF5)
 	{
-		pcls_b->saveHDF5_server_write();
+		pcls_cdm->saveHDF5_server_write();
+		if(sim.baryon_flag)
+		{
+			pcls_b->saveHDF5_server_write();
+		}
+		for(i=0; i<cosmo.num_ncdm; i++)
+		{
+			pcls_ncdm[i].saveHDF5_server_write();
+		}
 	}
-	for(i = 0; i < cosmo.num_ncdm; i++)
+	else
 	{
-		pcls_ncdm[i].saveHDF5_server_write();
+		hdr.time = a;
+		hdr.redshift = (1./a) - 1.;
+		hdr.npart[1] = (unsigned int) (sim.numpcl[0] / sim.tracer_factor[0]);
+		hdr.npartTotal[1] = hdr.npart[1];
+		if(sim.baryon_flag)
+		{
+			hdr.mass[1] = (double) sim.tracer_factor[0] * C_RHO_CRIT * cosmo.Omega_cdm * sim.boxsize * sim.boxsize * sim.boxsize / sim.numpcl[0] / GADGET_MASS_CONVERSION;
+		}
+		else
+		{
+			hdr.mass[1] = (double) sim.tracer_factor[0] * C_RHO_CRIT * (cosmo.Omega_cdm + cosmo.Omega_b) * sim.boxsize * sim.boxsize * sim.boxsize / sim.numpcl[0] / GADGET_MASS_CONVERSION;
+		}
+		pcls_cdm->saveGadget2(h5filename + "_cdm", hdr, sim.tracer_factor[0]);
+
+		if(sim.baryon_flag)
+		{
+			hdr.npart[1] = (unsigned int) (sim.numpcl[1] / sim.tracer_factor[1]);
+			hdr.npartTotal[1] = hdr.npart[1];
+			hdr.mass[1] = (double) sim.tracer_factor[1] * C_RHO_CRIT * cosmo.Omega_b * sim.boxsize * sim.boxsize * sim.boxsize / sim.numpcl[1] / GADGET_MASS_CONVERSION;
+			pcls_b->saveGadget2(h5filename + "_b", hdr, sim.tracer_factor[1]);
+		}
+		for (i=0; i<cosmo.num_ncdm; i++)
+		{
+			sprintf(buffer, "_ncdm%d", i);
+			hdr.npart[1] = (unsigned int) (sim.numpcl[i+1+sim.baryon_flag] / sim.tracer_factor[i+1+sim.baryon_flag]);
+			hdr.npartTotal[1] = hdr.npart[1];
+			hdr.mass[1] = (double) sim.tracer_factor[i+1+sim.baryon_flag] * C_RHO_CRIT * cosmo.Omega_ncdm[i] * sim.boxsize * sim.boxsize * sim.boxsize / sim.numpcl[i+1+sim.baryon_flag] / GADGET_MASS_CONVERSION;
+			pcls_ncdm[i].saveGadget2(h5filename + buffer, hdr, sim.tracer_factor[i+1+sim.baryon_flag]);
+		}
 	}
 
 	if(sim.gr_flag > 0)
@@ -1439,7 +1666,7 @@ void hibernate_fR(metadata & sim,
 	}
 
 	#ifndef CHECK_B
-	if(sim.vector_flag == VECTOR_PARABOLIC)
+		if(sim.vector_flag == VECTOR_PARABOLIC)
 	#endif
 	Bi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 
@@ -1454,20 +1681,56 @@ void hibernate_fR(metadata & sim,
 		eightpiG_deltaT.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 		phidot.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 		xidot.saveHDF5_server_write(NUMBER_OF_IO_FILES);
-		laplace_xi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 	}
 
 	ioserver.closeOstream();
-	#else
-	pcls_cdm->saveHDF5(h5filename + "_cdm", 1);
-	if(sim.baryon_flag)
+
+#else
+
+	if(sim.hibernation_save_mode == HIB_SAVE_HDF5)
 	{
-		pcls_b->saveHDF5(h5filename + "_b", 1);
+		pcls_cdm->saveHDF5(h5filename + "_cdm", 1);
+		if(sim.baryon_flag)
+		{
+			pcls_b->saveHDF5(h5filename + "_b", 1);
+		}
+		for(i=0; i<cosmo.num_ncdm; i++)
+		{
+			sprintf(buffer, "%d", i);
+			pcls_ncdm[i].saveHDF5(h5filename + "_ncdm" + buffer, 1);
+		}
 	}
-	for(i = 0; i < cosmo.num_ncdm; i++)
+	else
 	{
-		sprintf(buffer, "%d", i);
-		pcls_ncdm[i].saveHDF5(h5filename + "_ncdm" + buffer, 1);
+		hdr.time = a;
+		hdr.redshift = (1./a) - 1.;
+		hdr.npart[1] = (unsigned int) (sim.numpcl[0] / sim.tracer_factor[0]);
+		hdr.npartTotal[1] = hdr.npart[1];
+		if(sim.baryon_flag)
+		{
+			hdr.mass[1] = (double) sim.tracer_factor[0] * C_RHO_CRIT * cosmo.Omega_cdm * sim.boxsize * sim.boxsize * sim.boxsize / sim.numpcl[0] / GADGET_MASS_CONVERSION;
+		}
+		else
+		{
+			hdr.mass[1] = (double) sim.tracer_factor[0] * C_RHO_CRIT * (cosmo.Omega_cdm + cosmo.Omega_b) * sim.boxsize * sim.boxsize * sim.boxsize / sim.numpcl[0] / GADGET_MASS_CONVERSION;
+		}
+		pcls_cdm->saveGadget2(h5filename + "_cdm", hdr, sim.tracer_factor[0]);
+
+		if(sim.baryon_flag)
+		{
+			hdr.npart[1] = (unsigned int) (sim.numpcl[1] / sim.tracer_factor[1]);
+			hdr.npartTotal[1] = hdr.npart[1];
+			hdr.mass[1] = (double) sim.tracer_factor[1] * C_RHO_CRIT * cosmo.Omega_b * sim.boxsize * sim.boxsize * sim.boxsize / sim.numpcl[1] / GADGET_MASS_CONVERSION;
+			pcls_b->saveGadget2(h5filename + "_b", hdr, sim.tracer_factor[1]);
+		}
+		for(i=0; i<cosmo.num_ncdm; i++)
+		{
+			sprintf(buffer, "_ncdm%d", i);
+			hdr.npart[1] = (unsigned int) (sim.numpcl[i+1+sim.baryon_flag] / sim.tracer_factor[i+1+sim.baryon_flag]);
+			hdr.npartTotal[1] = hdr.npart[1];
+			hdr.mass[1] = (double) sim.tracer_factor[i+1+sim.baryon_flag] * C_RHO_CRIT * cosmo.Omega_ncdm[i] * sim.boxsize * sim.boxsize * sim.boxsize / sim.numpcl[i+1+sim.baryon_flag] / GADGET_MASS_CONVERSION;
+			pcls_ncdm[i].saveGadget2(h5filename + buffer, hdr, sim.tracer_factor[i+1+sim.baryon_flag]);
+		}
 	}
 
 	if(sim.gr_flag > 0)
@@ -1481,10 +1744,10 @@ void hibernate_fR(metadata & sim,
 		Bi.saveHDF5(h5filename + "_B.h5");
 	}
 	#ifdef CHECK_B
-	else
-	{
-		Bi.saveHDF5(h5filename + "_B_check.h5");
-	}
+		else
+		{
+			Bi.saveHDF5(h5filename + "_B_check.h5");
+		}
 	#endif
 
 	if(sim.mg_flag == FR)
@@ -1498,10 +1761,10 @@ void hibernate_fR(metadata & sim,
 		eightpiG_deltaT.saveHDF5(h5filename + "_eightpiG_deltaT.h5");
 		phidot.saveHDF5(h5filename + "_phidot.h5");
 		xidot.saveHDF5(h5filename + "_xidot.h5");
-		laplace_xi.saveHDF5(h5filename + "_laplace_xi.h5");
 	}
 
-	#endif
+#endif
 }
+
 
 #endif

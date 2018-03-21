@@ -339,13 +339,6 @@ double multigrid_u(MultiField<FieldType> * u,
   error = compute_error(diff_u[0], u[0], deltaR[0], rhs[0], engine, coeff1, Rbar, fbar, fRbar, sim, 0, numpts3d[0]);
   COUT << " z = " << 1./a - 1. << ", initial error = " << error << endl;
 
-  // TODO: remove after debugging
-  check_field(diff_u[0], "diff_u", numpts3d[0]);
-  check_field(u[0], "u", numpts3d[0]);
-  check_field(deltaR[0], "deltaR", numpts3d[0]);
-  check_field(eightpiG_deltaT[0], "eightpiG_deltaT", numpts3d[0]);
-  check_field(rhs[0], "rhs", numpts3d[0]);
-
   trunc_error = gamma_cycle(u, diff_u, deltaR, eightpiG_deltaT, rhs, temp, trunc, engine, a, dx, numpts3d, Rbar, fbar, fRbar, sim, 0) / 3.;
 
   u[0].updateHalo();
@@ -354,16 +347,8 @@ double multigrid_u(MultiField<FieldType> * u,
   copy_field(eightpiG_deltaT[0], rhs[0], coeff1);
   //
   error = compute_error(diff_u[0], u[0], deltaR[0], rhs[0], engine, coeff1, Rbar, fbar, fRbar, sim, 0, numpts3d[0]);
-  COUT << " z = " << 1./a - 1. << endl
-       << "              error = " << error << endl
-       << "(1/3) * trunc_error = " << trunc_error << endl;
-
-  // TODO: remove after debugging
-  check_field(diff_u[0], "diff_u", numpts3d[0]);
-  check_field(u[0], "u", numpts3d[0]);
-  check_field(deltaR[0], "deltaR", numpts3d[0]);
-  check_field(eightpiG_deltaT[0], "eightpiG_deltaT", numpts3d[0]);
-  check_field(rhs[0], "rhs", numpts3d[0]);
+  COUT << "            error = " << error << endl
+       << "(1/3)*trunc_error = " << trunc_error << endl;
 
   return error / trunc_error;
 }
@@ -423,13 +408,6 @@ double multigrid_FMG(MultiField<FieldType> * u,
   error = compute_error(diff_u[0], u[0], deltaR[0], rhs[0], engine, coeff1, Rbar, fbar, fRbar, sim, 0, numpts3d[0]);
   COUT << " z = " << 1./a - 1. << ", initial error = " << error << endl;
 
-  // TODO: remove after debugging
-  check_field(diff_u[0], "diff_u", numpts3d[0]);
-  check_field(u[0], "u", numpts3d[0]);
-  check_field(deltaR[0], "deltaR", numpts3d[0]);
-  check_field(eightpiG_deltaT[0], "eightpiG_deltaT", numpts3d[0]);
-  check_field(rhs[0], "rhs", numpts3d[0]);
-
   // solve problem on coarsest grid
   if(engine.isPartLayer(max_level))
   {
@@ -487,13 +465,6 @@ double multigrid_FMG(MultiField<FieldType> * u,
   copy_field(eightpiG_deltaT[0], rhs[0], coeff1);
   error = compute_error(diff_u[0], u[0], deltaR[0], rhs[0], engine, coeff1, Rbar, fbar, fRbar, sim, 0, numpts3d[0]);
   COUT << " z = " << 1./a - 1. << ", error = " << error << endl;
-
-  // TODO: remove after debugging
-  check_field(diff_u[0], "diff_u", numpts3d[0]);
-  check_field(u[0], "u", numpts3d[0]);
-  check_field(deltaR[0], "deltaR", numpts3d[0]);
-  check_field(eightpiG_deltaT[0], "eightpiG_deltaT", numpts3d[0]);
-  check_field(rhs[0], "rhs", numpts3d[0]);
 
   return error;
 }

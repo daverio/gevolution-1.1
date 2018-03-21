@@ -111,7 +111,7 @@ void readIC_GR(metadata & sim,
 
 	projection_init(phi);
 
-	if (ic.z_ic > -1.)
+	if(ic.z_ic > -1.)
 	{
 		a = 1. / (1. + ic.z_ic);
 	}
@@ -129,7 +129,7 @@ void readIC_GR(metadata & sim,
 		dummy1 = (Real *) malloc(3 * fd.numProcPerFile * sizeof(Real));
 		dummy2 = (Real *) malloc(3 * fd.numProcPerFile * sizeof(Real));
 		get_fileDsc_local(filename + ".h5", numpcl, dummy1, dummy2, fd.numProcPerFile);
-		for(i = 0; i < fd.numProcPerFile; i++)
+		for(i=0; i<fd.numProcPerFile; i++)
 		{
 			sim.numpcl[0] += numpcl[i];
 		}
@@ -141,29 +141,33 @@ void readIC_GR(metadata & sim,
 	else
 	{
 		pcls_cdm->initialize(pcls_cdm_info, pcls_cdm_dataType, &(phi->lattice()), boxSize);
-		i = 0;
+		i=0;
 		do
 		{
 			filename.assign(ic.pclfile[0]);
 			pcls_cdm->loadGadget2(filename, hdr);
-			if (hdr.npart[1] == 0) break;
-			if (hdr.time / a > 1.001 || hdr.time / a < 0.999)
+			if(hdr.npart[1] == 0)
+			{
+				break;
+			}
+
+			if(hdr.time / a > 1.001 || hdr.time / a < 0.999)
 			{
 				COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": redshift indicated in Gadget2 header does not match initial redshift of simulation!" << endl;
 			}
 			sim.numpcl[0] += hdr.npart[1];
 			i++;
-			if (hdr.num_files > 1)
+			if(hdr.num_files > 1)
 			{
 				ext = ic.pclfile[0];
-				while (strchr(ext, (int) '.') != NULL)
+				while(strchr(ext, (int) '.') != NULL)
 				{
 					ext = strchr(ext, (int) '.');
 				}
 				sprintf(ext+1, "%d", i);
 			}
 		}
-		while(i < hdr.num_files);
+		while(i<hdr.num_files);
 
 		if(sim.baryon_flag == 1)
 		{
@@ -178,7 +182,7 @@ void readIC_GR(metadata & sim,
 	COUT << " " << sim.numpcl[0] << " cdm particles read successfully." << endl;
 	maxvel[0] = pcls_cdm->updateVel(update_q, 0., &phi, 1, &a);
 
-	if (sim.baryon_flag == 1)
+	if(sim.baryon_flag == 1)
 	{
 		strcpy(pcls_b_info.type_name, "part_simple");
 		pcls_b_info.mass = 0.;
@@ -186,7 +190,7 @@ void readIC_GR(metadata & sim,
 
 		pcls_b->initialize(pcls_b_info, pcls_b_dataType, &(phi->lattice()), boxSize);
 
-		if ((ext = strstr(ic.pclfile[1], ".h5")) != NULL)
+		if((ext = strstr(ic.pclfile[1], ".h5")) != NULL)
 		{
 			filename.assign(ic.pclfile[1], ext-ic.pclfile[1]);
 			get_fileDsc_global(filename + ".h5", fd);
@@ -194,8 +198,10 @@ void readIC_GR(metadata & sim,
 			dummy1 = (Real *) malloc(3 * fd.numProcPerFile * sizeof(Real));
 			dummy2 = (Real *) malloc(3 * fd.numProcPerFile * sizeof(Real));
 			get_fileDsc_local(filename + ".h5", numpcl, dummy1, dummy2, fd.numProcPerFile);
-			for (i = 0; i < fd.numProcPerFile; i++)
+			for(i=0; i<fd.numProcPerFile; i++)
+			{
 				sim.numpcl[1] += numpcl[i];
+			}
 			pcls_b->loadHDF5(filename, 1);
 			free(numpcl);
 			free(dummy1);
@@ -203,27 +209,29 @@ void readIC_GR(metadata & sim,
 		}
 		else
 		{
-			i = 0;
+			i=0;
 			do
 			{
 				filename.assign(ic.pclfile[1]);
 				pcls_b->loadGadget2(filename, hdr);
-				if (hdr.npart[1] == 0) break;
-				if (hdr.time / a > 1.001 || hdr.time / a < 0.999)
+				if(hdr.npart[1] == 0) break;
+				if(hdr.time / a > 1.001 || hdr.time / a < 0.999)
 				{
 					COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": redshift indicated in Gadget2 header does not match initial redshift of simulation!" << endl;
 				}
 				sim.numpcl[1] += hdr.npart[1];
 				i++;
-				if (hdr.num_files > 1)
+				if(hdr.num_files > 1)
 				{
 					ext = ic.pclfile[1];
 					while (strchr(ext, (int) '.') != NULL)
+					{
 						ext = strchr(ext, (int) '.');
+					}
 					sprintf(ext+1, "%d", i);
 				}
 			}
-			while (i < hdr.num_files);
+			while (i<hdr.num_files);
 
 			pcls_b->parts_info()->mass = cosmo.Omega_b / (Real) sim.numpcl[1];
 		}
@@ -236,15 +244,13 @@ void readIC_GR(metadata & sim,
 		sim.baryon_flag = 0;
 	}
 
-	for (p = 0; p < cosmo.num_ncdm; p++)
+	for(p=0; p<cosmo.num_ncdm; p++)
 	{
 		strcpy(pcls_ncdm_info[p].type_name, "part_simple");
 		pcls_ncdm_info[p].mass = 0.;
 		pcls_ncdm_info[p].relativistic = true;
-
 		pcls_ncdm[p].initialize(pcls_ncdm_info[p], pcls_ncdm_dataType, &(phi->lattice()), boxSize);
-
-		if ((ext = strstr(ic.pclfile[sim.baryon_flag+1+p], ".h5")) != NULL)
+		if((ext = strstr(ic.pclfile[sim.baryon_flag+1+p], ".h5")) != NULL)
 		{
 			filename.assign(ic.pclfile[sim.baryon_flag+1+p], ext-ic.pclfile[sim.baryon_flag+1+p]);
 			get_fileDsc_global(filename + ".h5", fd);
@@ -252,8 +258,10 @@ void readIC_GR(metadata & sim,
 			dummy1 = (Real *) malloc(3 * fd.numProcPerFile * sizeof(Real));
 			dummy2 = (Real *) malloc(3 * fd.numProcPerFile * sizeof(Real));
 			get_fileDsc_local(filename + ".h5", numpcl, dummy1, dummy2, fd.numProcPerFile);
-			for (i = 0; i < fd.numProcPerFile; i++)
+			for(i=0; i<fd.numProcPerFile; i++)
+			{
 				sim.numpcl[1] += numpcl[i];
+			}
 			pcls_ncdm[p].loadHDF5(filename, 1);
 			free(numpcl);
 			free(dummy1);
@@ -261,27 +269,29 @@ void readIC_GR(metadata & sim,
 		}
 		else
 		{
-			i = 0;
+			i=0;
 			do
 			{
 				filename.assign(ic.pclfile[sim.baryon_flag+1+p]);
 				pcls_ncdm[p].loadGadget2(filename, hdr);
-				if (hdr.npart[1] == 0) break;
-				if (hdr.time / a > 1.001 || hdr.time / a < 0.999)
+				if(hdr.npart[1] == 0) break;
+				if(hdr.time / a > 1.001 || hdr.time / a < 0.999)
 				{
 					COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": redshift indicated in Gadget2 header does not match initial redshift of simulation!" << endl;
 				}
 				sim.numpcl[sim.baryon_flag+1+p] += hdr.npart[1];
 				i++;
-				if (hdr.num_files > 1)
+				if(hdr.num_files > 1)
 				{
 					ext = ic.pclfile[sim.baryon_flag+1+p];
 					while (strchr(ext, (int) '.') != NULL)
+					{
 						ext = strchr(ext, (int) '.');
+					}
 					sprintf(ext+1, "%d", i);
 				}
 			}
-			while (i < hdr.num_files);
+			while (i<hdr.num_files);
 
 			pcls_ncdm[p].parts_info()->mass = cosmo.Omega_ncdm[p] / (Real) sim.numpcl[sim.baryon_flag+1+p];
 		}
@@ -290,7 +300,7 @@ void readIC_GR(metadata & sim,
 		maxvel[sim.baryon_flag+1+p] = pcls_ncdm[p].updateVel(update_q, 0., &phi, 1, &a);
 	}
 
-	if (sim.gr_flag > 0 && ic.metricfile[0][0] != '\0')
+	if(sim.gr_flag > 0 && ic.metricfile[0][0] != '\0')
 	{
 		filename.assign(ic.metricfile[0]);
 		phi->loadHDF5(filename);
@@ -299,14 +309,16 @@ void readIC_GR(metadata & sim,
 	{
 		projection_init(source);
 		scalarProjectionCIC_project(pcls_cdm, source);
-		if (sim.baryon_flag) scalarProjectionCIC_project(pcls_b, source);
+		if(sim.baryon_flag) scalarProjectionCIC_project(pcls_b, source);
 		scalarProjectionCIC_comm(source);
 
 		plan_source->execute(FFT_FORWARD);
 
 		kFT.first();
-		if (kFT.coord(0) == 0 && kFT.coord(1) == 0 && kFT.coord(2) == 0)
+		if(kFT.coord(0) == 0 && kFT.coord(1) == 0 && kFT.coord(2) == 0)
+		{
 			(*scalarFT)(kFT) = Cplx(0.,0.);
+		}
 
 		solveModifiedPoissonFT(*scalarFT, *scalarFT, fourpiG / a, 3. * sim.gr_flag * (Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) + fourpiG * cosmo.Omega_m / a));
 		plan_phi->execute(FFT_BACKWARD);
@@ -314,16 +326,15 @@ void readIC_GR(metadata & sim,
 
 	phi->updateHalo();
 
-	if (ic.restart_cycle >= 0)
+	if(ic.restart_cycle >= 0)
 	{
 		#ifndef CHECK_B
-		if (sim.vector_flag == VECTOR_PARABOLIC)
+			if(sim.vector_flag == VECTOR_PARABOLIC)
 		#endif
 		{
 			filename.assign(ic.metricfile[2*sim.gr_flag]);
 			Bi->loadHDF5(filename);
-
-			for (x.first(); x.test(); x.next())
+			for(x.first(); x.test(); x.next())
 			{
 				(*Bi)(x,0) *= a * a / (sim.numpts * sim.numpts);
 				(*Bi)(x,1) *= a * a / (sim.numpts * sim.numpts);
@@ -332,24 +343,22 @@ void readIC_GR(metadata & sim,
 			plan_Bi->execute(FFT_FORWARD);
 		}
 
-		if (sim.gr_flag > 0)
+		if(sim.gr_flag > 0)
 		{
 			filename.assign(ic.metricfile[1]);
 			chi->loadHDF5(filename);
 			chi->updateHalo();
 		}
 
-
-
-		if (parallel.isRoot())
+		if(parallel.isRoot())
 		{
 			sprintf(line, "%s%s_background.dat", sim.output_path, sim.basename_generic);
 			bgfile = fopen(line, "r");
-			if (bgfile == NULL)
+			if(bgfile == NULL)
 			{
 				COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": unable to locate file for background output! A new file will be created" << endl;
 				bgfile = fopen(line, "w");
-				if (bgfile == NULL)
+				if(bgfile == NULL)
 				{
 					COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": unable to create file for background output!" << endl;
 					parallel.abortForce();
@@ -365,21 +374,21 @@ void readIC_GR(metadata & sim,
 				buf.reserve(PARAM_MAX_LINESIZE);
 				buf.clear();
 
-				if (fgets(line, PARAM_MAX_LINESIZE, bgfile) == 0)
+				if(fgets(line, PARAM_MAX_LINESIZE, bgfile) == 0)
 				{
 					COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": unable to read file for background output! A new file will be created" << endl;
 				}
-				else if (line[0] != '#')
+				else if(line[0] != '#')
 				{
 					COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": file for background output has unexpected format! Contents will be overwritten!" << endl;
 				}
 				else
 				{
-					if (fgets(line, PARAM_MAX_LINESIZE, bgfile) == 0)
+					if(fgets(line, PARAM_MAX_LINESIZE, bgfile) == 0)
 					{
 						COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": unable to read file for background output! A new file will be created" << endl;
 					}
-					else if (line[0] != '#')
+					else if(line[0] != '#')
 					{
 						COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": file for background output has unexpected format! Contents will be overwritten!" << endl;
 					}
@@ -387,13 +396,19 @@ void readIC_GR(metadata & sim,
 
 				while (fgets(line, PARAM_MAX_LINESIZE, bgfile) != 0)
 				{
-					if (sscanf(line, " %d", &i) != 1)
+					if(sscanf(line, " %d", &i) != 1)
+					{
 						break;
+					}
 
-					if (i > ic.restart_cycle)
+					if(i > ic.restart_cycle)
+					{
 						break;
+					}
 					else
+					{
 						buf += line;
+					}
 				}
 
 				fclose(bgfile);
@@ -420,7 +435,7 @@ void readIC_GR(metadata & sim,
 	{
 		projection_init(Bi);
 		projection_T0i_project(pcls_cdm, Bi, phi);
-		if (sim.baryon_flag)
+		if(sim.baryon_flag)
 		{
 			projection_T0i_project(pcls_b, Bi, phi);
 		}
@@ -432,7 +447,7 @@ void readIC_GR(metadata & sim,
 
 		projection_init(Sij);
 		projection_Tij_project(pcls_cdm, Sij, a, phi);
-		if (sim.baryon_flag)
+		if(sim.baryon_flag)
 		{
 			projection_Tij_project(pcls_b, Sij, a, phi);
 		}
@@ -445,7 +460,7 @@ void readIC_GR(metadata & sim,
 		chi->updateHalo();
 	}
 
-	if (ic.restart_tau > 0.)
+	if(ic.restart_tau > 0.)
 	{
 		tau = ic.restart_tau;
 	}
@@ -454,12 +469,12 @@ void readIC_GR(metadata & sim,
 		particleHorizon(a, fourpiG, cosmo);
 	}
 
-	if (ic.restart_dtau > 0.)
+	if(ic.restart_dtau > 0.)
 	{
 		dtau_old = ic.restart_dtau;
 	}
 
-	if (sim.Cf / (double) sim.numpts < sim.steplimit / Hconf(a, fourpiG, cosmo))
+	if(sim.Cf / (double) sim.numpts < sim.steplimit / Hconf(a, fourpiG, cosmo))
 	{
 		dtau = sim.Cf / (double) sim.numpts;
 	}
@@ -468,7 +483,7 @@ void readIC_GR(metadata & sim,
 		dtau = sim.steplimit / Hconf(a, fourpiG, cosmo);
 	}
 
-	if (ic.restart_cycle >= 0)
+	if(ic.restart_cycle >= 0)
 	{
 		cycle = ic.restart_cycle + 1;
 	}
@@ -521,7 +536,7 @@ void readIC_fR(metadata & sim,
 							 Field<Real> * deltaR,
 							 Field<Real> * deltaR_prev,
 							 Field<Real> * dot_deltaR,
-							 Field<Real> * deltaT,
+							 Field<Real> * eightpiG_deltaT,
 							 Field<Real> * phidot,
 							 Field<Real> * xidot,
 							 Field<Real> * source,
@@ -568,9 +583,9 @@ void readIC_fR(metadata & sim,
 	metadata mdtemp;
 	cosmology cosmotemp;
 	double dtemp;
-
 	ifstream file_bin;
 	file_bin.open(filename_bin,ios::in|ios::binary);
+
 	if(file_bin.is_open())
 	{
 		file_bin.read((char*) & dtemp, sizeof(double));
@@ -597,13 +612,9 @@ void readIC_fR(metadata & sim,
 		sim = mdtemp;
 		file_bin.read((char*) & cosmotemp, sizeof(cosmology));
 		cosmo = cosmotemp;
+		// TODO: Add icsettings too?
+
 		file_bin.close();
-
-		// COUT << "Hybernation metadata and cosmology loaded:" << endl;
-		// COUT << sim << endl;
-		// COUT << cosmo << endl;
-
-
 	}
 	else
 	{
@@ -615,7 +626,7 @@ void readIC_fR(metadata & sim,
 	pcls_cdm_info.relativistic = false;
 	pcls_cdm->initialize(pcls_cdm_info, pcls_cdm_dataType, &(phi->lattice()), boxSize);
 
-	if ((ext = strstr(ic.pclfile[0], ".h5")) != NULL)
+	if((ext = strstr(ic.pclfile[0], ".h5")) != NULL)
 	{
 		filename.assign(ic.pclfile[0], ext-ic.pclfile[0]);
 		get_fileDsc_global(filename + ".h5", fd);
@@ -623,8 +634,10 @@ void readIC_fR(metadata & sim,
 		dummy1 = (Real *) malloc(3 * fd.numProcPerFile * sizeof(Real));
 		dummy2 = (Real *) malloc(3 * fd.numProcPerFile * sizeof(Real));
 		get_fileDsc_local(filename + ".h5", numpcl, dummy1, dummy2, fd.numProcPerFile);
-		for (i = 0; i < fd.numProcPerFile; i++)
-			sim.numpcl[0] += numpcl[i];
+		// for(i=0; i<fd.numProcPerFile; i++) // TODO: Removed because we already read sim from binary file. Check!
+		// {
+		// 	sim.numpcl[0] += numpcl[i];
+		// }
 		pcls_cdm->loadHDF5(filename, 1);
 		free(numpcl);
 		free(dummy1);
@@ -632,45 +645,55 @@ void readIC_fR(metadata & sim,
 	}
 	else
 	{
-		i = 0;
+		i=0;
 		do
 		{
 			filename.assign(ic.pclfile[0]);
 			pcls_cdm->loadGadget2(filename, hdr);
-			if (hdr.npart[1] == 0) break;
-			if (hdr.time / a > 1.001 || hdr.time / a < 0.999)
+			if(hdr.npart[1] == 0)
+			{
+				break;
+			}
+
+			if(hdr.time / a > 1.001 || hdr.time / a < 0.999)
 			{
 				COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": redshift indicated in Gadget2 header does not match initial redshift of simulation!" << endl;
 			}
-			sim.numpcl[0] += hdr.npart[1];
+			// sim.numpcl[0] += hdr.npart[1]; // TODO: Removed because we already read sim from binary file. Check!
 			i++;
-			if (hdr.num_files > 1)
+			if(hdr.num_files > 1)
 			{
 				ext = ic.pclfile[0];
 				while (strchr(ext, (int) '.') != NULL)
+				{
 					ext = strchr(ext, (int) '.');
+				}
 				sprintf(ext+1, "%d", i);
 			}
 		}
-		while (i < hdr.num_files);
+		while(i<hdr.num_files);
 
-		if (sim.baryon_flag == 1)
+		if(sim.baryon_flag == 1)
+		{
 			pcls_cdm->parts_info()->mass = cosmo.Omega_cdm / (Real) sim.numpcl[0];
+		}
 		else
+		{
 			pcls_cdm->parts_info()->mass = (cosmo.Omega_cdm + cosmo.Omega_b) / (Real) sim.numpcl[0];
+		}
 	}
 
 	COUT << " " << sim.numpcl[0] << " cdm particles read successfully." << endl;
 	maxvel[0] = pcls_cdm->updateVel(update_q, 0., &phi, 1, &a);
 
-	if (sim.baryon_flag == 1)
+	if(sim.baryon_flag == 1)
 	{
 		strcpy(pcls_b_info.type_name, "part_simple");
 		pcls_b_info.mass = 0.;
 		pcls_b_info.relativistic = false;
 		pcls_b->initialize(pcls_b_info, pcls_b_dataType, &(phi->lattice()), boxSize);
 
-		if ((ext = strstr(ic.pclfile[1], ".h5")) != NULL)
+		if((ext = strstr(ic.pclfile[1], ".h5")) != NULL)
 		{
 			filename.assign(ic.pclfile[1], ext-ic.pclfile[1]);
 			get_fileDsc_global(filename + ".h5", fd);
@@ -678,8 +701,10 @@ void readIC_fR(metadata & sim,
 			dummy1 = (Real *) malloc(3 * fd.numProcPerFile * sizeof(Real));
 			dummy2 = (Real *) malloc(3 * fd.numProcPerFile * sizeof(Real));
 			get_fileDsc_local(filename + ".h5", numpcl, dummy1, dummy2, fd.numProcPerFile);
-			for (i = 0; i < fd.numProcPerFile; i++)
-				sim.numpcl[1] += numpcl[i];
+			// for(i=0; i<fd.numProcPerFile; i++)// TODO: Removed because we already read sim from binary file. Check!
+			// {
+			// 	sim.numpcl[1] += numpcl[i];
+			// }
 			pcls_b->loadHDF5(filename, 1);
 			free(numpcl);
 			free(dummy1);
@@ -687,27 +712,29 @@ void readIC_fR(metadata & sim,
 		}
 		else
 		{
-			i = 0;
+			i=0;
 			do
 			{
 				filename.assign(ic.pclfile[1]);
 				pcls_b->loadGadget2(filename, hdr);
-				if (hdr.npart[1] == 0) break;
-				if (hdr.time / a > 1.001 || hdr.time / a < 0.999)
+				if(hdr.npart[1] == 0) break;
+				if(hdr.time / a > 1.001 || hdr.time / a < 0.999)
 				{
 					COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": redshift indicated in Gadget2 header does not match initial redshift of simulation!" << endl;
 				}
-				sim.numpcl[1] += hdr.npart[1];
+				// sim.numpcl[1] += hdr.npart[1];// TODO: Removed because we already read sim from binary file. Check!
 				i++;
-				if (hdr.num_files > 1)
+				if(hdr.num_files > 1)
 				{
 					ext = ic.pclfile[1];
 					while (strchr(ext, (int) '.') != NULL)
+					{
 						ext = strchr(ext, (int) '.');
+					}
 					sprintf(ext+1, "%d", i);
 				}
 			}
-			while (i < hdr.num_files);
+			while(i<hdr.num_files);
 
 			pcls_b->parts_info()->mass = cosmo.Omega_b / (Real) sim.numpcl[1];
 		}
@@ -716,17 +743,17 @@ void readIC_fR(metadata & sim,
 		maxvel[1] = pcls_b->updateVel(update_q, 0., &phi, 1, &a);
 	}
 	else
+	{
 		sim.baryon_flag = 0;
+	}
 
-	for (p = 0; p < cosmo.num_ncdm; p++)
+	for(p=0; p<cosmo.num_ncdm; p++)
 	{
 		strcpy(pcls_ncdm_info[p].type_name, "part_simple");
 		pcls_ncdm_info[p].mass = 0.;
 		pcls_ncdm_info[p].relativistic = true;
-
 		pcls_ncdm[p].initialize(pcls_ncdm_info[p], pcls_ncdm_dataType, &(phi->lattice()), boxSize);
-
-		if ((ext = strstr(ic.pclfile[sim.baryon_flag+1+p], ".h5")) != NULL)
+		if((ext = strstr(ic.pclfile[sim.baryon_flag+1+p], ".h5")) != NULL)
 		{
 			filename.assign(ic.pclfile[sim.baryon_flag+1+p], ext-ic.pclfile[sim.baryon_flag+1+p]);
 			get_fileDsc_global(filename + ".h5", fd);
@@ -734,8 +761,10 @@ void readIC_fR(metadata & sim,
 			dummy1 = (Real *) malloc(3 * fd.numProcPerFile * sizeof(Real));
 			dummy2 = (Real *) malloc(3 * fd.numProcPerFile * sizeof(Real));
 			get_fileDsc_local(filename + ".h5", numpcl, dummy1, dummy2, fd.numProcPerFile);
-			for (i = 0; i < fd.numProcPerFile; i++)
-				sim.numpcl[1] += numpcl[i];
+			// for(i=0; i<fd.numProcPerFile; i++)// TODO: Removed because we already read sim from binary file. Check!
+			// {
+			// 	sim.numpcl[1] += numpcl[i];
+			// }
 			pcls_ncdm[p].loadHDF5(filename, 1);
 			free(numpcl);
 			free(dummy1);
@@ -743,27 +772,29 @@ void readIC_fR(metadata & sim,
 		}
 		else
 		{
-			i = 0;
+			i=0;
 			do
 			{
 				filename.assign(ic.pclfile[sim.baryon_flag+1+p]);
 				pcls_ncdm[p].loadGadget2(filename, hdr);
-				if (hdr.npart[1] == 0) break;
-				if (hdr.time / a > 1.001 || hdr.time / a < 0.999)
+				if(hdr.npart[1] == 0) break;
+				if(hdr.time / a > 1.001 || hdr.time / a < 0.999)
 				{
 					COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": redshift indicated in Gadget2 header does not match initial redshift of simulation!" << endl;
 				}
-				sim.numpcl[sim.baryon_flag+1+p] += hdr.npart[1];
+				// sim.numpcl[sim.baryon_flag+1+p] += hdr.npart[1];// TODO: Removed because we already read sim from binary file. Check!
 				i++;
-				if (hdr.num_files > 1)
+				if(hdr.num_files > 1)
 				{
 					ext = ic.pclfile[sim.baryon_flag+1+p];
-					while (strchr(ext, (int) '.') != NULL)
+					while(strchr(ext, (int) '.') != NULL)
+					{
 						ext = strchr(ext, (int) '.');
+					}
 					sprintf(ext+1, "%d", i);
 				}
 			}
-			while (i < hdr.num_files);
+			while (i<hdr.num_files);
 
 			pcls_ncdm[p].parts_info()->mass = cosmo.Omega_ncdm[p] / (Real) sim.numpcl[sim.baryon_flag+1+p];
 		}
@@ -772,7 +803,7 @@ void readIC_fR(metadata & sim,
 		maxvel[sim.baryon_flag+1+p] = pcls_ncdm[p].updateVel(update_q, 0., &phi, 1, &a);
 	}
 
-	if (sim.gr_flag > 0 && ic.metricfile[0][0] != '\0')
+	if(ic.metricfile[0][0] != '\0')
 	{
 		filename.assign(ic.metricfile[0]);
 		phi->loadHDF5(filename);
@@ -781,14 +812,16 @@ void readIC_fR(metadata & sim,
 	{
 		projection_init(source);
 		scalarProjectionCIC_project(pcls_cdm, source);
-		if (sim.baryon_flag) scalarProjectionCIC_project(pcls_b, source);
+		if(sim.baryon_flag) scalarProjectionCIC_project(pcls_b, source);
 		scalarProjectionCIC_comm(source);
 
 		plan_source->execute(FFT_FORWARD);
 
 		kFT.first();
-		if (kFT.coord(0) == 0 && kFT.coord(1) == 0 && kFT.coord(2) == 0)
+		if(kFT.coord(0) == 0 && kFT.coord(1) == 0 && kFT.coord(2) == 0)
+		{
 			(*scalarFT)(kFT) = Cplx(0.,0.);
+		}
 
 		solveModifiedPoissonFT(*scalarFT, *scalarFT, fourpiG / a, 3. * sim.gr_flag * (Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) + fourpiG * cosmo.Omega_m / a));
 		plan_phi->execute(FFT_BACKWARD);
@@ -796,16 +829,15 @@ void readIC_fR(metadata & sim,
 
 	phi->updateHalo();
 
-	if (ic.restart_cycle >= 0)
+	if(ic.restart_cycle >= 0)
 	{
-#ifndef CHECK_B
-		if (sim.vector_flag == VECTOR_PARABOLIC)
-#endif
+		#ifndef CHECK_B
+			if(sim.vector_flag == VECTOR_PARABOLIC)
+		#endif
 		{
 			filename.assign(ic.metricfile[2*sim.gr_flag]);
 			Bi->loadHDF5(filename);
-
-			for (x.first(); x.test(); x.next())
+			for(x.first(); x.test(); x.next())
 			{
 				(*Bi)(x,0) *= a * a / (sim.numpts * sim.numpts);
 				(*Bi)(x,1) *= a * a / (sim.numpts * sim.numpts);
@@ -814,7 +846,7 @@ void readIC_fR(metadata & sim,
 			plan_Bi->execute(FFT_FORWARD);
 		}
 
-		if (sim.gr_flag > 0)
+		if(sim.gr_flag > 0)
 		{
 			filename.assign(ic.metricfile[1]);
 			chi->loadHDF5(filename);
@@ -823,61 +855,51 @@ void readIC_fR(metadata & sim,
 
 		if(sim.mg_flag == FR)
 		{
-			int j = 3;
+			int j=3;
 			filename.assign(ic.metricfile[j]);
-			COUT << " Reading file: " << filename << "\n";
 			xi->loadHDF5(filename);
 			xi->updateHalo();
 			j++;
 
 			filename.assign(ic.metricfile[j]);
-			COUT << " Reading file: " << filename << "\n";
 			xi_prev->loadHDF5(filename);
 			xi_prev->updateHalo();
 			j++;
 
 			filename.assign(ic.metricfile[j]);
-			COUT << " Reading file: " << filename << "\n";
 			zeta->loadHDF5(filename);
 			zeta->updateHalo();
 			j++;
 
 			filename.assign(ic.metricfile[j]);
-			COUT << " Reading file: " << filename << "\n";
 			deltaR->loadHDF5(filename);
 			deltaR->updateHalo();
 			j++;
 
 			filename.assign(ic.metricfile[j]);
-			COUT << " Reading file: " << filename << "\n";
 			deltaR_prev->loadHDF5(filename);
 			deltaR_prev->updateHalo();
 			j++;
 
 			filename.assign(ic.metricfile[j]);
-			COUT << " Reading file: " << filename << "\n";
 			dot_deltaR->loadHDF5(filename);
 			dot_deltaR->updateHalo();
 			j++;
 
 			filename.assign(ic.metricfile[j]);
-			COUT << " Reading file: " << filename << "\n";
-			deltaT->loadHDF5(filename);
-			deltaT->updateHalo();
+			eightpiG_deltaT->loadHDF5(filename);
+			eightpiG_deltaT->updateHalo();
 			j++;
 
 			filename.assign(ic.metricfile[j]);
-			COUT << " Reading file: " << filename << "\n";
 			phidot->loadHDF5(filename);
 			phidot->updateHalo();
 			j++;
 
 			filename.assign(ic.metricfile[j]);
-			COUT << " Reading file: " << filename << "\n";
 			xidot->loadHDF5(filename);
 			xidot->updateHalo();
 			j++;
-
 		}
 
 		if(parallel.isRoot())
@@ -904,21 +926,21 @@ void readIC_fR(metadata & sim,
 				buf.reserve(PARAM_MAX_LINESIZE);
 				buf.clear();
 
-				if (fgets(line, PARAM_MAX_LINESIZE, bgfile) == 0)
+				if(fgets(line, PARAM_MAX_LINESIZE, bgfile) == 0)
 				{
 					COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": unable to read file for background output! A new file will be created" << endl;
 				}
-				else if (line[0] != '#')
+				else if(line[0] != '#')
 				{
 					COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": file for background output has unexpected format! Contents will be overwritten!" << endl;
 				}
 				else
 				{
-					if (fgets(line, PARAM_MAX_LINESIZE, bgfile) == 0)
+					if(fgets(line, PARAM_MAX_LINESIZE, bgfile) == 0)
 					{
 						COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": unable to read file for background output! A new file will be created" << endl;
 					}
-					else if (line[0] != '#')
+					else if(line[0] != '#')
 					{
 						COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": file for background output has unexpected format! Contents will be overwritten!" << endl;
 					}
@@ -926,13 +948,19 @@ void readIC_fR(metadata & sim,
 
 				while (fgets(line, PARAM_MAX_LINESIZE, bgfile) != 0)
 				{
-					if (sscanf(line, " %d", &i) != 1)
+					if(sscanf(line, " %d", &i) != 1)
+					{
 						break;
+					}
 
-					if (i > ic.restart_cycle)
+					if(i > ic.restart_cycle)
+					{
 						break;
+					}
 					else
+					{
 						buf += line;
+					}
 				}
 
 				fclose(bgfile);
@@ -959,8 +987,10 @@ void readIC_fR(metadata & sim,
 	{
 		projection_init(Bi);
 		projection_T0i_project(pcls_cdm, Bi, phi);
-		if (sim.baryon_flag)
+		if(sim.baryon_flag)
+		{
 			projection_T0i_project(pcls_b, Bi, phi);
+		}
 		projection_T0i_comm(Bi);
 		plan_Bi->execute(FFT_FORWARD);
 		projectFTvector(*BiFT, *BiFT, fourpiG / (double) sim.numpts / (double) sim.numpts);
@@ -969,8 +999,10 @@ void readIC_fR(metadata & sim,
 
 		projection_init(Sij);
 		projection_Tij_project(pcls_cdm, Sij, a, phi);
-		if (sim.baryon_flag)
+		if(sim.baryon_flag)
+		{
 			projection_Tij_project(pcls_b, Sij, a, phi);
+		}
 		projection_Tij_comm(Sij);
 
 		prepareFTsource<Real>(*phi, *Sij, *Sij, 2. * fourpiG / a / (double) sim.numpts / (double) sim.numpts);
@@ -980,17 +1012,25 @@ void readIC_fR(metadata & sim,
 		chi->updateHalo();
 	}
 
-	if (ic.restart_cycle >= 0)
-	cycle = ic.restart_cycle + 1;
+	if(ic.restart_cycle >= 0)
+	{
+		cycle = ic.restart_cycle + 1;
+	}
 
-	while (snapcount < sim.num_snapshot && 1. / a < sim.z_snapshot[snapcount] + 1.)
+	while(snapcount < sim.num_snapshot && 1. / a < sim.z_snapshot[snapcount] + 1.)
+	{
 		snapcount++;
+	}
 
-	while (pkcount < sim.num_pk && 1. / a < sim.z_pk[pkcount] + 1.)
+	while(pkcount < sim.num_pk && 1. / a < sim.z_pk[pkcount] + 1.)
+	{
 		pkcount++;
+	}
 
-	while (restartcount < sim.num_restart && 1. / a < sim.z_restart[restartcount] + 1.)
+	while(restartcount < sim.num_restart && 1. / a < sim.z_restart[restartcount] + 1.)
+	{
 		restartcount++;
+	}
 }
 
 #endif

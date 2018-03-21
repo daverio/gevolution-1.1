@@ -27,12 +27,10 @@ struct parameter
 	bool used;
 };
 
-
 int sort_descending(const void * z1, const void * z2)
 {
 	return (* (double *) z1 > * (double *) z2) ? -1 : ((* (double *) z1 < * (double *) z2) ? 1 : 0);
 }
-
 
 //////////////////////////
 // readline
@@ -71,10 +69,10 @@ bool readline(char * line, char * pname, char * pvalue)
 	if(phash != NULL && phash < pequal) return false;
 
 	l = line;
-	while (*l == ' ' || *l == '\t') l++;
+	while(*l == ' ' || *l == '\t') l++;
 
 	r = pequal-1;
-	while ((*r == ' ' || *r == '\t') && r > line) r--;
+	while((*r == ' ' || *r == '\t') && r > line) r--;
 
 	if(r < l) return false;
 
@@ -84,14 +82,14 @@ bool readline(char * line, char * pname, char * pvalue)
 	pname[r-l+1] = '\0';
 
 	l = pequal+1;
-	while (*l == ' ' || *l == '\t') l++;
+	while(*l == ' ' || *l == '\t') l++;
 
 	if(phash == NULL)
 		r = line+strlen(line)-1;
 	else
 		r = phash-1;
 
-	while (*r == ' ' || *r == '\t' || *r == '\n' || *r == '\r') r--;
+	while(*r == ' ' || *r == '\t' || *r == '\n' || *r == '\r') r--;
 
 	if(r < l) return false;
 
@@ -139,11 +137,13 @@ int loadParameterFile(const char * filename, parameter * & params)
 			parallel.abortForce();
 		}
 
-		while (!feof(paramfile) && !ferror(paramfile))
+		while(!feof(paramfile) && !ferror(paramfile))
 		{
 			fgets(line, PARAM_MAX_LINESIZE, paramfile);
-
-			if(readline(line, pname, pvalue) == true) numparam++;
+			if(readline(line, pname, pvalue) == true)
+			{
+				numparam++;
+			}
 		}
 
 		if(numparam == 0)
@@ -164,10 +164,9 @@ int loadParameterFile(const char * filename, parameter * & params)
 
 		rewind(paramfile);
 
-		while (!feof(paramfile) && !ferror(paramfile) && i < numparam)
+		while(!feof(paramfile) && !ferror(paramfile) && i<numparam)
 		{
 			fgets(line, PARAM_MAX_LINESIZE, paramfile);
-
 			if(readline(line, params[i].name, params[i].value) == true)
 			{
 				params[i].used = false;
@@ -177,7 +176,7 @@ int loadParameterFile(const char * filename, parameter * & params)
 
 		fclose(paramfile);
 
-		if(i < numparam)
+		if(i<numparam)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadParameterFile! File may have changed or file pointer corrupted." << endl;
 			free(params);
@@ -235,7 +234,7 @@ void saveParameterFile(const char * filename, parameter * params, const int nump
 		}
 		else
 		{
-			for (int i = 0; i < numparam; i++)
+			for(int i=0; i<numparam; i++)
 			{
 				if(!used_only || params[i].used)
 					fprintf(paramfile, "%s = %s\n", params[i].name, params[i].value);
@@ -266,7 +265,7 @@ void saveParameterFile(const char * filename, parameter * params, const int nump
 
 bool parseParameter(parameter * & params, const int numparam, const char * pname, int & pvalue)
 {
-	for (int i = 0; i < numparam; i++)
+	for(int i=0; i<numparam; i++)
 	{
 		if(strcmp(params[i].name, pname) == 0)
 		{
@@ -301,7 +300,7 @@ bool parseParameter(parameter * & params, const int numparam, const char * pname
 
 bool parseParameter(parameter * & params, const int numparam, const char * pname, long & pvalue)
 {
-	for (int i = 0; i < numparam; i++)
+	for(int i=0; i<numparam; i++)
 	{
 		if(strcmp(params[i].name, pname) == 0)
 		{
@@ -336,7 +335,7 @@ bool parseParameter(parameter * & params, const int numparam, const char * pname
 
 bool parseParameter(parameter * & params, const int numparam, const char * pname, double & pvalue)
 {
-	for (int i = 0; i < numparam; i++)
+	for(int i=0; i<numparam; i++)
 	{
 		if(strcmp(params[i].name, pname) == 0)
 		{
@@ -371,7 +370,7 @@ bool parseParameter(parameter * & params, const int numparam, const char * pname
 
 bool parseParameter(parameter * & params, const int numparam, const char * pname, char * pvalue)
 {
-	for (int i = 0; i < numparam; i++)
+	for(int i=0; i<numparam; i++)
 	{
 		if(strcmp(params[i].name, pname) == 0)
 		{
@@ -410,14 +409,14 @@ bool parseParameter(parameter * & params, const int numparam, const char * pname
 	char item[PARAM_MAX_LENGTH];
 	int n = 0;
 
-	for (int i = 0; i < numparam; i++)
+	for(int i=0; i<numparam; i++)
 	{
 		if(strcmp(params[i].name, pname) == 0)
 		{
 			start = params[i].value;
 			if(nmax > 1)
 			{
-				while ((comma = strchr(start, ',')) != NULL)
+				while((comma = strchr(start, ',')) != NULL)
 				{
 					strncpy(item, start, comma-start);
 					item[comma-start] = '\0';
@@ -472,14 +471,14 @@ bool parseParameter(parameter * & params, const int numparam, const char * pname
 	char item[PARAM_MAX_LENGTH];
 	int n = 0;
 
-	for (int i = 0; i < numparam; i++)
+	for(int i=0; i<numparam; i++)
 	{
 		if(strcmp(params[i].name, pname) == 0)
 		{
 			start = params[i].value;
 			if(nmax > 1)
 			{
-				while ((comma = strchr(start, ',')) != NULL)
+				while((comma = strchr(start, ',')) != NULL)
 				{
 					strncpy(item, start, comma-start);
 					item[comma-start] = '\0';
@@ -536,19 +535,19 @@ bool parseParameter(parameter * & params, const int numparam, const char * pname
 	char item[PARAM_MAX_LENGTH];
 	int n = 0;
 
-	for (int i = 0; i < numparam; i++)
+	for(int i=0; i<numparam; i++)
 	{
 		if(strcmp(params[i].name, pname) == 0)
 		{
 			start = params[i].value;
 			if(nmax > 1)
 			{
-				while ((comma = strchr(start, ',')) != NULL)
+				while((comma = strchr(start, ',')) != NULL)
 				{
 					l = start;
-					while (*l == ' ' || *l == '\t') l++;
+					while(*l == ' ' || *l == '\t') l++;
 					r = comma-1;
-					while ((*r == ' ' || *r == '\t') && r > start) r--;
+					while((*r == ' ' || *r == '\t') && r > start) r--;
 
 					if(r < l)
 					{
@@ -565,9 +564,9 @@ bool parseParameter(parameter * & params, const int numparam, const char * pname
 				}
 			}
 			l = start;
-			while (*l == ' ' || *l == '\t') l++;
+			while(*l == ' ' || *l == '\t') l++;
 			r = l;
-			while (*r != ' ' && *r != '\t' && *r != '\0') r++;
+			while(*r != ' ' && *r != '\t' && *r != '\0') r++;
 			r--;
 
 			if(r < l)
@@ -614,16 +613,16 @@ bool parseFieldSpecifiers(parameter * & params, const int numparam, const char *
 	int pos;
 	char item[PARAM_MAX_LENGTH];
 
-	for (int i = 0; i < numparam; i++)
+	for(int i=0; i<numparam; i++)
 	{
 		if(strcmp(params[i].name, pname) == 0)
 		{
 			pvalue = 0;
 			start = params[i].value;
-			while ((comma = strchr(start, ',')) != NULL)
+			while((comma = strchr(start, ',')) != NULL)
 			{
 				strncpy(item, start, comma-start);
-				for (pos = comma-start; pos > 0; pos--)
+				for(pos = comma-start; pos > 0; pos--)
 				{
 					if(item[pos-1] != ' ' && item[pos-1] != '\t') break;
 				}
@@ -668,7 +667,7 @@ bool parseFieldSpecifiers(parameter * & params, const int numparam, const char *
 					pvalue |= MASK_LENSING;
 
 				start = comma+1;
-				while (*start == ' ' || *start == '\t') start++;
+				while(*start == ' ' || *start == '\t') start++;
 			}
 
 			if(strcmp(start, "Phi") == 0 || strcmp(start, "phi") == 0)
@@ -749,7 +748,10 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	ic.pkfile[0] = '\0';
 	ic.tkfile[0] = '\0';
-	for(i=0; i < METRICFILE_LENGTH; i++) ic.metricfile[i][0] = '\0';
+	for(i=0; i<METRICFILE_LENGTH; i++)
+	{
+		ic.metricfile[i][0] = '\0';
+	}
 	ic.seed = 0;
 	ic.flags = 0;
 	ic.z_ic = -2.;
@@ -773,25 +775,34 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	ic.restart_dot_Rbar = -1.;
 
 	parseParameter(params, numparam, "seed", ic.seed);
-
 	if(parseParameter(params, numparam, "IC generator", par_string))
 	{
 		if(par_string[0] == 'B' || par_string[0] == 'b')
+		{
 			ic.generator = ICGEN_BASIC;
+		}
 		else if(par_string[0] == 'R' || par_string[0] == 'r')
+		{
 			ic.generator = ICGEN_READ_FROM_DISK;
-#ifdef ICGEN_PREVOLUTION
-		else if(par_string[0] == 'P' || par_string[0] == 'p')
-			ic.generator = ICGEN_PREVOLUTION;
-#endif
-#ifdef ICGEN_SONG
-		else if(par_string[0] == 'S' || par_string[0] == 's')
-			ic.generator = ICGEN_SONG;
-#endif
-#ifdef ICGEN_FALCONIC
-		else if(par_string[0] == 'F' || par_string[0] == 'f')
-			ic.generator = ICGEN_FALCONIC;
-#endif
+		}
+		#ifdef ICGEN_PREVOLUTION
+			else if(par_string[0] == 'P' || par_string[0] == 'p')
+			{
+				ic.generator = ICGEN_PREVOLUTION;
+			}
+		#endif
+		#ifdef ICGEN_SONG
+			else if(par_string[0] == 'S' || par_string[0] == 's')
+			{
+				ic.generator = ICGEN_SONG;
+			}
+		#endif
+		#ifdef ICGEN_FALCONIC
+			else if(par_string[0] == 'F' || par_string[0] == 'f')
+			{
+				ic.generator = ICGEN_FALCONIC;
+			}
+		#endif
 		else
 		{
 			COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": IC generator not recognized!" << endl;
@@ -804,7 +815,11 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		ic.generator = ICGEN_BASIC;
 	}
 
-	for (i = 0; i < MAX_PCL_SPECIES; i++)	pptr[i] = ic.pclfile[i];
+	for(i=0; i<MAX_PCL_SPECIES; i++)
+	{
+		pptr[i] = ic.pclfile[i];
+	}
+
 	if(ic.generator == ICGEN_READ_FROM_DISK)
 	{
 		if(!parseParameter(params, numparam, "particle file", pptr, i))
@@ -819,46 +834,58 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		parallel.abortForce();
 	}
 
-	for (; i < MAX_PCL_SPECIES; i++)
-		strcpy(ic.pclfile[i], ic.pclfile[i-1]);
-
-#ifdef ICGEN_FALCONIC
-	if((!parseParameter(params, numparam, "mPk file", ic.pkfile) && !parseParameter(params, numparam, "Tk file", ic.tkfile) && ic.generator != ICGEN_READ_FROM_DISK && ic.generator != ICGEN_FALCONIC)
-#else
-	if((!parseParameter(params, numparam, "mPk file", ic.pkfile) && !parseParameter(params, numparam, "Tk file", ic.tkfile) && ic.generator != ICGEN_READ_FROM_DISK)
-#endif
-#ifdef ICGEN_PREVOLUTION
-	    || ic.generator == ICGEN_PREVOLUTION)
-#else
-		)
-#endif
+	for(; i<MAX_PCL_SPECIES; i++)
 	{
-#ifdef HAVE_CLASS
-		COUT << " initial transfer functions will be computed by calling CLASS" << endl;
-#else
-		COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": no power spectrum file nor transfer function file specified!" << endl;
-		parallel.abortForce();
-#endif
+		strcpy(ic.pclfile[i], ic.pclfile[i-1]);
+	}
+
+	#ifdef ICGEN_FALCONIC
+		if((!parseParameter(params, numparam, "mPk file", ic.pkfile) && !parseParameter(params, numparam, "Tk file", ic.tkfile) && ic.generator != ICGEN_READ_FROM_DISK && ic.generator != ICGEN_FALCONIC)
+	#else
+		if((!parseParameter(params, numparam, "mPk file", ic.pkfile) && !parseParameter(params, numparam, "Tk file", ic.tkfile) && ic.generator != ICGEN_READ_FROM_DISK)
+	#endif
+	#ifdef ICGEN_PREVOLUTION
+	  || ic.generator == ICGEN_PREVOLUTION)
+	#else
+		)
+	#endif
+	{
+		#ifdef HAVE_CLASS
+			COUT << " initial transfer functions will be computed by calling CLASS" << endl;
+		#else
+			COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": no power spectrum file nor transfer function file specified!" << endl;
+			parallel.abortForce();
+		#endif
 	}
 
 	if(parseParameter(params, numparam, "correct displacement", par_string))
 	{
 		if(par_string[0] == 'Y' || par_string[0] == 'y')
+		{
 			ic.flags |= ICFLAG_CORRECT_DISPLACEMENT;
+		}
 		else if(par_string[0] != 'N' && par_string[0] != 'n')
+		{
 			COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": setting chosen for deconvolve displacement option not recognized, using default (no)" << endl;
+		}
 	}
 
 	if(parseParameter(params, numparam, "k-domain", par_string))
 	{
 		if(par_string[0] == 'S' || par_string[0] == 's')
+		{
 			ic.flags |= ICFLAG_KSPHERE;
+		}
 		else if(par_string[0] != 'C' && par_string[0] != 'c')
+		{
 			COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": setting chosen for k-domain option not recognized, using default (cube)" << endl;
+		}
 	}
 
-	for (i = 0; i < MAX_PCL_SPECIES; i++)
+	for(i=0; i<MAX_PCL_SPECIES; i++)
+	{
 		ic.numtile[i] = 0;
+	}
 
 	if(!parseParameter(params, numparam, "tiling factor", ic.numtile, i) && ic.generator != ICGEN_READ_FROM_DISK)
 	{
@@ -867,10 +894,12 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		i = 1;
 	}
 
-	for (; i < MAX_PCL_SPECIES; i++)
+	for(; i<MAX_PCL_SPECIES; i++)
+	{
 		ic.numtile[i] = ic.numtile[i-1];
+	}
 
-	for (i = 0; i < MAX_PCL_SPECIES; i++)
+	for(i=0; i<MAX_PCL_SPECIES; i++)
 	{
 		if(ic.numtile[i] <= 0 && ic.generator != ICGEN_READ_FROM_DISK)
 		{
@@ -935,36 +964,38 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			sim.radiation_flag = 0;
 			COUT << " radiation treatment set to: " << COLORTEXT_CYAN << "ignore" << COLORTEXT_RESET << endl;
 		}
-#ifdef HAVE_CLASS
-		else if(par_string[0] == 'c' || par_string[0] == 'C')
-		{
-			sim.radiation_flag = 1;
-			COUT << " radiation treatment set to: " << COLORTEXT_CYAN << "CLASS" << COLORTEXT_RESET << endl;
-			if((ic.pkfile[0] != '\0' || ic.tkfile[0] != '\0')
-#ifdef ICGEN_PREVOLUTION
-				&& ic.generator != ICGEN_PREVOLUTION
-#endif
-				)
+		#ifdef HAVE_CLASS
+			else if(par_string[0] == 'c' || par_string[0] == 'C')
 			{
-				COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": using radiation treatment = CLASS and providing initial power spectra / transfer functions independently" << endl;
-				COUT << "              is dangerous! In order to ensure consistency, it is recommended to call CLASS directly." << endl;
+				sim.radiation_flag = 1;
+				COUT << " radiation treatment set to: " << COLORTEXT_CYAN << "CLASS" << COLORTEXT_RESET << endl;
+				if((ic.pkfile[0] != '\0' || ic.tkfile[0] != '\0')
+				#ifdef ICGEN_PREVOLUTION
+					&& ic.generator != ICGEN_PREVOLUTION
+				#endif
+				)
+				{
+					COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": using radiation treatment = CLASS and providing initial power spectra / transfer functions independently" << endl;
+					COUT << "              is dangerous! In order to ensure consistency, it is recommended to call CLASS directly." << endl;
+				}
 			}
-		}
-		else
-		{
-			COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": radiation treatment not supported!" << endl;
-			parallel.abortForce();
-		}
-#else
-		else
-		{
-			sim.radiation_flag = 0;
-			COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": CLASS is not available, setting radiation treatment = ignore" << endl;
-		}
-#endif
+			else
+			{
+				COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": radiation treatment not supported!" << endl;
+				parallel.abortForce();
+			}
+		#else
+			else
+			{
+				sim.radiation_flag = 0;
+				COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": CLASS is not available, setting radiation treatment = ignore" << endl;
+			}
+		#endif
 	}
 	else
-			sim.radiation_flag = 0;
+	{
+		sim.radiation_flag = 0;
+	}
 
 	parseParameter(params, numparam, "relaxation redshift", ic.z_relax);
 
@@ -981,8 +1012,11 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		}
 		parseParameter(params, numparam, "tau", ic.restart_tau);
 		parseParameter(params, numparam, "dtau", ic.restart_dtau);
+		for(i=0; i<METRICFILE_LENGTH; i++)
+		{
+			pptr[i] = ic.metricfile[i];
+		}
 
-		for (i = 0; i < METRICFILE_LENGTH; i++) pptr[i] = ic.metricfile[i];
 		parseParameter(params, numparam, "metric file", pptr, i);
 		if(parseParameter(params, numparam, "gevolution version", ic.restart_version))
 		{
@@ -992,50 +1026,50 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			}
 		}
 	}
-#ifdef ICGEN_PREVOLUTION
-	else if(ic.generator == ICGEN_PREVOLUTION)
-	{
-		if(!parseParameter(params, numparam, "prevolution redshift", ic.z_ic))
+	#ifdef ICGEN_PREVOLUTION
+		else if(ic.generator == ICGEN_PREVOLUTION)
 		{
-			COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": no starting redshift specified for IC generator = prevolution" << endl;
-			parallel.abortForce();
-		}
+			if(!parseParameter(params, numparam, "prevolution redshift", ic.z_ic))
+			{
+				COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": no starting redshift specified for IC generator = prevolution" << endl;
+				parallel.abortForce();
+			}
 
-		parseParameter(params, numparam, "prevolution Courant factor", ic.Cf);
-	}
-#endif
+			parseParameter(params, numparam, "prevolution Courant factor", ic.Cf);
+		}
+	#endif
 
 	if(!parseParameter(params, numparam, "A_s", ic.A_s) && (
-#ifdef ICGEN_FALCONIC
+	#ifdef ICGEN_FALCONIC
 		ic.generator == ICGEN_FALCONIC ||
-#endif
-#ifdef ICGEN_PREVOLUTION
+	#endif
+	#ifdef ICGEN_PREVOLUTION
 		ic.generator == ICGEN_PREVOLUTION ||
-#endif
+	#endif
 		sim.radiation_flag > 0 || (ic.pkfile[0] == '\0' && ic.generator != ICGEN_READ_FROM_DISK)))
 	{
 		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": power spectrum normalization not specified, using default value (2.215e-9)" << endl;
 	}
 
 	if(!parseParameter(params, numparam, "n_s", ic.n_s) && (
-#ifdef ICGEN_FALCONIC
+	#ifdef ICGEN_FALCONIC
 		ic.generator == ICGEN_FALCONIC ||
-#endif
-#ifdef ICGEN_PREVOLUTION
+	#endif
+	#ifdef ICGEN_PREVOLUTION
 		ic.generator == ICGEN_PREVOLUTION ||
-#endif
+	#endif
 		sim.radiation_flag > 0 || (ic.pkfile[0] == '\0' && ic.generator != ICGEN_READ_FROM_DISK)))
 	{
 		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": scalar spectral index not specified, using default value (0.9619)" << endl;
 	}
 
 	if(!parseParameter(params, numparam, "k_pivot", ic.k_pivot) && (
-#ifdef ICGEN_FALCONIC
+	#ifdef ICGEN_FALCONIC
 		ic.generator == ICGEN_FALCONIC ||
-#endif
-#ifdef ICGEN_PREVOLUTION
+	#endif
+	#ifdef ICGEN_PREVOLUTION
 		ic.generator == ICGEN_PREVOLUTION ||
-#endif
+	#endif
 		sim.radiation_flag > 0 || (ic.pkfile[0] == '\0' && ic.generator != ICGEN_READ_FROM_DISK)))
 	{
 		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": pivot scale not specified, using default value (0.05 / Mpc)" << endl;
@@ -1045,7 +1079,10 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	sim.numpts = 0;
 	sim.downgrade_factor = 1;
-	for (i = 0; i < MAX_PCL_SPECIES; i++) sim.numpcl[i] = 0;
+	for(i=0; i<MAX_PCL_SPECIES; i++)
+	{
+		sim.numpcl[i] = 0;
+	}
 	sim.vector_flag = VECTOR_PARABOLIC;
 	sim.gr_flag = 0;
 	sim.mg_flag = GENREL;
@@ -1055,19 +1092,18 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	sim.numbins = 0;
 	sim.num_snapshot = MAX_OUTPUTS;
 	sim.num_restart = MAX_OUTPUTS;
-	for (i = 0; i < MAX_PCL_SPECIES; i++) sim.tracer_factor[i] = 1;
+	for(i=0; i<MAX_PCL_SPECIES; i++) sim.tracer_factor[i] = 1;
 	sim.Cf = 1.;
 	sim.steplimit = 1.;
 	sim.boxsize = -1.;
 	sim.wallclocklimit = -1.;
 	sim.z_in = 0.;
 	sim.fR_type = 0;
-	for (i = 0; i < MAX_FR_PARAMS; i++) sim.fR_params[i] = 0;
+	for(i=0; i<MAX_FR_PARAMS; i++) sim.fR_params[i] = 0;
 	sim.num_fR_params = MAX_FR_PARAMS;
 
 	parseParameter(params, numparam, "CYCLE_INFO_INTERVAL", sim.CYCLE_INFO_INTERVAL); // Defaults to 10
 	parseParameter(params, numparam, "BACKGROUND_NUMPTS", sim.BACKGROUND_NUMPTS);
-
 	if(parseParameter(params, numparam, "vector method", par_string))
 	{
 		if(par_string[0] == 'p' || par_string[0] == 'P')
@@ -1116,7 +1152,9 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	}
 
 	if(!parseParameter(params, numparam, "move limit", sim.movelimit))
+	{
 		sim.movelimit = (double) sim.numpts;
+	}
 
 	if(!parseParameter(params, numparam, "initial redshift", sim.z_in))
 	{
@@ -1124,34 +1162,45 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		parallel.abortForce();
 	}
 
-	if(ic.z_relax < -1.) ic.z_relax = sim.z_in;
-#ifdef ICGEN_PREVOLUTION
-	else if(ic.generator == ICGEN_PREVOLUTION && ic.z_relax < sim.z_in)
+	if(ic.z_relax < -1.)
 	{
-		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": relaxation redshift cannot be below initial redshift for IC generator = prevolution; reset to initial redshift!" << endl;
 		ic.z_relax = sim.z_in;
 	}
-#endif
+	#ifdef ICGEN_PREVOLUTION
+		else if(ic.generator == ICGEN_PREVOLUTION && ic.z_relax < sim.z_in)
+		{
+			COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": relaxation redshift cannot be below initial redshift for IC generator = prevolution; reset to initial redshift!" << endl;
+			ic.z_relax = sim.z_in;
+		}
+	#endif
 
-	if(ic.z_ic < sim.z_in && ic.generator != ICGEN_READ_FROM_DISK) ic.z_ic = sim.z_in;
+	if(ic.z_ic < sim.z_in && ic.generator != ICGEN_READ_FROM_DISK)
+	{
+		ic.z_ic = sim.z_in;
+	}
 
 	parseParameter(params, numparam, "snapshot redshifts", sim.z_snapshot, sim.num_snapshot);
 	if(sim.num_snapshot > 0)
+	{
 		qsort((void *) sim.z_snapshot, (size_t) sim.num_snapshot, sizeof(double), sort_descending);
+	}
 
 	parseParameter(params, numparam, "Pk redshifts", sim.z_pk, sim.num_pk);
 	if(sim.num_pk > 0)
+	{
 		qsort((void *) sim.z_pk, (size_t) sim.num_pk, sizeof(double), sort_descending);
+	}
 
 	parseParameter(params, numparam, "hibernation redshifts", sim.z_restart, sim.num_restart);
 	if(sim.num_restart > 0)
+	{
 		qsort((void *) sim.z_restart, (size_t) sim.num_restart, sizeof(double), sort_descending);
+	}
 
 	parseParameter(params, numparam, "hibernation wallclock limit", sim.wallclocklimit);
-
 	i = MAX_PCL_SPECIES;
 	parseParameter(params, numparam, "tracer factor", sim.tracer_factor, i);
-	for (; i > 0; i--)
+	for(; i > 0; i--)
 	{
 		if(sim.tracer_factor[i-1] < 1)
 		{
@@ -1167,8 +1216,10 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	}
 
 	parseParameter(params, numparam, "Courant factor", sim.Cf);
-
-	if(ic.Cf < 0.) ic.Cf = sim.Cf;
+	if(ic.Cf < 0.)
+	{
+		ic.Cf = sim.Cf;
+	}
 
 	// parse cosmological parameters
 	if(!parseParameter(params, numparam, "h", cosmo.h))
@@ -1179,18 +1230,21 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	cosmo.num_ncdm = MAX_PCL_SPECIES-2;
 	if(!parseParameter(params, numparam, "m_ncdm", cosmo.m_ncdm, cosmo.num_ncdm))
 	{
-		for (i = 0; i < MAX_PCL_SPECIES-2; i++) cosmo.m_ncdm[i] = 0.;
+		for(i=0; i<MAX_PCL_SPECIES-2; i++)
+		{
+			cosmo.m_ncdm[i] = 0.;
+		}
 		cosmo.num_ncdm = 0;
 	}
 
 	if(parseParameter(params, numparam, "N_ncdm", i))
 	{
-		if(i < 0 || !isfinite(i))
+		if(i<0 || !isfinite(i))
 		{
 			COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": number of ncdm species not set properly!" << endl;
 			parallel.abortForce();
 		}
-		if(i > cosmo.num_ncdm)
+		if(i>cosmo.num_ncdm)
 		{
 			COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": N_ncdm = " << i << " is larger than the number of mass parameters specified (" << cosmo.num_ncdm << ")!" << endl;
 			parallel.abortForce();
@@ -1202,7 +1256,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": N_ncdm not specified, inferring from number of mass parameters in m_ncdm (" << cosmo.num_ncdm << ")!" << endl;
 	}
 
-	for (i = 0; i < MAX_PCL_SPECIES-2; i++)
+	for(i=0; i<MAX_PCL_SPECIES-2; i++)
 	{
 		cosmo.T_ncdm[i] = P_T_NCDM;
 		cosmo.deg_ncdm[i] = 1.0;
@@ -1211,7 +1265,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	i = MAX_PCL_SPECIES-2;
 	parseParameter(params, numparam, "deg_ncdm", cosmo.deg_ncdm, i);
 
-	for (i = 0; i < cosmo.num_ncdm; i++)
+	for(i=0; i<cosmo.num_ncdm; i++)
 	{
 		cosmo.Omega_ncdm[i] = cosmo.m_ncdm[i] * cosmo.deg_ncdm[i] / P_NCDM_MASS_OMEGA / cosmo.h / cosmo.h;
 	}
@@ -1248,7 +1302,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	}
 
 	cosmo.Omega_rad = cosmo.Omega_g + cosmo.Omega_ur;
-
 	if(parseParameter(params, numparam, "omega_b", cosmo.Omega_b))
 	{
 		cosmo.Omega_b /= cosmo.h * cosmo.h;
@@ -1270,7 +1323,10 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	}
 
 	cosmo.Omega_m = cosmo.Omega_cdm + cosmo.Omega_b;
-	for (i = 0; i < cosmo.num_ncdm; i++) cosmo.Omega_m += cosmo.Omega_ncdm[i];
+	for(i=0; i<cosmo.num_ncdm; i++)
+	{
+		cosmo.Omega_m += cosmo.Omega_ncdm[i];
+	}
 
 	if(cosmo.Omega_m <= 0. || cosmo.Omega_m > 1.)
 	{
@@ -1291,14 +1347,18 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	if(sim.background_only)
 	{
-		if(parseParameter(params, numparam, "background initial redshift", sim.bg_initial_redshift))
+		if(!parseParameter(params, numparam, "background initial redshift", sim.bg_initial_redshift))
 		{
-			COUT << " Background only mode. Initial redshift = " << sim.bg_initial_redshift << "\n";
+			sim.bg_initial_redshift = sim.z_in;
 		}
-		else sim.bg_initial_redshift = sim.z_in;
 
-		parseParameter(params, numparam, "background final redshift", sim.bg_final_redshift);
-		COUT << "                       Final redshift = " << sim.bg_final_redshift << "\n";
+		if(!parseParameter(params, numparam, "background final redshift", sim.bg_final_redshift))
+		{
+			sim.bg_final_redshift = 0.;
+		}
+
+		COUT << " Background only mode. Initial redshift = " << sim.bg_initial_redshift << endl
+				 << "                         Final redshift = " << sim.bg_final_redshift << endl;
 	}
 
 	// Parse Gravity Theory
@@ -1310,9 +1370,9 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			sim.gr_flag = 0;
 			cosmo.Omega_Lambda = 1. - cosmo.Omega_m - cosmo.Omega_rad; //In Newton, set total Omega = 1
 			if(ic.pkfile[0] == '\0' && ic.tkfile[0] != '\0'
-#ifdef ICGEN_PREVOLUTION
+			#ifdef ICGEN_PREVOLUTION
 				&& ic.generator != ICGEN_PREVOLUTION
-#endif
+			#endif
 				)
 			{
 				COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": gauge transformation to N-body gauge can only be performed for the positions; the transformation for" << endl;
@@ -1328,7 +1388,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		else if(par_string[0] == 'F' || par_string[0] == 'f')
 		{
 			COUT << " Gravity theory set to: " << COLORTEXT_CYAN << "f(R)" << COLORTEXT_RESET << endl;
-
 			if(ic.generator == ICGEN_READ_FROM_DISK)
 			{
 				parseParameter(params, numparam, "dtau_old", ic.restart_dtau_old);
@@ -1419,6 +1478,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 						parallel.abortForce();
 						// TODO: Check that parameter n of Hu-Sawicki is >= 1
 					}
+
 					sim.fR_type = FR_TYPE_HU_SAWICKI;
 					if(sim.lcdm_background)
 					{
@@ -1443,6 +1503,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 						COUT << " The parameter a of a * (R/a)^(1+delta) model must be positive. Closing...\n";
 						parallel.abortForce();
 					}
+
 					sim.fR_type = FR_TYPE_DELTA;
 				}
 
@@ -1517,7 +1578,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		{
 			parseParameter(params, numparam, "f(R) target precision", sim.fR_target_precision);
 			parseParameter(params, numparam, "f(R) count max", sim.fR_count_max);
-
 			if(parseParameter(params, numparam, "relaxation method", sim.relaxation_method))
 			{
 				if(sim.relaxation_method == METHOD_FMG)
@@ -1527,12 +1587,12 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 				parseParameter(params, numparam, "relaxation error", sim.relaxation_error);
 				parseParameter(params, numparam, "multigrid pre-smoothing", sim.multigrid_pre_smoothing);
 				parseParameter(params, numparam, "multigrid post-smoothing", sim.multigrid_post_smoothing);
-				if(parseParameter(params, numparam, "multigrid n_cycles", sim.multigrid_n_cycles));
-				else
+				if(!parseParameter(params, numparam, "multigrid n-cycles", sim.multigrid_n_cycles))
 				{
 					COUT << " /!\\ Multigrid n_cycles set to default = 1" << endl;
 					sim.multigrid_n_cycles = 1;
 				}
+
 				parseParameter(params, numparam, "red black", sim.multigrid_red_black);
 				parseParameter(params, numparam, "check shape", sim.multigrid_check_shape);
 				if(parseParameter(params, numparam, "multigrid shape", par_string))
@@ -1553,6 +1613,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 						parallel.abortForce();
 					}
 				}
+
 				if(parseParameter(params, numparam, "relaxation error method", par_string))
 				{
 					if(par_string[0] == 'M' || par_string[0] == 'm')
@@ -1580,14 +1641,18 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			{
 				COUT << " Quasi-static mode active (modified Newtonian).\n";
 			}
+
 			parseParameter(params, numparam, "f(R) epsilon fields", sim.fR_epsilon_fields);
 		}
+
 		parseParameter(params, numparam, "f(R) epsilon background", sim.fR_epsilon_bg);// TODO: put some of these only for f(R)
 	}
+
 	if(!parseParameter(params, numparam, "check fields", sim.check_fields))
 	{
 		sim.check_fields = 0;
 	}
+
 	if(sim.check_fields)
 	{
 		if(!parseParameter(params, numparam, "check pause", sim.check_pause))
@@ -1595,6 +1660,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			sim.check_pause = 0;
 		}
 	}
+
 	parseParameter(params, numparam, "check redshift", sim.z_check);
 	parseParameter(params, numparam, "time step limit", sim.steplimit);
 
@@ -1632,19 +1698,46 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	}
 
 	if(!parseParameter(params, numparam, "snapshot file base", sim.basename_snapshot))
+	{
 		strcpy(sim.basename_snapshot, "snap");
+	}
 
 	if(!parseParameter(params, numparam, "Pk file base", sim.basename_pk))
+	{
 		strcpy(sim.basename_pk, "pk");
+	}
 
 	if(!parseParameter(params, numparam, "output path", sim.output_path))
+	{
 		sim.output_path[0] = '\0';
+	}
 
 	if(!parseParameter(params, numparam, "hibernation path", sim.restart_path))
+	{
 		strcpy(sim.restart_path, sim.output_path);
+	}
 
 	if(!parseParameter(params, numparam, "hibernation file base", sim.basename_restart))
+	{
 		strcpy(sim.basename_restart, "restart");
+	}
+
+	if(parseParameter(params, numparam, "particle save mode", par_string))
+	{
+		if(par_string[0] == 'h' || par_string[0] == 'H')
+		{
+			sim.hibernation_save_mode = HIB_SAVE_HDF5;
+		}
+		else if(par_string[0] == 'g' || par_string[0] == 'G')
+		{
+			sim.hibernation_save_mode = HIB_SAVE_GADGET2;
+		}
+		else
+		{
+			sim.hibernation_save_mode = HIB_SAVE_GADGET2;
+			COUT << " Wrong particle save mode specified for hibernation. Defaults to HDF5." << endl;
+		}
+	}
 
 	COUT << " cosmological parameters are: Omega_m0 = " << cosmo.Omega_m
 			 << ", Omega_rad0 = " << cosmo.Omega_rad
@@ -1652,7 +1745,9 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			 << ", h = " << cosmo.h << endl;
 
 	if(!parseParameter(params, numparam, "switch delta_rad", sim.z_switch_deltarad))
+	{
 		sim.z_switch_deltarad = 0.;
+	}
 
 	i = MAX_PCL_SPECIES-2;
 	if(!parseParameter(params, numparam, "switch delta_ncdm", sim.z_switch_deltancdm, i))
@@ -1660,20 +1755,28 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		sim.z_switch_deltancdm[0] = sim.z_in;
 		i = 1;
 	}
-	for (; i < MAX_PCL_SPECIES-2; i++)
+	for(; i<MAX_PCL_SPECIES-2; i++)
+	{
 		sim.z_switch_deltancdm[i] = sim.z_switch_deltancdm[i-1];
+	}
 
 	if(!parseParameter(params, numparam, "switch linear chi", sim.z_switch_linearchi))
 	{
 		if(sim.gr_flag > 0)
+		{
 			sim.z_switch_linearchi = 0.;
+		}
 		else
+		{
 			sim.z_switch_linearchi = 0.011;
+		}
 
-		for (i = 0; i < cosmo.num_ncdm; i++)
+		for(i=0; i<cosmo.num_ncdm; i++)
 		{
 			if(sim.z_switch_linearchi < sim.z_switch_deltancdm[i])
+			{
 				sim.z_switch_linearchi = sim.z_switch_deltancdm[i];
+			}
 		}
 	}
 	else if(sim.gr_flag == 0 && sim.z_switch_linearchi <= 0.01)
@@ -1686,13 +1789,17 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	i = MAX_PCL_SPECIES-2;
 	if(!parseParameter(params, numparam, "switch B ncdm", sim.z_switch_Bncdm, i))
 	{
-		for (i = 0; i < MAX_PCL_SPECIES-2; i++)
+		for(i=0; i<MAX_PCL_SPECIES-2; i++)
+		{
 			sim.z_switch_Bncdm[i] = sim.z_switch_deltancdm[i];
+		}
 	}
-	for (; i < MAX_PCL_SPECIES-2; i++)
+	for(; i<MAX_PCL_SPECIES-2; i++)
+	{
 		sim.z_switch_Bncdm[i] = sim.z_switch_Bncdm[i-1];
+	}
 
-	for (i = 0; i < numparam; i++)
+	for(i=0; i<numparam; i++)
 	{
 		if(params[i].used) usedparams++;
 	}

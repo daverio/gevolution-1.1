@@ -27,7 +27,7 @@
 #endif
 
 #ifndef PARAM_MAX_LENGTH
-#define PARAM_MAX_LENGTH 256
+#define PARAM_MAX_LENGTH 1024
 #endif
 
 #ifndef PARAM_MAX_LINESIZE
@@ -120,6 +120,10 @@
 #endif
 #endif
 
+// Hibernation particle save mode
+#define HIB_SAVE_HDF5 0
+#define HIB_SAVE_GADGET2 1
+
 //Modified gravity types
 #define GENREL 0 // General Relativity
 #define FR 1   // f(R)
@@ -210,12 +214,11 @@ struct metadata
 	double bg_initial_redshift;
 	double bg_final_redshift;
 	int lcdm_background;
-
+	double Cf;
 	int back_to_GR;
 	int check_fields;
 	int check_pause;
-
-	double Cf;
+	int hibernation_save_mode;
 	double fR_params[MAX_FR_PARAMS];
 	double fR_epsilon_bg;
 	double fR_epsilon_fields;
@@ -261,13 +264,18 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "BACKGROUND_NUMPTS: " << sim.BACKGROUND_NUMPTS << "\n";
 	os << "numpts: " << sim.numpts << "\n";
 	os << "downgrade_factor: " << sim.downgrade_factor << "\n";
-
 	os << "numpcl: " << sim.numpcl[0];
-	for(int i = 1; i<MAX_PCL_SPECIES; i++) os << " , " << sim.numpcl[i];
+	for(int i=1; i<MAX_PCL_SPECIES; i++)
+	{
+		os << " , " << sim.numpcl[i];
+	}
 	os << "\n";
 
 	os << "tracer_factor: " << sim.tracer_factor[0];
-	for(int i = 1; i<MAX_PCL_SPECIES; i++) os << " , " << sim.tracer_factor[i];
+	for(int i=1; i<MAX_PCL_SPECIES; i++)
+	{
+		os << " , " << sim.tracer_factor[i];
+	}
 	os << "\n";
 
 	os << "baryon_flag: " << sim.baryon_flag << "\n";

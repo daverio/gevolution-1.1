@@ -380,9 +380,13 @@ else
 		hdr.npart[1] = (unsigned int) (sim.numpcl[0] / sim.tracer_factor[0]);
 		hdr.npartTotal[1] = hdr.npart[1];
 		if(sim.baryon_flag)
+		{
 			hdr.mass[1] = (double) sim.tracer_factor[0] * C_RHO_CRIT * cosmo.Omega_cdm * sim.boxsize * sim.boxsize * sim.boxsize / sim.numpcl[0] / GADGET_MASS_CONVERSION;
+		}
 		else
+		{
 			hdr.mass[1] = (double) sim.tracer_factor[0] * C_RHO_CRIT * (cosmo.Omega_cdm + cosmo.Omega_b) * sim.boxsize * sim.boxsize * sim.boxsize / sim.numpcl[0] / GADGET_MASS_CONVERSION;
+		}
 		pcls_cdm->saveGadget2(h5filename + filename + "_cdm", hdr, sim.tracer_factor[0]);
 
 		if(sim.baryon_flag)

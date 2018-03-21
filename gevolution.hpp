@@ -54,7 +54,7 @@ void prepareFTsource(Field<FieldType> & phi, Field<FieldType> & Tij, Field<Field
 {
 	Site x(phi.lattice());
 
-	for (x.first(); x.test(); x.next())
+	for(x.first(); x.test(); x.next())
 	{
 		// 0-0-component:
 		Sij(x, 0, 0) = coeff * Tij(x, 0, 0);
@@ -178,7 +178,7 @@ void prepareFTsource_S00(Field<FieldType> & minus_a3_T00, // -a^3 * T00
 
   if(sim.back_to_GR) // If back_to_GR
   {
-    for (x.first(); x.test(); x.next())
+    for(x.first(); x.test(); x.next())
     {
       source(x) = fourpiG_over_a * (minus_a3_T00(x) - minus_a3_T00_hom);// 4piG * (-a^3*T00 + a^3*Tbar00) = -4piG * a^3 * dT00
       for(i=0; i<3; i++)
@@ -198,7 +198,7 @@ void prepareFTsource_S00(Field<FieldType> & minus_a3_T00, // -a^3 * T00
 	}
   else if(sim.quasi_static) // Quasi-static approximation -- Modified Newtonian
   {
-    for (x.first(); x.test(); x.next())
+    for(x.first(); x.test(); x.next())
     {
       source(x) = fourpiG_over_a * (minus_a3_T00(x) - minus_a3_T00_hom);// 4piG * (-a^3*T00 + a^3*Tbar00) / a = -4piG * a^2 * dT00
 			source(x) *= 1. - 4. * phi(x);
@@ -233,7 +233,7 @@ void prepareFTsource_S00(Field<FieldType> & minus_a3_T00, // -a^3 * T00
   }
   else // Full F(R), with all time derivatives
   {
-    for (x.first(); x.test(); x.next())
+    for(x.first(); x.test(); x.next())
     {
       source(x) = fourpiG_over_a * (minus_a3_T00(x) - minus_a3_T00_hom);// 4piG * (-a^3*T00 + a^3*Tbar00) = -4piG * a^3 * dT00
       for(i=0; i<3; i++)
@@ -280,7 +280,7 @@ void projectFTsource_S0i(Field<FieldType> & S0iFT,
 	Cplx im = Cplx(0.0,-1.0);
 
 
-	for (i = 0; i < linesize; i++)
+	for(i = 0; i < linesize; i++)
 	{
 		gridk2[i] = 2. * (Real) linesize * sin(M_PI * (Real) i / (Real) linesize); // Factor linesize here is the same as 1/dx, as in the correct definition of k[i]
 		kshift[i] = gridk2[i] * Cplx(cos(M_PI * (Real) i / (Real) linesize), -sin(M_PI * (Real) i / (Real) linesize));
@@ -288,13 +288,13 @@ void projectFTsource_S0i(Field<FieldType> & S0iFT,
 	}
 
 	k.first();
-	if (k.coord(0) == 0 && k.coord(1) == 0 && k.coord(2) == 0)
+	if(k.coord(0) == 0 && k.coord(1) == 0 && k.coord(2) == 0)
 	{
 		output(k) = Cplx(0.,0.);
 		k.next();
 	}
 
-	for (; k.test(); k.next())
+	for(; k.test(); k.next())
 	{
     if(k.coord(0) + k.coord(1) + k.coord(2) == -1)
     {
@@ -372,7 +372,7 @@ void prepareFTsource(Field<FieldType> & phi,
 {
 	Site x(phi.lattice());
 
-	for (x.first(); x.test(); x.next())
+	for(x.first(); x.test(); x.next())
 	{
 		result(x) = coeff2 * (source(x) - bgmodel);
 
@@ -422,7 +422,7 @@ void projectFTscalar(Field<Cplx> & SijFT, Field<Cplx> & chiFT, const int add = 0
 	gridk2 = (Real *) malloc(linesize * sizeof(Real));
 	kshift = (Cplx *) malloc(linesize * sizeof(Cplx));
 
-	for (i = 0; i < linesize; i++)
+	for(i = 0; i < linesize; i++)
 	{
 		gridk2[i] = 2. * (Real) linesize * sin(M_PI * (Real) i / (Real) linesize); // TODO: can linesize and 1/dx be used interchangeably? Probably: YES
 		kshift[i] = gridk2[i] * Cplx(cos(M_PI * (Real) i / (Real) linesize), -sin(M_PI * (Real) i / (Real) linesize));
@@ -430,15 +430,15 @@ void projectFTscalar(Field<Cplx> & SijFT, Field<Cplx> & chiFT, const int add = 0
 	}
 
 	k.first();
-	if (k.coord(0) == 0 && k.coord(1) == 0 && k.coord(2) == 0)
+	if(k.coord(0) == 0 && k.coord(1) == 0 && k.coord(2) == 0)
 	{
 		chiFT(k) = Cplx(0.,0.);
 		k.next();
 	}
 
-	if (add)
+	if(add)
 	{
-		for (; k.test(); k.next())
+		for(; k.test(); k.next())
 		{
 			chiFT(k) += ((gridk2[k.coord(1)] + gridk2[k.coord(2)] - 2. * gridk2[k.coord(0)]) * SijFT(k, 0, 0) +
 						(gridk2[k.coord(0)] + gridk2[k.coord(2)] - 2. * gridk2[k.coord(1)]) * SijFT(k, 1, 1) +
@@ -451,7 +451,7 @@ void projectFTscalar(Field<Cplx> & SijFT, Field<Cplx> & chiFT, const int add = 0
 	}
 	else
 	{
-		for (; k.test(); k.next())
+		for(; k.test(); k.next())
 		{
 			chiFT(k) = ((gridk2[k.coord(1)] + gridk2[k.coord(2)] - 2. * gridk2[k.coord(0)]) * SijFT(k, 0, 0) +
 						(gridk2[k.coord(0)] + gridk2[k.coord(2)] - 2. * gridk2[k.coord(1)]) * SijFT(k, 1, 1) +
@@ -496,7 +496,7 @@ void evolveFTvector(Field<Cplx> & SijFT, Field<Cplx> & BiFT, const Real a2dtau)
 	gridk2 = (Real *) malloc(linesize * sizeof(Real));
 	kshift = (Cplx *) malloc(linesize * sizeof(Cplx));
 
-	for (i = 0; i < linesize; i++)
+	for(i = 0; i < linesize; i++)
 	{
 		gridk2[i] = 2. * (Real) linesize * sin(M_PI * (Real) i / (Real) linesize);
 		kshift[i] = gridk2[i] * Cplx(cos(M_PI * (Real) i / (Real) linesize), -sin(M_PI * (Real) i / (Real) linesize));
@@ -504,7 +504,7 @@ void evolveFTvector(Field<Cplx> & SijFT, Field<Cplx> & BiFT, const Real a2dtau)
 	}
 
 	k.first();
-	if (k.coord(0) == 0 && k.coord(1) == 0 && k.coord(2) == 0)
+	if(k.coord(0) == 0 && k.coord(1) == 0 && k.coord(2) == 0)
 	{
 		BiFT(k, 0) = Cplx(0.,0.);
 		BiFT(k, 1) = Cplx(0.,0.);
@@ -512,7 +512,7 @@ void evolveFTvector(Field<Cplx> & SijFT, Field<Cplx> & BiFT, const Real a2dtau)
 		k.next();
 	}
 
-	for (; k.test(); k.next())
+	for(; k.test(); k.next())
 	{
 		k4 = gridk2[k.coord(0)] + gridk2[k.coord(1)] + gridk2[k.coord(2)];
 		k4 *= k4;
@@ -544,7 +544,7 @@ void evolveFTvector(Field<Cplx> & SijFT, Field<Cplx> & BiFT, const Real a2dtau)
 //   SiFT       reference to the Fourier image of the input vector field
 //   BiFT       reference to the Fourier image of the vector perturbation (can be identical to input)
 //   coeff      rescaling coefficient (default 1)
-//   modif      modification k^2 -> k^2 + modif (default 0)
+//   modif      modification k^2 -> k^2 + modif(default 0)
 //
 // Returns:
 //
@@ -563,7 +563,7 @@ void projectFTvector(Field<Cplx> & SiFT, Field<Cplx> & BiFT, const Real coeff = 
 	gridk2 = (Real *) malloc(linesize * sizeof(Real));
 	kshift = (Cplx *) malloc(linesize * sizeof(Cplx));
 
-	for (i = 0; i < linesize; i++)
+	for(i = 0; i < linesize; i++)
 	{
 		gridk2[i] = 2. * (Real) linesize * sin(M_PI * (Real) i / (Real) linesize);
 		kshift[i] = gridk2[i] * Cplx(cos(M_PI * (Real) i / (Real) linesize), -sin(M_PI * (Real) i / (Real) linesize));
@@ -571,7 +571,7 @@ void projectFTvector(Field<Cplx> & SiFT, Field<Cplx> & BiFT, const Real coeff = 
 	}
 
 	k.first();
-	if (k.coord(0) == 0 && k.coord(1) == 0 && k.coord(2) == 0)
+	if(k.coord(0) == 0 && k.coord(1) == 0 && k.coord(2) == 0)
 	{
 		BiFT(k, 0) = Cplx(0.,0.);
 		BiFT(k, 1) = Cplx(0.,0.);
@@ -579,7 +579,7 @@ void projectFTvector(Field<Cplx> & SiFT, Field<Cplx> & BiFT, const Real coeff = 
 		k.next();
 	}
 
-	for (; k.test(); k.next())
+	for(; k.test(); k.next())
 	{
 		k2 = gridk2[k.coord(0)] + gridk2[k.coord(1)] + gridk2[k.coord(2)];
 
@@ -627,7 +627,7 @@ void projectFTtensor(Field<Cplx> & SijFT, Field<Cplx> & hijFT)
 	gridk2 = (Real *) malloc(linesize * sizeof(Real));
 	kshift = (Cplx *) malloc(linesize * sizeof(Cplx));
 
-	for (i = 0; i < linesize; i++)
+	for(i = 0; i < linesize; i++)
 	{
 		gridk2[i] = 2. * (Real) linesize * sin(M_PI * (Real) i / (Real) linesize);
 		kshift[i] = gridk2[i] * Cplx(cos(M_PI * (Real) i / (Real) linesize), -sin(M_PI * (Real) i / (Real) linesize));
@@ -635,15 +635,15 @@ void projectFTtensor(Field<Cplx> & SijFT, Field<Cplx> & hijFT)
 	}
 
 	k.first();
-	if (k.coord(0) == 0 && k.coord(1) == 0 && k.coord(2) == 0)
+	if(k.coord(0) == 0 && k.coord(1) == 0 && k.coord(2) == 0)
 	{
-		for (i = 0; i < hijFT.components(); i++)
+		for(i = 0; i < hijFT.components(); i++)
 			hijFT(k, i) = Cplx(0.,0.);
 
 		k.next();
 	}
 
-	for (; k.test(); k.next())
+	for(; k.test(); k.next())
 	{
 		SxxFT = SijFT(k, 0, 0);
 		SxyFT = SijFT(k, 0, 1);
@@ -699,7 +699,7 @@ void projectFTtensor(Field<Cplx> & SijFT, Field<Cplx> & hijFT)
 //   sourceFT   reference to the Fourier image of the source field
 //   potFT      reference to the Fourier image of the potential
 //   coeff      coefficient applied to the source ("4 pi G / a")
-//   modif      modification k^2 -> k^2 + modif (default 0 gives standard Poisson equation)
+//   modif      modification k^2 -> k^2 + modif(default 0 gives standard Poisson equation)
 //
 // Returns:
 //
@@ -716,23 +716,23 @@ void solveModifiedPoissonFT(Field<Cplx> & sourceFT, Field<Cplx> & potFT, Real co
 
 	coeff /= -((long) linesize * (long) linesize * (long) linesize);
 
-	for (i = 0; i < linesize; i++)
+	for(i = 0; i < linesize; i++)
 	{
 		gridk2[i] = 2. * (Real) linesize * sin(M_PI * (Real) i / (Real) linesize);
 		gridk2[i] *= gridk2[i];
 	}
 
 	k.first();
-	if (k.coord(0) == 0 && k.coord(1) == 0 && k.coord(2) == 0)
+	if(k.coord(0) == 0 && k.coord(1) == 0 && k.coord(2) == 0)
 	{
-		if (modif == 0.)
+		if(modif == 0.)
 			potFT(k) = Cplx(0.,0.);
 		else
 			potFT(k) = sourceFT(k) * coeff / modif;
 		k.next();
 	}
 
-	for (; k.test(); k.next())
+	for(; k.test(); k.next())
 	{
 		potFT(k) = sourceFT(k) * coeff / ( gridk2[k.coord(0)] + gridk2[k.coord(1)] + gridk2[k.coord(2)] + modif);
 	}
@@ -804,7 +804,7 @@ Real update_q(double dtau, double dx, part_simple * part, double * ref_dist, par
 	gradphi[1] *= (v2 + e2) / e2;
 	gradphi[2] *= (v2 + e2) / e2;
 
-	if (nfield >= 2 && fields[1] != NULL)
+	if(nfield >= 2 && fields[1] != NULL)
 	{
 		gradphi[0] -= (1.-ref_dist[1]) * (1.-ref_dist[2]) * (chi(xchi+0) - chi(xchi));
 		gradphi[1] -= (1.-ref_dist[0]) * (1.-ref_dist[2]) * (chi(xchi+1) - chi(xchi));
@@ -822,7 +822,7 @@ Real update_q(double dtau, double dx, part_simple * part, double * ref_dist, par
 
 	e2 = sqrt(e2);
 
-	if (nfield >= 3 && fields[2] != NULL)
+	if(nfield >= 3 && fields[2] != NULL)
 	{
 		pgradB[0] = ((1.-ref_dist[2]) * (Bi(xB+0,1) - Bi(xB,1)) + ref_dist[2] * (Bi(xB+2+0,1) - Bi(xB+2,1))) * (*part).vel[1];
 		pgradB[0] += ((1.-ref_dist[1]) * (Bi(xB+0,2) - Bi(xB,2)) + ref_dist[1] * (Bi(xB+1+0,2) - Bi(xB+1,2))) * (*part).vel[2];
@@ -851,7 +851,7 @@ Real update_q(double dtau, double dx, part_simple * part, double * ref_dist, par
 	}
 
 	v2 = 0.;
-	for (int i = 0; i < 3; i++)
+	for(int i = 0; i < 3; i++)
 	{
 		(*part).vel[i] -= dtau * e2 * gradphi[i] / dx;
 		v2 += (*part).vel[i] * (*part).vel[i];
@@ -918,7 +918,7 @@ Real update_q_Newton(double dtau, double dx, part_simple * part, double * ref_di
 	gradpsi[1] += ref_dist[0] * ref_dist[2] * (psi(xpsi+2+1+0) - psi(xpsi+2+0));
 	gradpsi[2] += ref_dist[0] * ref_dist[1] * (psi(xpsi+2+1+0) - psi(xpsi+1+0));
 
-	if (nfield >= 2 && fields[1] != NULL)
+	if(nfield >= 2 && fields[1] != NULL)
 	{
 		gradpsi[0] -= (1.-ref_dist[1]) * (1.-ref_dist[2]) * (chi(xchi+0) - chi(xchi));
 		gradpsi[1] -= (1.-ref_dist[0]) * (1.-ref_dist[2]) * (chi(xchi+1) - chi(xchi));
@@ -935,7 +935,7 @@ Real update_q_Newton(double dtau, double dx, part_simple * part, double * ref_di
 	}
 
 	Real v2 = 0.;
-	for (int i = 0; i < 3; i++)
+	for(int i = 0; i < 3; i++)
 	{
 		(*part).vel[i] -= dtau * params[0] * gradpsi[i] / dx;
 		v2 += (*part).vel[i] * (*part).vel[i];
@@ -989,7 +989,7 @@ void update_pos(double dtau, double dx, part_simple * part, double * ref_dist, p
 	Real phi = 0;
 	Real chi = 0;
 
-	if (nfield >= 1)
+	if(nfield >= 1)
 	{
 		phi = (*fields[0])(Sites[0]) * (1.-ref_dist[0]) * (1.-ref_dist[1]) * (1.-ref_dist[2]);
 		phi += (*fields[0])(Sites[0]+0) * ref_dist[0] * (1.-ref_dist[1]) * (1.-ref_dist[2]);
@@ -1001,7 +1001,7 @@ void update_pos(double dtau, double dx, part_simple * part, double * ref_dist, p
 		phi += (*fields[0])(Sites[0]+0+1+2) * ref_dist[0] * ref_dist[1] * ref_dist[2];
 	}
 
-	if (nfield >= 2)
+	if(nfield >= 2)
 	{
 		chi = (*fields[1])(Sites[1]) * (1.-ref_dist[0]) * (1.-ref_dist[1]) * (1.-ref_dist[2]);
 		chi += (*fields[1])(Sites[1]+0) * ref_dist[0] * (1.-ref_dist[1]) * (1.-ref_dist[2]);
@@ -1019,7 +1019,7 @@ void update_pos(double dtau, double dx, part_simple * part, double * ref_dist, p
 	v[1] = (*part).vel[1] * v2;
 	v[2] = (*part).vel[2] * v2;
 
-	if (nfield >= 3)
+	if(nfield >= 3)
 	{
 		Real b[3];
 
@@ -1036,11 +1036,11 @@ void update_pos(double dtau, double dx, part_simple * part, double * ref_dist, p
 		b[0] += (*fields[2])(Sites[2]+2+1, 0) * ref_dist[1] * ref_dist[2];
 		b[2] += (*fields[2])(Sites[2]+1+0, 2) * ref_dist[0] * ref_dist[1];
 
-		for (int i = 0; i < 3; i++) (*part).pos[i] += dtau * (v[i] + b[i] / params[1]);
+		for(int i = 0; i < 3; i++) (*part).pos[i] += dtau * (v[i] + b[i] / params[1]);
 	}
 	else
 	{
-		for (int i = 0; i < 3 ; i++) (*part).pos[i] += dtau * v[i];
+		for(int i = 0; i < 3 ; i++) (*part).pos[i] += dtau * v[i];
 	}
 }
 
@@ -1073,7 +1073,7 @@ void update_pos(double dtau, double dx, part_simple * part, double * ref_dist, p
 
 void update_pos_Newton(double dtau, double dx, part_simple * part, double * ref_dist, part_simple_info partInfo, Field<Real> ** fields, Site * Sites, int nfield, double * params, double * outputs, int noutputs)
 {
-	for (int i = 0; i < 3; i++) (*part).pos[i] += dtau * (*part).vel[i] / params[0];
+	for(int i = 0; i < 3; i++) (*part).pos[i] += dtau * (*part).vel[i] / params[0];
 }
 
 
@@ -1100,7 +1100,7 @@ void update_pos_Newton(double dtau, double dx, part_simple * part, double * ref_
 template<typename part, typename part_info, typename part_dataType>
 void projection_T00_project(Particles<part, part_info, part_dataType> * pcls, Field<Real> * T00, double a = 1., Field<Real> * phi = NULL, double coeff = 1.)
 {
-	if (T00->lattice().halo() == 0)
+	if(T00->lattice().halo() == 0)
 	{
 		cout<< "projection_T00_project: target field needs halo > 0" << endl;
 		exit(-1);
@@ -1127,16 +1127,25 @@ void projection_T00_project(Particles<part, part_info, part_dataType> * pcls, Fi
 	Real localCube[8]; // XYZ = 000 | 001 | 010 | 011 | 100 | 101 | 110 | 111
 	Real localCubePhi[8];
 
-	for (int i = 0; i < 8; i++) localCubePhi[i] = 0.0;
-
-	for (xPart.first(), xField.first(); xPart.test(); xPart.next(), xField.next())
+	for(int i=0; i<8; i++)
 	{
-		if (pcls->field()(xPart).size != 0)
-		{
-			for(int i = 0; i < 3; i++) referPos[i] = xPart.coord(i)*dx;
-			for(int i = 0; i < 8; i++) localCube[i] = 0.0;
+		localCubePhi[i] = 0.0;
+	}
 
-			if (phi != NULL)
+	for(xPart.first(), xField.first(); xPart.test(); xPart.next(), xField.next())
+	{
+		if(pcls->field()(xPart).size != 0)
+		{
+			for(int i=0; i<3; i++)
+			{
+				referPos[i] = xPart.coord(i)*dx;
+			}
+			for(int i=0; i<8; i++)
+			{
+				localCube[i] = 0.0;
+			}
+
+			if(phi != NULL)
 			{
 				localCubePhi[0] = (*phi)(xField);
 				localCubePhi[1] = (*phi)(xField+2);
@@ -1148,15 +1157,15 @@ void projection_T00_project(Particles<part, part_info, part_dataType> * pcls, Fi
 				localCubePhi[7] = (*phi)(xField+0+1+2);
 			}
 
-			for (it = (pcls->field())(xPart).parts.begin(); it != (pcls->field())(xPart).parts.end(); ++it)
+			for(it = (pcls->field())(xPart).parts.begin(); it != (pcls->field())(xPart).parts.end(); ++it)
 			{
-				for (int i = 0; i < 3; i++)
+				for(int i=0; i<3; i++)
 				{
 					weightScalarGridUp[i] = ((*it).pos[i] - referPos[i]) / dx;
 					weightScalarGridDown[i] = 1.0l - weightScalarGridUp[i];
 				}
 
-				if (phi != NULL)
+				if(phi != NULL)
 				{
 					q = (Real*)((char*)&(*it)+offset_q);
 
@@ -1219,9 +1228,9 @@ void projection_T00_project(Particles<part, part_info, part_dataType> * pcls, Fi
 template<typename part, typename part_info, typename part_dataType>
 void projection_T0i_project(Particles<part,part_info,part_dataType> * pcls, Field<Real> * T0i, Field<Real> * phi = NULL, double coeff = 1.)
 {
-	if (T0i->lattice().halo() == 0)
+	if(T0i->lattice().halo() == 0)
 	{
-		cout<< "projection_T0i_project: target field needs halo > 0" << endl;
+		cout << "projection_T0i_project: target field needs halo > 0" << endl;
 		exit(-1);
 	}
 
@@ -1238,25 +1247,33 @@ void projection_T0i_project(Particles<part,part_info,part_dataType> * pcls, Fiel
 	double mass = coeff / (dx*dx*dx);
 	mass *= *(double*)((char*)pcls->parts_info() + pcls->mass_offset());
 
-    Real w;
+  Real w;
 	Real * q;
 	size_t offset_q = offsetof(part,vel);
 
-	Real  qi[12];
-	Real  localCubePhi[8];
+	Real qi[12];
+	Real localCubePhi[8];
 
-	for (int i = 0; i < 8; i++) localCubePhi[i] = 0;
+	for(int i=0; i<8; i++)
+	{
+		localCubePhi[i] = 0;
+	}
 
 	for(xPart.first(), xT0i.first(); xPart.test(); xPart.next(), xT0i.next())
 	{
 		if(pcls->field()(xPart).size!=0)
-        {
-        	for(int i=0; i<3; i++)
-        		referPos[i] = xPart.coord(i)*dx;
+    {
+			for(int i=0; i<3; i++)
+			{
+				referPos[i] = xPart.coord(i)*dx;
+			}
 
-            for(int i = 0; i < 12; i++) qi[i]=0.0;
+			for(int i = 0; i < 12; i++)
+			{
+				qi[i]=0.0;
+			}
 
-			if (phi != NULL)
+			if(phi != NULL)
 			{
 				localCubePhi[0] = (*phi)(xT0i);
 				localCubePhi[1] = (*phi)(xT0i+2);
@@ -1268,16 +1285,15 @@ void projection_T0i_project(Particles<part,part_info,part_dataType> * pcls, Fiel
 				localCubePhi[7] = (*phi)(xT0i+0+1+2);
 			}
 
-			for (it = (pcls->field())(xPart).parts.begin(); it != (pcls->field())(xPart).parts.end(); ++it)
+			for(it = (pcls->field())(xPart).parts.begin(); it != (pcls->field())(xPart).parts.end(); ++it)
 			{
-				for (int i = 0; i < 3; i++)
+				for(int i=0; i<3; i++)
 				{
 					weightScalarGridUp[i] = ((*it).pos[i] - referPos[i]) / dx;
 					weightScalarGridDown[i] = 1.0l - weightScalarGridUp[i];
 				}
 
 				q = (Real*)((char*)&(*it)+offset_q);
-
 				w = mass * q[0];
 
 				qi[0] +=  w * weightScalarGridDown[1] * weightScalarGridDown[2];
@@ -1292,7 +1308,7 @@ void projection_T0i_project(Particles<part,part_info,part_dataType> * pcls, Fiel
 				qi[6] +=  w * weightScalarGridDown[0] * weightScalarGridUp[2];
 				qi[7] +=  w * weightScalarGridUp[0]   * weightScalarGridUp[2];
 
-                w = mass * q[2];
+        w = mass * q[2];
 
 				qi[8] +=  w * weightScalarGridDown[0] * weightScalarGridDown[1];
 				qi[9] +=  w * weightScalarGridUp[0]   * weightScalarGridDown[1];
@@ -1304,24 +1320,23 @@ void projection_T0i_project(Particles<part,part_info,part_dataType> * pcls, Fiel
 			(*T0i)(xT0i,1) += qi[4] * (1. + localCubePhi[0] + localCubePhi[2]);
 			(*T0i)(xT0i,2) += qi[8] * (1. + localCubePhi[0] + localCubePhi[1]);
 
-            (*T0i)(xT0i+0,1) += qi[5] * (1. + localCubePhi[4] + localCubePhi[6]);
-            (*T0i)(xT0i+0,2) += qi[9] * (1. + localCubePhi[4] + localCubePhi[5]);
+      (*T0i)(xT0i+0,1) += qi[5] * (1. + localCubePhi[4] + localCubePhi[6]);
+      (*T0i)(xT0i+0,2) += qi[9] * (1. + localCubePhi[4] + localCubePhi[5]);
 
-            (*T0i)(xT0i+1,0) += qi[1] * (1. + localCubePhi[2] + localCubePhi[6]);
-            (*T0i)(xT0i+1,2) += qi[10] * (1. + localCubePhi[2] + localCubePhi[3]);
+      (*T0i)(xT0i+1,0) += qi[1] * (1. + localCubePhi[2] + localCubePhi[6]);
+      (*T0i)(xT0i+1,2) += qi[10] * (1. + localCubePhi[2] + localCubePhi[3]);
 
-            (*T0i)(xT0i+2,0) += qi[2] * (1. + localCubePhi[1] + localCubePhi[5]);
-            (*T0i)(xT0i+2,1) += qi[6] * (1. + localCubePhi[1] + localCubePhi[3]);
+      (*T0i)(xT0i+2,0) += qi[2] * (1. + localCubePhi[1] + localCubePhi[5]);
+      (*T0i)(xT0i+2,1) += qi[6] * (1. + localCubePhi[1] + localCubePhi[3]);
 
-            (*T0i)(xT0i+1+2,0) += qi[3] * (1. + localCubePhi[3] + localCubePhi[7]);
-            (*T0i)(xT0i+0+2,1) += qi[7] * (1. + localCubePhi[5] + localCubePhi[7]);
-            (*T0i)(xT0i+0+1,2) += qi[11] * (1. + localCubePhi[6] + localCubePhi[7]);
+      (*T0i)(xT0i+1+2,0) += qi[3] * (1. + localCubePhi[3] + localCubePhi[7]);
+      (*T0i)(xT0i+0+2,1) += qi[7] * (1. + localCubePhi[5] + localCubePhi[7]);
+      (*T0i)(xT0i+0+1,2) += qi[11] * (1. + localCubePhi[6] + localCubePhi[7]);
 		}
 	}
 }
 
 #define projection_T0i_comm vectorProjectionCICNGP_comm
-
 
 //////////////////////////
 // projection_Tij_project
@@ -1346,7 +1361,7 @@ void projection_T0i_project(Particles<part,part_info,part_dataType> * pcls, Fiel
 template<typename part, typename part_info, typename part_dataType>
 void projection_Tij_project(Particles<part, part_info, part_dataType> * pcls, Field<Real> * Tij, double a = 1., Field<Real> * phi = NULL, double coeff = 1.)
 {
-	if (Tij->lattice().halo() == 0)
+	if(Tij->lattice().halo() == 0)
 	{
 		cout<< "projection_Tij_project: target field needs halo > 0" << endl;
 		exit(-1);
@@ -1374,19 +1389,19 @@ void projection_Tij_project(Particles<part, part_info, part_dataType> * pcls, Fi
 	Real  tii[24];          // local cube
 	Real  localCubePhi[8];
 
-	for (int i = 0; i < 8; i++) localCubePhi[i] = 0;
+	for(int i = 0; i < 8; i++) localCubePhi[i] = 0;
 
-	for (xPart.first(), xTij.first(); xPart.test(); xPart.next(), xTij.next())
+	for(xPart.first(), xTij.first(); xPart.test(); xPart.next(), xTij.next())
 	{
-		if (pcls->field()(xPart).size != 0)
+		if(pcls->field()(xPart).size != 0)
 		{
-			for (int i = 0; i < 3; i++)
+			for(int i = 0; i < 3; i++)
 				referPos[i] = (double)xPart.coord(i)*dx;
 
-			for (int i = 0; i < 6; i++)  tij[i]=0.0;
-			for (int i = 0; i < 24; i++) tii[i]=0.0;
+			for(int i = 0; i < 6; i++)  tij[i]=0.0;
+			for(int i = 0; i < 24; i++) tii[i]=0.0;
 
-			if (phi != NULL)
+			if(phi != NULL)
 			{
 				localCubePhi[0] = (*phi)(xTij);
 				localCubePhi[1] = (*phi)(xTij+2);
@@ -1398,9 +1413,9 @@ void projection_Tij_project(Particles<part, part_info, part_dataType> * pcls, Fi
 				localCubePhi[7] = (*phi)(xTij+0+1+2);
 			}
 
-			for (it = (pcls->field())(xPart).parts.begin(); it != (pcls->field())(xPart).parts.end(); ++it)
+			for(it = (pcls->field())(xPart).parts.begin(); it != (pcls->field())(xPart).parts.end(); ++it)
 			{
-				for (int i = 0; i < 3; i++)
+				for(int i = 0; i < 3; i++)
 				{
 					weightScalarGridUp[i] = ((*it).pos[i] - referPos[i]) / dx;
 					weightScalarGridDown[i] = 1.0l - weightScalarGridUp[i];
@@ -1412,7 +1427,7 @@ void projection_Tij_project(Particles<part, part_info, part_dataType> * pcls, Fi
 				f = 4. + a * a / (f + a * a);
 
 				// diagonal components
-				for (int i = 0; i < 3; i++)
+				for(int i = 0; i < 3; i++)
 				{
 					w = mass * q[i] * q[i] / e;
 					//000
@@ -1448,24 +1463,24 @@ void projection_Tij_project(Particles<part, part_info, part_dataType> * pcls, Fi
 			}
 
 
-			for (int i = 0; i < 3; i++) (*Tij)(xTij,i,i) += tii[8*i];
+			for(int i = 0; i < 3; i++) (*Tij)(xTij,i,i) += tii[8*i];
 			(*Tij)(xTij,0,1) += tij[0];
 			(*Tij)(xTij,0,2) += tij[2];
 			(*Tij)(xTij,1,2) += tij[4];
 
-			for (int i = 0; i < 3; i++) (*Tij)(xTij+0,i,i) += tii[4+8*i];
+			for(int i = 0; i < 3; i++) (*Tij)(xTij+0,i,i) += tii[4+8*i];
 			(*Tij)(xTij+0,1,2) += tij[5];
 
-			for (int i = 0; i < 3; i++) (*Tij)(xTij+1,i,i) += tii[2+8*i];
+			for(int i = 0; i < 3; i++) (*Tij)(xTij+1,i,i) += tii[2+8*i];
 			(*Tij)(xTij+1,0,2) += tij[3];
 
-			for (int i = 0; i < 3; i++) (*Tij)(xTij+2,i,i) += tii[1+8*i];
+			for(int i = 0; i < 3; i++) (*Tij)(xTij+2,i,i) += tii[1+8*i];
 			(*Tij)(xTij+2,0,1) += tij[1];
 
-			for (int i = 0; i < 3; i++) (*Tij)(xTij+0+1,i,i) += tii[6+8*i];
-			for (int i = 0; i < 3; i++) (*Tij)(xTij+0+2,i,i) += tii[5+8*i];
-			for (int i = 0; i < 3; i++) (*Tij)(xTij+1+2,i,i) += tii[3+8*i];
-			for (int i = 0; i < 3; i++) (*Tij)(xTij+0+1+2,i,i) += tii[7+8*i];
+			for(int i = 0; i < 3; i++) (*Tij)(xTij+0+1,i,i) += tii[6+8*i];
+			for(int i = 0; i < 3; i++) (*Tij)(xTij+0+2,i,i) += tii[5+8*i];
+			for(int i = 0; i < 3; i++) (*Tij)(xTij+1+2,i,i) += tii[3+8*i];
+			for(int i = 0; i < 3; i++) (*Tij)(xTij+0+1+2,i,i) += tii[7+8*i];
 		}
 	}
 }

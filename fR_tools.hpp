@@ -66,8 +66,8 @@ Real f(const double R, const metadata & sim, int code)
 	else
 	{
 		cout << " f(R) Evaluated to NaN (code " << code << ").\n"
-		     << " R = " << R << ", Rpow = " << Rpow << ", f(R) = " << output << "\n Closing...\n";
-		parallel.abortForce();
+		     << " R = " << R << ", Rpow = " << Rpow << ", f(R) = " << output << endl;
+		return FR_WRONG_RETURN; // Returns a huge negative number to throw some exception
 	}
 }
 
@@ -122,7 +122,7 @@ Real fR(const double R, const metadata & sim, int code)
 	{
 		cout << " fR Evaluated to NaN (code " << code << ").\n"
 		     << " R = " << R << ", Rpow = " << Rpow << ", fR = " << output << "\n Closing...\n";
-		parallel.abortForce();
+		return FR_WRONG_RETURN; // Returns a huge negative number to throw some exception
 	}
 }
 
@@ -179,13 +179,13 @@ Real fRR(const double R, const metadata & sim, int code)
 	{
 		cout << " fRR Evaluated to 0 (code " << code << ").\n"
 		     << " R = " << R << ", Rpow = " << Rpow << ", fRR = " << output << endl;
-		return output;
+		return 0.;
 	}
 	else if(std::isnan(output))
 	{
 		cout << " fRR Evaluated to NaN (code " << code << ").\n"
 		     << " R = " << R << ", Rpow = " << Rpow << ", fRR = " << output << endl;
-		return output;
+		return FR_WRONG_RETURN; // Returns a huge negative number to throw some exception
 	}
 }
 
@@ -246,7 +246,7 @@ Real fRRR(const double R, const metadata & sim, int code)
 	{
 		cout << " fRRR Evaluated to NaN (code " << code << ").\n"
 		     << " R = " << R << ", Rpow = " << Rpow << ", fRRR = " << output << "\n Closing...\n";
-		parallel.abortForce();
+		return FR_WRONG_RETURN; // Returns a huge negative number to throw some exception
 	}
 }
 
@@ -610,9 +610,10 @@ void leapfrog_dotxi(Field<FieldType> & xi, Field<FieldType> & zeta, Field<FieldT
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
-void convert_deltaR_to_xi(Field<FieldType> & xi, Field<FieldType> & deltaR, double const Rbar, double const fRbar, const metadata & sim)
+double convert_deltaR_to_xi(Field<FieldType> & xi, Field<FieldType> & deltaR, double const Rbar, double const fRbar, const metadata & sim)
 {
 	Site x(xi.lattice());
+	double temp;
 
 	if(sim.fR_type == FR_TYPE_R2)
 	{
@@ -625,10 +626,15 @@ void convert_deltaR_to_xi(Field<FieldType> & xi, Field<FieldType> & deltaR, doub
 	{
 		for(x.first(); x.test(); x.next())
 		{
-			xi(x) = fR(Rbar + deltaR(x), sim, 832) - fRbar;
+			temp = fR(Rbar + deltaR(x), sim, 832);
+			if(temp < - FR_WRONG)
+			{
+				return FR_WRONG_RETURN; // Returns a huge negative number to throw some exception
+			}
+			xi(x) =  - fRbar;
 		}
 	}
-	return;
+	return 1.;
 }
 
 
@@ -637,15 +643,19 @@ void convert_deltaR_to_xi(Field<FieldType> & xi, Field<FieldType> & deltaR, doub
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
-void convert_deltaR_to_u(Field<FieldType> & u, Field<FieldType> & deltaR, double const Rbar, double const fRbar, const metadata & sim)
+double convert_deltaR_to_u(Field<FieldType> & u, Field<FieldType> & deltaR, double const Rbar, double const fRbar, const metadata & sim)
 {
 	Site x(u.lattice());
+	double temp;
 
 	for(x.first(); x.test(); x.next())
 	{
-		u(x) = log(fR(Rbar + deltaR(x), sim, 833)/fRbar);
+		temp = fR(Rbar + deltaR(x), sim, 833);
+		if(temp > FR_WRONG) return FR_WRONG_RETURN; // Returns a huge negative number to throw some exception
+
+		u(x) = log(temp/fRbar);
 	}
-	return;
+	return 1.;
 }
 
 
@@ -657,6 +667,7 @@ template <class FieldType>
 void convert_u_to_xi(Field<FieldType> & u, Field<FieldType> & xi, double const fRbar)
 {
 	Site x(u.lattice());
+	double temp;
 
 	for(x.first(); x.test(); x.next())
 	{
@@ -742,10 +753,8 @@ double convert_xi_to_deltaR(Field<FieldType> & eightpiG_deltaT,
 				}
 				R_temp = m2 / c2 * ( sqrt(R_temp) - 1.);
 				fRR_temp = fabs(fRR(R_temp, sim, 5911));
-				if(max_fRR < fRR_temp)
-				{
-					max_fRR = fRR_temp;
-				}
+				if(fRR_temp > FR_WRONG) return FR_WRONG_RETURN; // Returns a huge negative number to throw some exception
+				if(max_fRR < fRR_temp) max_fRR = fRR_temp;
 				deltaR(x) = R_temp - Rbar;
 			}
 		}
@@ -760,19 +769,24 @@ double convert_xi_to_deltaR(Field<FieldType> & eightpiG_deltaT,
 				if(R_temp > 10. * m2)
 				{
 					R_temp = -c1 * n / c2 / c2 / (xi(x) + fRbar);
-					R_temp = m2 * pow( R_temp, 1./(n+1.));
+					R_temp = m2 * pow(R_temp, 1./(n+1.));
 				}
 
 				count = 0;
 				while(true)
 				{
-					temp = fabs(xi(x)/(fR(R_temp, sim, 56) - fRbar) - 1.);
+					temp = fR(R_temp, sim, 56);
+					if(temp > FR_WRONG) return FR_WRONG_RETURN;
+					temp = fabs(xi(x)/(temp - fRbar) - 1.);
 					if(temp < sim.fR_target_precision) break;
 					fRR_temp = fRR(R_temp, sim, 57);
+					if(fRR_temp > FR_WRONG) return FR_WRONG_RETURN;
 
 					if(fRR_temp > 0 && fabs(R_temp) <= 1.E+20)
 					{
-						R_temp += (xi(x) - fR(R_temp, sim, 58) + fRbar) / fRR_temp;
+						temp = fR(R_temp, sim, 58);
+						if(temp > FR_WRONG) return FR_WRONG_RETURN;
+						R_temp += (xi(x) - temp + fRbar) / fRR_temp;
 					}
 					else
 					{
@@ -789,10 +803,8 @@ double convert_xi_to_deltaR(Field<FieldType> & eightpiG_deltaT,
 				}
 
 				fRR_temp = fabs(fRR(R_temp, sim, 5912));
-				if(max_fRR < fRR_temp)
-				{
-					max_fRR = fRR_temp;
-				}
+				if(fRR_temp > FR_WRONG) return FR_WRONG_RETURN;
+				if(max_fRR < fRR_temp) max_fRR = fRR_temp;
 				deltaR(x) = R_temp - Rbar;
 			}
 		}
@@ -804,7 +816,8 @@ double convert_xi_to_deltaR(Field<FieldType> & eightpiG_deltaT,
 			R_temp = pow(Rbar, sim.fR_params[1] - 1.) + xi(x)/sim.fR_params[0]/sim.fR_params[1];
 			R_temp = pow(R_temp, 1./(sim.fR_params[1] - 1.));
 			fRR_temp = fabs(fRR(R_temp, sim, 60));
-			if(max_fRR < fRR_temp) max_fRR = fRR_temp;
+			if(fRR_temp > FR_WRONG) return FR_WRONG_RETURN;
+ 			if(max_fRR < fRR_temp) max_fRR = fRR_temp;
 			deltaR(x) = R_temp - Rbar;
 		}
 	}
@@ -821,10 +834,19 @@ double convert_xi_to_deltaR(Field<FieldType> & eightpiG_deltaT,
 			count = 0;
 			while(true)
 			{
-				temp = fabs(xi(x)/(fR(R_temp, sim, 61) - fRbar) - 1.);
+				temp = fR(R_temp, sim, 61);
+				if(temp > FR_WRONG) return FR_WRONG_RETURN;
+
+				temp = fabs(xi(x)/(temp - fRbar) - 1.);
 				if(temp < sim.fR_target_precision) break;
+
 				fRR_temp = fRR(R_temp, sim, 62);
-				R_temp += fRR_temp > 0 ? (xi(x) - fR(R_temp, sim, 63) + fRbar) / fRR_temp : .01 * R_temp; // Displace R_temp slightly, if fRR(R_temp) is "bad"
+				if(fRR_temp > FR_WRONG) return FR_WRONG_RETURN;
+
+				temp = fR(R_temp, sim, 63);
+				if(temp > FR_WRONG) return FR_WRONG_RETURN;
+
+				R_temp += fRR_temp > 0 ? (xi(x) - temp + fRbar) / fRR_temp : .01 * R_temp; // Displace R_temp slightly, if fRR(R_temp) is "bad"
 				count ++;
 				if(count > sim.fR_count_max)
 				{
@@ -833,11 +855,11 @@ double convert_xi_to_deltaR(Field<FieldType> & eightpiG_deltaT,
 				}
 			}
 			fRR_temp = fabs(fRR(R_temp, sim, 64));
+			if(fRR_temp > FR_WRONG) return FR_WRONG_RETURN;
 			if(max_fRR < fRR_temp) max_fRR = fRR_temp;
 			deltaR(x) = R_temp - Rbar;
 		}
 	}
-
 	parallel.max(max_fRR);
   if(max_fRR and !std::isnan(max_fRR))
 	{
@@ -849,8 +871,6 @@ double convert_xi_to_deltaR(Field<FieldType> & eightpiG_deltaT,
     return fRR(Rbar, sim, 65);
   }
 }
-
-
 
 // Convert u = log(xi/fRbar + 1.)
 template <class FieldType>
@@ -865,6 +885,7 @@ double convert_u_to_deltaR(Field<FieldType> & eightpiG_deltaT,
   Site x(u.lattice());
   double R_temp,
 			   temp,
+				 temp2,
 				 max_fRR = 0.,
 				 fRR_temp;
   int count,
@@ -884,6 +905,7 @@ double convert_u_to_deltaR(Field<FieldType> & eightpiG_deltaT,
 			{
 				R_temp = m2 / c2 * ( sqrt(-c1 * exp(-u(x)) / fRbar ) - 1.);
 				fRR_temp = fRR(R_temp, sim, 5913);
+				if(fRR_temp > FR_WRONG) return FR_WRONG_RETURN;
 				if(std::isnan(fRR_temp) || !fRR_temp)
 				{
 					cout << " u(x) = " << u(x) << "\n R_temp = " << R_temp << "\n fRR_temp = " << fRR_temp << endl;
@@ -916,13 +938,21 @@ double convert_u_to_deltaR(Field<FieldType> & eightpiG_deltaT,
 				count = 0;
 				while(true)
 				{
-					temp = fabs(u(x)/(fR(R_temp, sim, 56) - fRbar) - 1.);
+					temp = fR(R_temp, sim, 56);
+					if(temp > FR_WRONG) return FR_WRONG_RETURN;
+
+					temp = fabs(u(x)/(temp - fRbar) - 1.);
 					if(temp < sim.fR_target_precision) break;
+
 					fRR_temp = fRR(R_temp, sim, 57);
+					if(fRR_temp > FR_WRONG) return FR_WRONG_RETURN;
 
 					if(fRR_temp > 0 && fabs(R_temp) <= 1.E+20)
 					{
-						R_temp += (u(x) - fR(R_temp, sim, 58) + fRbar) / fRR_temp;
+						temp = fR(R_temp, sim, 58);
+						if(temp > FR_WRONG) return FR_WRONG_RETURN;
+
+						R_temp += (u(x) - temp + fRbar) / fRR_temp;
 					}
 					else
 					{
@@ -938,7 +968,10 @@ double convert_u_to_deltaR(Field<FieldType> & eightpiG_deltaT,
 					}
 				}
 
-				fRR_temp = fabs(fRR(R_temp, sim, 5914));
+				temp = fRR(R_temp, sim, 5914);
+				if(temp > FR_WRONG) return FR_WRONG_RETURN;
+
+				fRR_temp = fabs(temp);
 				if(max_fRR < fRR_temp)
 				{
 					max_fRR = fRR_temp;
@@ -955,7 +988,9 @@ double convert_u_to_deltaR(Field<FieldType> & eightpiG_deltaT,
 			u(x) = fRbar * (exp(u(x)) - 1.); // Convert xi -> u
 			R_temp = pow(Rbar, sim.fR_params[1] - 1.) + u(x)/sim.fR_params[0]/sim.fR_params[1];
 			R_temp = pow(R_temp, 1./(sim.fR_params[1] - 1.));
-			fRR_temp = fabs(fRR(R_temp, sim, 60));
+			temp = fRR(R_temp, sim, 60);
+			if(temp > FR_WRONG) return FR_WRONG_RETURN;
+			fRR_temp = fabs(temp);
 			if(max_fRR < fRR_temp) max_fRR = fRR_temp;
 			deltaR(x) = R_temp - Rbar;
 			u(x) = log(u(x)/fRbar + 1.); // Convert back u -> xi
@@ -975,10 +1010,16 @@ double convert_u_to_deltaR(Field<FieldType> & eightpiG_deltaT,
 			count = 0;
 			while(true)
 			{
-				temp = fabs(u(x)/(fR(R_temp, sim, 61) - fRbar) - 1.);
-				if(temp < sim.fR_target_precision) break;
+				temp = fR(R_temp, sim, 61);
+				if(temp > FR_WRONG) return FR_WRONG_RETURN;
+
+				temp2 = fabs(u(x)/(temp - fRbar) - 1.);
+				if(temp2 < sim.fR_target_precision) break;
+
 				fRR_temp = fRR(R_temp, sim, 62);
-				R_temp += fRR_temp > 0 ? (u(x) - fR(R_temp, sim, 63) + fRbar) / fRR_temp : .01 * R_temp; // Displace R_temp slightly, if fRR(R_temp) is "bad"
+				if(fRR_temp > FR_WRONG) return FR_WRONG_RETURN;
+
+				R_temp += fRR_temp > 0 ? (u(x) - temp + fRbar) / fRR_temp : .01 * R_temp; // Displace R_temp slightly, if fRR(R_temp) is "bad"
 				count ++;
 				if(count > sim.fR_count_max)
 				{
@@ -987,7 +1028,10 @@ double convert_u_to_deltaR(Field<FieldType> & eightpiG_deltaT,
 				}
 			}
 			fRR_temp = fabs(fRR(R_temp, sim, 64));
+			if(fRR_temp > FR_WRONG) return FR_WRONG_RETURN;
+
 			if(max_fRR < fRR_temp) max_fRR = fRR_temp;
+
 			deltaR(x) = R_temp - Rbar;
 			u(x) = log(u(x)/fRbar + 1.); // Convert back u -> xi
 		}

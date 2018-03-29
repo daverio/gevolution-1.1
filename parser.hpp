@@ -237,7 +237,9 @@ void saveParameterFile(const char * filename, parameter * params, const int nump
 			for(int i=0; i<numparam; i++)
 			{
 				if(!used_only || params[i].used)
+				{
 					fprintf(paramfile, "%s = %s\n", params[i].name, params[i].value);
+				}
 			}
 
 			fclose(paramfile);
@@ -426,8 +428,7 @@ bool parseParameter(parameter * & params, const int numparam, const char * pname
 						return false;
 					}
 					start = comma+1;
-					if(++n > nmax-2)
-						break;
+					if(++n > nmax-2) break;
 				}
 			}
 			if(sscanf(start, " %lf ", pvalue+n) != 1)
@@ -488,8 +489,7 @@ bool parseParameter(parameter * & params, const int numparam, const char * pname
 						return false;
 					}
 					start = comma+1;
-					if(++n > nmax-2)
-						break;
+					if(++n > nmax-2) break;
 				}
 			}
 			if(sscanf(start, " %d ", pvalue+n) != 1)
@@ -559,8 +559,7 @@ bool parseParameter(parameter * & params, const int numparam, const char * pname
 					pvalue[n][r-l+1] = '\0';
 
 					start = comma+1;
-					if(++n > nmax-2)
-						break;
+					if(++n > nmax-2) break;
 				}
 			}
 			l = start;
@@ -1199,8 +1198,9 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	parseParameter(params, numparam, "hibernation wallclock limit", sim.wallclocklimit);
 	i = MAX_PCL_SPECIES;
+
 	parseParameter(params, numparam, "tracer factor", sim.tracer_factor, i);
-	for(; i > 0; i--)
+	for(; i>0; i--)
 	{
 		if(sim.tracer_factor[i-1] < 1)
 		{
@@ -1584,7 +1584,19 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 				{
 					COUT << " Multigrid: FMG mode" << endl;
 				}
+
 				parseParameter(params, numparam, "relaxation error", sim.relaxation_error);
+				if(!parseParameter(params, numparam, "overrelaxation coefficient", sim.overrelaxation_coeff))
+				{
+					sim.overrelaxation_coeff = 1.;
+					COUT << " No overrelaxation coefficient set. Using default value = " << sim.overrelaxation_coeff << endl;
+				}
+				else if(sim.overrelaxation_coeff >= 2. || sim.overrelaxation_coeff <= 0.)
+				{
+					sim.overrelaxation_coeff = 1.;
+					COUT << " Wrong value for overrelaxation coefficient. Using default value = " << sim.overrelaxation_coeff << endl;
+				}
+
 				parseParameter(params, numparam, "multigrid pre-smoothing", sim.multigrid_pre_smoothing);
 				parseParameter(params, numparam, "multigrid post-smoothing", sim.multigrid_post_smoothing);
 				if(!parseParameter(params, numparam, "multigrid n-cycles", sim.multigrid_n_cycles))
@@ -1593,19 +1605,34 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 					sim.multigrid_n_cycles = 1;
 				}
 
-				parseParameter(params, numparam, "red black", sim.multigrid_red_black);
+				if(!parseParameter(params, numparam, "red black", sim.multigrid_red_black))
+				{
+					sim.multigrid_red_black = 0;
+					COUT << " Using simple sequential sweep of sites." << endl;
+				}
+				else if(sim.multigrid_red_black)
+				{
+					COUT << " Using red-black sweep scheme." << endl;
+				}
+				else
+				{
+					sim.multigrid_red_black = 0;
+					COUT << " Using simple sequential sweep of sites." << endl;
+				}
+
+
 				parseParameter(params, numparam, "check shape", sim.multigrid_check_shape);
 				if(parseParameter(params, numparam, "multigrid shape", par_string))
 				{
 					if(par_string[0] == 'V' || par_string[0] == 'v')
 					{
 						sim.multigrid_shape = MG_SHAPE_V;
-						COUT << " Multigrid: gamma-cycle shape : V" << endl;
+						COUT << " Multigrid: gamma-cycle shape = V" << endl;
 					}
 					else if(par_string[0] == 'W' || par_string[0] == 'w')
 					{
 						sim.multigrid_shape = MG_SHAPE_W;
-						COUT << " Multigrid: gamma-cycle shape : W" << endl;
+						COUT << " Multigrid: gamma-cycle shape = W" << endl;
 					}
 					else
 					{

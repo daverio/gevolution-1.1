@@ -103,7 +103,7 @@ void writeRestartSettings_fR(metadata & sim,
 
 		fprintf(outfile, "at redshift z=%f\n\n", (1./a)-1.);
 		fprintf(outfile, "\n#=========================== IC generation ===========================#\n");
-		fprintf(outfile, "IC generator       = restart\n");
+		fprintf(outfile, "IC generator        = restart\n");
 		if(restartcount >= 0)
 		{
 			sprintf(buffer, "%03d", restartcount);
@@ -115,7 +115,7 @@ void writeRestartSettings_fR(metadata & sim,
 
 		if(sim.hibernation_save_mode == HIB_SAVE_HDF5)
 		{
-			fprintf(outfile, "particle file      = %s%s%s_cdm.h5", sim.restart_path, sim.basename_restart, buffer);
+			fprintf(outfile, "particle file       = %s%s%s_cdm.h5", sim.restart_path, sim.basename_restart, buffer);
 			if(sim.baryon_flag)
 			{
 				fprintf(outfile, ", %s%s%s_b.h5", sim.restart_path, sim.basename_restart, buffer);
@@ -127,7 +127,7 @@ void writeRestartSettings_fR(metadata & sim,
 		}
 		else
 		{
-			fprintf(outfile, "particle file      = %s%s%s_cdm", sim.restart_path, sim.basename_restart, buffer);
+			fprintf(outfile, "particle file       = %s%s%s_cdm", sim.restart_path, sim.basename_restart, buffer);
 			if(sim.baryon_flag)
 			{
 				fprintf(outfile, ", %s%s%s_b", sim.restart_path, sim.basename_restart, buffer);
@@ -139,7 +139,7 @@ void writeRestartSettings_fR(metadata & sim,
 		}
 
 		fprintf(outfile, "\n");
-		fprintf(outfile, "metric file        = %s%s%s_phi.h5", sim.restart_path, sim.basename_restart, buffer);
+		fprintf(outfile, "metric file         = %s%s%s_phi.h5", sim.restart_path, sim.basename_restart, buffer);
 		fprintf(outfile, ", %s%s%s_chi.h5", sim.restart_path, sim.basename_restart, buffer);
 
 		if(sim.vector_flag == VECTOR_PARABOLIC)
@@ -312,30 +312,31 @@ void writeRestartSettings_fR(metadata & sim,
 		fprintf(outfile, "check redshift              = %f\n", sim.z_check);
 
 		fprintf(outfile, "\n#=========================== Multigrid and relaxation ===========================#\n");
-		fprintf(outfile, "relaxation method           = %d\n", sim.relaxation_method);
-		fprintf(outfile, "multigrid pre-smoothing     = %d\n", sim.multigrid_pre_smoothing);
-		fprintf(outfile, "multigrid post-smoothing    = %d\n", sim.multigrid_post_smoothing);
-		fprintf(outfile, "multigrid n-grids           = %d\n", sim.multigrid_n_grids);
-		fprintf(outfile, "multigrid n-cycles          = %d\n", sim.multigrid_n_cycles);
-		fprintf(outfile, "relaxation error            = %e\n", sim.relaxation_error);
-		fprintf(outfile, "red black                   = %d\n", sim.multigrid_red_black);
-		fprintf(outfile, "check shape                 = %d\n", sim.multigrid_check_shape);
+		fprintf(outfile, "relaxation method          = %d\n", sim.relaxation_method);
+		fprintf(outfile, "multigrid pre-smoothing    = %d\n", sim.multigrid_pre_smoothing);
+		fprintf(outfile, "multigrid post-smoothing   = %d\n", sim.multigrid_post_smoothing);
+		fprintf(outfile, "multigrid n-grids          = %d\n", sim.multigrid_n_grids);
+		fprintf(outfile, "multigrid n-cycles         = %d\n", sim.multigrid_n_cycles);
+		fprintf(outfile, "relaxation error           = %e\n", sim.relaxation_error);
+		fprintf(outfile, "overrelaxation coefficient = %e\n", sim.overrelaxation_coeff);
+		fprintf(outfile, "red black                  = %d\n", sim.multigrid_red_black);
+		fprintf(outfile, "check shape                = %d\n", sim.multigrid_check_shape);
 		if(sim.multigrid_shape == MG_SHAPE_V)
 		{
-			fprintf(outfile, "multigrid shape             = V\n");
+			fprintf(outfile, "multigrid shape            = V\n");
 		}
 		else if(sim.multigrid_shape == MG_SHAPE_W)
 		{
-			fprintf(outfile, "multigrid shape             = W\n");
+			fprintf(outfile, "multigrid shape            = W\n");
 		}
 
 		if(sim.relaxation_error_method == RELAXATION_ERROR_METHOD_SUM)
 		{
-			fprintf(outfile, "relaxation error method     = SUM\n");
+			fprintf(outfile, "relaxation error method    = SUM\n");
 		}
 		else if(sim.relaxation_error_method == RELAXATION_ERROR_METHOD_MAX)
 		{
-			fprintf(outfile, "relaxation error method     = MAX\n");
+			fprintf(outfile, "relaxation error method    = MAX\n");
 		}
 
 		fprintf(outfile, "\n#=========================== output ===========================#\n");

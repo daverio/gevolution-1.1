@@ -146,11 +146,7 @@ void readIC_GR(metadata & sim,
 		{
 			filename.assign(ic.pclfile[0]);
 			pcls_cdm->loadGadget2(filename, hdr);
-			if(hdr.npart[1] == 0)
-			{
-				break;
-			}
-
+			if(hdr.npart[1] == 0) break;
 			if(hdr.time / a > 1.001 || hdr.time / a < 0.999)
 			{
 				COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": redshift indicated in Gadget2 header does not match initial redshift of simulation!" << endl;
@@ -396,10 +392,7 @@ void readIC_GR(metadata & sim,
 
 				while (fgets(line, PARAM_MAX_LINESIZE, bgfile) != 0)
 				{
-					if(sscanf(line, " %d", &i) != 1)
-					{
-						break;
-					}
+					if(sscanf(line, " %d", &i) != 1) break;
 
 					if(i > ic.restart_cycle)
 					{
@@ -650,11 +643,7 @@ void readIC_fR(metadata & sim,
 		{
 			filename.assign(ic.pclfile[0]);
 			pcls_cdm->loadGadget2(filename, hdr);
-			if(hdr.npart[1] == 0)
-			{
-				break;
-			}
-
+			if(hdr.npart[1] == 0) break;
 			if(hdr.time / a > 1.001 || hdr.time / a < 0.999)
 			{
 				COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": redshift indicated in Gadget2 header does not match initial redshift of simulation!" << endl;
@@ -948,10 +937,7 @@ void readIC_fR(metadata & sim,
 
 				while (fgets(line, PARAM_MAX_LINESIZE, bgfile) != 0)
 				{
-					if(sscanf(line, " %d", &i) != 1)
-					{
-						break;
-					}
+					if(sscanf(line, " %d", &i) != 1) break;
 
 					if(i > ic.restart_cycle)
 					{

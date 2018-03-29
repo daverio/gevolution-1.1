@@ -128,11 +128,15 @@
 #define GENREL 0 // General Relativity
 #define FR 1   // f(R)
 
-//F(R) models
+//f(R) models
 #define FR_TYPE_RN 1
 #define FR_TYPE_R2 2
 #define FR_TYPE_HU_SAWICKI 3
 #define FR_TYPE_DELTA 4
+
+// f(R) "SOMETHING WENT WRONG"
+#define FR_WRONG 1.E+30
+#define FR_WRONG_RETURN 2. * FR_WRONG
 
 // Relaxation methods
 #define METHOD_U 1
@@ -225,6 +229,7 @@ struct metadata
 	double fR_target_precision;
 	double fR_count_max;
 	double relaxation_error;
+	double overrelaxation_coeff;
 	int relaxation_method;
 	int relaxation_error_method;
 	int multigrid_shape;
@@ -277,7 +282,6 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 		os << " , " << sim.tracer_factor[i];
 	}
 	os << "\n";
-
 	os << "baryon_flag: " << sim.baryon_flag << "\n";
 	os << "gr_flag: " << sim.gr_flag << "\n";
 	os << "mg_flag: " << sim.mg_flag << "\n";
@@ -304,7 +308,7 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "Cf: " << sim.Cf << "\n";
 
 	os << "fR_params: " << sim.fR_params[0];
-	for(int i = 1; i<MAX_FR_PARAMS; i++) os << " , " << sim.fR_params[i];
+	for(int i=1; i<MAX_FR_PARAMS; i++) os << " , " << sim.fR_params[i];
 	os << "\n";
 
 	os << "fR_epsilon_bg: " << sim.fR_epsilon_bg << "\n";
@@ -314,6 +318,7 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "multigrid_pre_smoothing: " << sim.multigrid_pre_smoothing << "\n";
 	os << "multigrid_post_smoothing: " << sim.multigrid_post_smoothing << "\n";
 	os << "relaxation_error: " << sim.relaxation_error << "\n";
+	os << "overrelaxation coefficient: " << sim.overrelaxation_coeff << "\n";
 	os << "relaxation_error_method: " << sim.relaxation_error_method << "\n";
 	os << "movelimit: " << sim.movelimit << "\n";
 	os << "steplimit: " << sim.steplimit << "\n";
@@ -321,17 +326,25 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "wallclocklimit: " << sim.wallclocklimit << "\n";
 	os << "z_in: " << sim.z_in << "\n";
 	os << "z_check: " << sim.z_check << "\n";
-
 	os << "z_snapshot: " << sim.z_snapshot[0];
-	for(int i = 1; i<MAX_OUTPUTS; i++) os << " , " << sim.z_snapshot[i];
+	for(int i=1; i<MAX_OUTPUTS; i++)
+	{
+		os << " , " << sim.z_snapshot[i];
+	}
 	os << "\n";
 
 	os << "z_pk: " << sim.z_pk[0];
-	for(int i = 1; i<MAX_OUTPUTS; i++) os << " , " << sim.z_pk[i];
+	for(int i=1; i<MAX_OUTPUTS; i++)
+	{
+		os << " , " << sim.z_pk[i];
+	}
 	os << "\n";
 
 	os << "z_restart: " << sim.z_restart[0];
-	for(int i = 1; i<MAX_OUTPUTS; i++) os << " , " << sim.z_restart[i];
+	for(int i=1; i<MAX_OUTPUTS; i++)
+	{
+		os << " , " << sim.z_restart[i];
+	}
 	os << "\n";
 
 	os << "z_switch_fR_background: " << sim.z_switch_fR_background << "\n";
@@ -339,11 +352,11 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "z_switch_linearchi: " << sim.z_switch_linearchi << "\n";
 
 	os << "z_switch_deltancdm: " << sim.z_switch_deltancdm[0];
-	for(int i = 1; i<MAX_PCL_SPECIES-2; i++) os << " , " << sim.z_switch_deltancdm[i];
+	for(int i=1; i<MAX_PCL_SPECIES-2; i++) os << " , " << sim.z_switch_deltancdm[i];
 	os << "\n";
 
 	os << "z_switch_Bncdm: " << sim.z_switch_Bncdm[0];
-	for(int i = 1; i<MAX_PCL_SPECIES-2; i++) os << " , " << sim.z_switch_Bncdm[i];
+	for(int i=1; i<MAX_PCL_SPECIES-2; i++) os << " , " << sim.z_switch_Bncdm[i];
 	os << "\n";
 
 	os << "basename_snapshot: " << sim.basename_snapshot << "\n";
@@ -418,21 +431,21 @@ std::ostream& operator<< (std::ostream& os, const cosmology& cosmo)
 	os << "Omega_rad: " << cosmo.Omega_rad << "\n";
 
 	os << "Omega_ncdm: " << cosmo.Omega_ncdm[0];
-	for(int i = 1; i<MAX_PCL_SPECIES-2; i++) os << " , " << cosmo.Omega_ncdm[i];
+	for(int i=1; i<MAX_PCL_SPECIES-2; i++) os << " , " << cosmo.Omega_ncdm[i];
 	os << "\n";
 
 	os << "h: " << cosmo.h << "\n";
 
 	os << "m_ncdm: " << cosmo.m_ncdm[0];
-	for(int i = 1; i<MAX_PCL_SPECIES-2; i++) os << " , " << cosmo.m_ncdm[i];
+	for(int i=1; i<MAX_PCL_SPECIES-2; i++) os << " , " << cosmo.m_ncdm[i];
 	os << "\n";
 
 	os << "T_ncdm: " << cosmo.T_ncdm[0];
-	for(int i = 1; i<MAX_PCL_SPECIES-2; i++) os << " , " << cosmo.T_ncdm[i];
+	for(int i=1; i<MAX_PCL_SPECIES-2; i++) os << " , " << cosmo.T_ncdm[i];
 	os << "\n";
 
 	os << "deg_ncdm: " << cosmo.deg_ncdm[0];
-	for(int i = 1; i<MAX_PCL_SPECIES-2; i++) os << " , " << cosmo.deg_ncdm[i];
+	for(int i=1; i<MAX_PCL_SPECIES-2; i++) os << " , " << cosmo.deg_ncdm[i];
 	os << "\n";
 
 	os << "num_ncdm: " << cosmo.num_ncdm << "\n";

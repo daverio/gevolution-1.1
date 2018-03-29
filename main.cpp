@@ -691,6 +691,9 @@ int main(int argc, char **argv)
 		}
 	#endif
 
+	////TODO: Remove after debugging
+	sim.steplimit = 0.005;
+
 	//=========================================== Main loop ===========================================//
 	while(true)
 	{
@@ -915,14 +918,18 @@ int main(int argc, char **argv)
 					}
 					else
 					{
+
+						check_field(deltaR, "deltaR", numpts3d, " Before initial cond");
 						// Build initial guess for deltaR and u -- common to all methods!
-						// copy_field(eightpiG_deltaT, deltaR, -1.);
 						copy_field(xi, xi_prev); // Copy old value of xi on xi_prev
-						copy_field(eightpiG_deltaT, deltaR, -1.);
-						convert_deltaR_to_xi(xi, deltaR, Rbar, fRbar, sim);
-						build_laplacian(xi, laplace_xi, dx);
-						copy_field(laplace_xi, zeta, 3./a/a);
-						subtract_fields(zeta, eightpiG_deltaT, deltaR);
+						initial_conditions_deltaR(deltaR, eightpiG_deltaT, zeta, sim);
+
+						//// TODO: Uses trace equation to produce initial condition for deltaR ---
+						// convert_deltaR_to_xi(xi, deltaR, Rbar, fRbar, sim);
+						// copy_field(laplace_xi, zeta, 3./a/a);
+						// subtract_fields(zeta, eightpiG_deltaT, deltaR);
+						//// --- END OF TODO
+
 						convert_deltaR_to_u(xi, deltaR, Rbar, fRbar, sim); // deltaR and u are now consistent
 
 						if(sim.relaxation_method == METHOD_U)
@@ -931,18 +938,18 @@ int main(int argc, char **argv)
 						}
 						else if(sim.relaxation_method == METHOD_MULTIGRID_U)
 						{
-							while(1)
+							temp1 = multigrid_u(mg_u, mg_diff_u, mg_deltaR, mg_eightpiG_deltaT, mg_rhs, mg_residual, mg_err, mg_engine, a, dx, Rbar, fbar, fRbar, sim);
+							if(temp1 > FR_WRONG)
 							{
-								temp1 = multigrid_u(mg_u, mg_diff_u, mg_deltaR, mg_eightpiG_deltaT, mg_rhs, mg_residual, mg_err, mg_engine, a, dx, Rbar, fbar, fRbar, sim);
-								if(temp1 < 1.) break;
+								COUT << " multigrid_u returned FR_WRONG_RETURN. Check what's going on..." << endl;
 							}
 						}
 						else if(sim.relaxation_method == METHOD_FMG)
 						{
-							while(true)
+							temp1 = multigrid_FMG(mg_u, mg_diff_u, mg_deltaR, mg_eightpiG_deltaT, mg_rhs, mg_residual, mg_err, mg_engine, a, dx, Rbar, fbar, fRbar, sim);
+							if(temp1 > FR_WRONG)
 							{
-								temp1 = multigrid_FMG(mg_u, mg_diff_u, mg_deltaR, mg_eightpiG_deltaT, mg_rhs, mg_residual, mg_err, mg_engine, a, dx, Rbar, fbar, fRbar, sim);
-								if(temp1 < sim.relaxation_error) break;
+								COUT << " multigrid_FMG returned FR_WRONG_RETURN. Check what's going on..." << endl;
 							}
 						}
 
@@ -951,7 +958,7 @@ int main(int argc, char **argv)
 						// Convert back to xi
 						convert_u_to_xi(xi, xi, fRbar);
 
-						sim.multigrid_check_shape = 0; // Just check the first time
+						if(sim.multigrid_check_shape) sim.multigrid_check_shape = 0; // Just check the first time
 					}
 				}
 				else // Generic f(R) model (not R + R^2), all time derivatives
@@ -1268,10 +1275,7 @@ int main(int argc, char **argv)
 			spectra_output_time += MPI_Wtime() - ref_time;
 		#endif
 
-		if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot)
-		{
-			break; // simulation complete
-		}
+		if(pkcount >= sim.num_pk && snapcount >= sim.num_snapshot) break; // simulation complete
 
 		// compute number of step subdivisions for particle updates
 		numsteps = 1;
@@ -1623,6 +1627,7 @@ int main(int argc, char **argv)
 			check_field(phi, "phi", numpts3d);
 		}
 
+
 		if(sim.wallclocklimit > 0. && a <= 1.)   // check for wallclock time limit
 		{
 			tmp = MPI_Wtime() - start_time;
@@ -1665,9 +1670,8 @@ int main(int argc, char **argv)
 					}
 				#endif
 
-				break;
+				return 0; //  TODO: Maybe something more needed?
 			}
-			return 0; //  TODO: Maybe something more needed?
 		}
 
 		if(restartcount < sim.num_restart && 1. / a < sim.z_restart[restartcount] + 1.)

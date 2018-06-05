@@ -111,7 +111,7 @@ int main(int argc, char **argv)
 	gadget2_header hdr;
 	Real T00hom;
 
-	bool solves_first_phi = true;
+	bool solves_first_time = true;
 
 #ifndef H5_DEBUG
 	H5Eset_auto2 (H5E_DEFAULT, NULL, NULL);
@@ -243,23 +243,36 @@ int main(int argc, char **argv)
 #endif
 
 #ifdef MULTIGRID
+
+	Field<Real> sourcechi;
+	Field<Real> phiprime;
+
 	MultiGrid mg_engine;
 	MultiField<Real> * mphi;
+	MultiField<Real> * mchi;
 	MultiField<Real> * msource;
+	MultiField<Real> * msourcechi;
 	Field<Real> residual;
 	MultiField<Real> * mresidual;
 	Field<Real> errorMG;
 	MultiField<Real> * merrorMG;
 
-	if(sim.phi_solver_type==PHI_SOLVER_MG)
+	if(sim.solver_type==SOLVER_MG)
 	{
+		sourcechi.initialize(lat,1);
+		sourcechi.alloc();
+		phiprime.initialize(lat,1);
+		phiprime.alloc();
+
 		mg_engine.initialize(&lat,20,2);
 		residual.initialize(lat,1);
 		residual.alloc();
 		errorMG.initialize(lat,1);
 		errorMG.alloc();
 		mg_engine.initialize_Field(&phi,mphi);
+		mg_engine.initialize_Field(&chi,mchi);
 		mg_engine.initialize_Field(&source,msource);
+		mg_engine.initialize_Field(&sourcechi,msourcechi);
 		mg_engine.initialize_Field(&residual,mresidual);
 		mg_engine.initialize_Field(&errorMG,merrorMG);
 	}
@@ -434,8 +447,9 @@ int main(int argc, char **argv)
 
 		projection_T00_comm(&source);
 
-		if (sim.vector_flag == VECTOR_ELLIPTIC)
+		if (sim.vector_flag == VECTOR_ELLIPTIC || sim.solver_type == SOLVER_MG)
 		{
+			//COUT<<"projecting T0i"<<endl;
 			projection_init(&Bi);
 			projection_T0i_project(&pcls_cdm, &Bi, &phi);
 			if (sim.baryon_flag)
@@ -493,8 +507,9 @@ int main(int argc, char **argv)
 															fourpiG * dx * dx / a,
 															3. * Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) * dx * dx);  // prepare nonlinear source for phi update
 
-				if(sim.phi_solver_type == PHI_SOLVER_FT)
+				if(sim.solver_type == SOLVER_FT || solves_first_time)
 				{
+					//COUT<<"using FT for phi"<<endl;
 					#ifdef BENCHMARK
 									ref2_time= MPI_Wtime();
 					#endif
@@ -515,23 +530,16 @@ int main(int argc, char **argv)
 								fft_time += MPI_Wtime() - ref2_time;
 								fft_count++;
 					#endif
+					solves_first_time = false;
 				}
-				else if(sim.phi_solver_type == PHI_SOLVER_MG)
+				else if(sim.solver_type == SOLVER_MG)
 				{
-					if(solves_first_phi)
-					{
-						plan_source.execute(FFT_FORWARD);
-						solveModifiedPoissonFT(scalarFT,
-																 	 scalarFT,
-																 	 1. / (dx * dx),
-																 	 3. * Hconf(a, fourpiG, cosmo) / dtau_old);
-						plan_phi.execute(FFT_BACKWARD);
-						solves_first_phi = false;
-					}
-					else
-					{
-						for (x.first(); x.test(); x.next())source(x)/= dx*dx;
-
+						//COUT<<"using MG"<<endl;
+						for (x.first(); x.test(); x.next())
+						{
+							source(x)/= dx*dx;
+							phiprime(x) = -phi(x);
+						}
 
 						#ifdef MULTIGRID
 						solveModifiedPoisson_linearMGW(mg_engine,
@@ -550,8 +558,13 @@ int main(int argc, char **argv)
 						parallel.abortForce();
 						#endif
 
-						for (x.first(); x.test(); x.next())source(x) *= dx*dx;
-					}
+						for (x.first(); x.test(); x.next())
+						{
+							source(x) *= dx*dx;
+							phiprime(x)+=phi(x);
+							phiprime(x)/= dtau_old;
+						}
+						phiprime.updateHalo();
 				}
 			}
 		}
@@ -606,67 +619,129 @@ int main(int argc, char **argv)
 		}
 		// done recording background data
 
-		prepareFTsource<Real>(phi, Sij, Sij, 2. * fourpiG * dx * dx / a);  // prepare nonlinear source for additional equations
 
-#ifdef BENCHMARK
-		ref2_time= MPI_Wtime();
-#endif
-		plan_Sij.execute(FFT_FORWARD);  // go to k-space
-#ifdef BENCHMARK
-		fft_time += MPI_Wtime() - ref2_time;
-		fft_count += 6;
-#endif
 
-#ifdef HAVE_CLASS
-		if (sim.radiation_flag > 0 && a < 1. / (sim.z_switch_linearchi + 1.))
+		if(sim.solver_type == SOLVER_FT || solves_first_time)
 		{
-			prepareFTchiLinear(class_background, class_perturbs, class_spectra, scalarFT, sim, ic, cosmo, fourpiG, a);
-			projectFTscalar(SijFT, scalarFT, 1);
-		}
-		else
-#endif
-		projectFTscalar(SijFT, scalarFT);  // construct chi by scalar projection (k-space)
+			//COUT<<"Using FT for chi and Bi"<<endl;
+			prepareFTsource<Real>(phi, Sij, Sij, 2. * fourpiG * dx * dx / a);  // prepare nonlinear source for additional equations
 
-#ifdef BENCHMARK
-		ref2_time= MPI_Wtime();
-#endif
-		plan_chi.execute(FFT_BACKWARD);	 // go back to position space
-#ifdef BENCHMARK
-		fft_time += MPI_Wtime() - ref2_time;
-		fft_count++;
-#endif
-		chi.updateHalo();  // communicate halo values
-
-		if (sim.vector_flag == VECTOR_ELLIPTIC)
-		{
-#ifdef BENCHMARK
+	#ifdef BENCHMARK
 			ref2_time= MPI_Wtime();
-#endif
-			plan_Bi.execute(FFT_FORWARD);
-#ifdef BENCHMARK
+	#endif
+			plan_Sij.execute(FFT_FORWARD);  // go to k-space
+	#ifdef BENCHMARK
+			fft_time += MPI_Wtime() - ref2_time;
+			fft_count += 6;
+	#endif
+
+	#ifdef HAVE_CLASS
+			if (sim.radiation_flag > 0 && a < 1. / (sim.z_switch_linearchi + 1.))
+			{
+				prepareFTchiLinear(class_background, class_perturbs, class_spectra, scalarFT, sim, ic, cosmo, fourpiG, a);
+				projectFTscalar(SijFT, scalarFT, 1);
+			}
+			else
+	#endif
+			projectFTscalar(SijFT, scalarFT);  // construct chi by scalar projection (k-space)
+
+	#ifdef BENCHMARK
+			ref2_time= MPI_Wtime();
+	#endif
+			plan_chi.execute(FFT_BACKWARD);	 // go back to position space
+	#ifdef BENCHMARK
 			fft_time += MPI_Wtime() - ref2_time;
 			fft_count++;
-#endif
-			projectFTvector(BiFT, BiFT, fourpiG * dx * dx); // solve B using elliptic constraint (k-space)
-#ifdef CHECK_B
-			evolveFTvector(SijFT, BiFT_check, a * a * dtau_old);
-#endif
-		}
-		else
-			evolveFTvector(SijFT, BiFT, a * a * dtau_old);  // evolve B using vector projection (k-space)
+	#endif
+			chi.updateHalo();  // communicate halo values
 
-		if (sim.gr_flag > 0)
-		{
-#ifdef BENCHMARK
-			ref2_time= MPI_Wtime();
-#endif
-			plan_Bi.execute(FFT_BACKWARD);  // go back to position space
-#ifdef BENCHMARK
-			fft_time += MPI_Wtime() - ref2_time;
-			fft_count += 3;
-#endif
-			Bi.updateHalo();  // communicate halo values
+			if (sim.vector_flag == VECTOR_ELLIPTIC)
+			{
+	#ifdef BENCHMARK
+				ref2_time= MPI_Wtime();
+	#endif
+				plan_Bi.execute(FFT_FORWARD);
+	#ifdef BENCHMARK
+				fft_time += MPI_Wtime() - ref2_time;
+				fft_count++;
+	#endif
+				projectFTvector(BiFT, BiFT, fourpiG * dx * dx); // solve B using elliptic constraint (k-space)
+	#ifdef CHECK_B
+				evolveFTvector(SijFT, BiFT_check, a * a * dtau_old);
+	#endif
+			}
+			else
+				evolveFTvector(SijFT, BiFT, a * a * dtau_old);  // evolve B using vector projection (k-space)
+
+			if (sim.gr_flag > 0)
+			{
+	#ifdef BENCHMARK
+				ref2_time= MPI_Wtime();
+	#endif
+				plan_Bi.execute(FFT_BACKWARD);  // go back to position space
+	#ifdef BENCHMARK
+				fft_time += MPI_Wtime() - ref2_time;
+				fft_count += 3;
+	#endif
+				Bi.updateHalo();  // communicate halo values
+			}
 		}
+		else if(sim.solver_type == SOLVER_MG)
+		{
+			//chi solver:
+			//COUT<<"Using MG for chi and Bi"<<endl;
+
+			Bi.updateHalo();
+			phi.updateHalo();
+			phiprime.updateHalo();
+
+			preparechiSource(source, phi, phiprime,
+			                 Bi,
+			                 Hconf(a, fourpiG, cosmo),
+			                 a*a,
+			                 dx,
+			                 fourpiG);
+
+			solveModifiedPoisson_linearMGW(mg_engine,
+																		 msourcechi,
+																		 mchi,
+																		 mresidual,
+																		 merrorMG,
+																		 dx,
+																		 0,
+																		 sim.mg_chi_pre_smoothing,
+																		 sim.mg_chi_post_smoothing,
+																		 sim.mg_chi_cycle_number,
+																		 sim.mg_chi_gamma);
+
+			//solveModifiedPoissonFT(scalarFT,
+			//											 scalarFT,
+			//											 1. / (dx * dx),
+			//											 0);
+			//prepareFTsource<Real>(phi, Sij, Sij, 2. * fourpiG * dx * dx / a);
+			//plan_Sij.execute(FFT_FORWARD);
+			//projectFTscalar(SijFT, scalarFT);
+			//plan_chi.execute(FFT_BACKWARD);
+			chi.updateHalo();
+
+			/*
+			Site x(chi.lattice());
+			for(x.first();x.test();x.next())chi(x) = 0;
+
+*/
+		 	plan_Bi.execute(FFT_FORWARD);
+
+			projectFTvector(BiFT, BiFT, fourpiG * dx * dx); // soelliptic constraint (k-space)
+
+			plan_Bi.execute(FFT_BACKWARD);  // go back to position space
+
+			Bi.updateHalo();  // communicate halo values
+
+		}
+
+
+
+
 
 #ifdef BENCHMARK
 		gravity_solver_time += MPI_Wtime() - ref_time;

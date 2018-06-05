@@ -126,11 +126,24 @@ void solveCL(MultiGrid & mg_engine,
     int count = 1;
 
     //first guess:
-    for(x.first();x.test();x.next())
+    if(modif!=0)
     {
-      phi[level](x) = -source[level](x)/modif;
-      //cout<<x<<" "<< phi[level](x)<<endl;
+      for(x.first();x.test();x.next())
+      {
+        phi[level](x) = -source[level](x)/modif;
+        //cout<<x<<" "<< phi[level](x)<<endl;
+      }
     }
+    else
+    {
+      for(x.first();x.test();x.next())
+      {
+        phi[level](x) = 0;//source[level](x);
+        //cout<<x<<" "<< phi[level](x)<<endl;
+      }
+    }
+
+
     if(phi[level].lattice().size(0)>2)
     {
       while(error>wp)
@@ -393,4 +406,43 @@ void solveModifiedPoisson_linearFMS(MultiGrid & mg_engine,
 
 
 
+}
+
+
+void preparechiSource(Field<Real> &source,
+                      Field<Real> &phi,
+                      Field<Real> &phiprime,
+                      Field<Real> &T0i,
+                      double const H,
+                      double const a2,
+                      double const dx,
+                      double const fourpiG)
+{
+
+  Real temp;
+  double dx2 = dx*dx;
+  Site x(phi.lattice());
+  for(x.first();x.test();x.next())
+  {
+
+
+
+    temp = 0;
+    for(int i = 0;i<3;i++) temp += T0i(x,i)-T0i(x-i,i);
+
+    source(x) = fourpiG * temp / a2 / dx;
+
+    source(x) += ( phiprime(x+0) + phiprime(x-0)
+                   + phiprime(x+1) + phiprime(x-1)
+                   + phiprime(x+2) + phiprime(x-2) - 6.0*phiprime(x) )/dx2;
+
+    source(x) /= H;
+
+    source(x) += ( phi(x+0) + phi(x-0)
+                     + phi(x+1) + phi(x-1)
+                     + phi(x+2) + phi(x-2) - 6.0*phi(x) )/ dx2;
+
+    //source(x) *= dx2;
+
+  }
 }

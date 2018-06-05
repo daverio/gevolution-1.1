@@ -1039,7 +1039,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	sim.boxsize = -1.;
 	sim.wallclocklimit = -1.;
 	sim.z_in = 0.;
-	sim.phi_solver_type=PHI_SOLVER_FT;
+	sim.solver_type=SOLVER_FT;
 
 	if (parseParameter(params, numparam, "gravity theory", par_string))
 	{
@@ -1075,17 +1075,17 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	}
 
 
-	if (parseParameter(params, numparam, "phi solver", par_string))
+	if (parseParameter(params, numparam, "solver type", par_string))
 	{
 		if (par_string[0] == 'f' || par_string[0] == 'F' || par_string[0] == 's' || par_string[0] == 'S')
 		{
 			COUT << " Phi solver set to: " << COLORTEXT_CYAN << "spectral method" << COLORTEXT_RESET << endl;
-			sim.phi_solver_type=PHI_SOLVER_FT;
+			sim.solver_type=SOLVER_FT;
 		}
 		else if(par_string[0] == 'm' || par_string[0] == 'M')
 		{
 			COUT << " Phi solver set to: " << COLORTEXT_CYAN << "Multigrid method" << COLORTEXT_RESET << endl;
-			sim.phi_solver_type=PHI_SOLVER_MG;
+			sim.solver_type=SOLVER_MG;
 
 			if (parseParameter(params, numparam, "MG phi pre-smoothing", sim.mg_phi_pre_smoothing)){;}
 			else
@@ -1116,6 +1116,37 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			{
 				 COUT<<"Using Multigrid to solve phi, <MG phi gamma> not set, using default value: 2 (W-cycle)"<<endl;
 				 sim.mg_phi_gamma = 2;
+			}
+
+			if (parseParameter(params, numparam, "MG chi pre-smoothing", sim.mg_chi_pre_smoothing)){;}
+			else
+			{
+				 COUT<<"Using Multigrid to solve phi, <MG chi pre-smoothing> not set, using default value: 1"<<endl;
+				 COUT<<"Using default value for multigrid might lead to not so accurate result!"<<endl;
+				 sim.mg_chi_pre_smoothing = 1;
+			}
+
+			if (parseParameter(params, numparam, "MG chi post-smoothing", sim.mg_chi_post_smoothing)){;}
+			else
+			{
+				 COUT<<"Using Multigrid to solve phi, <MG chi post-smoothing> not set, using default value: 4"<<endl;
+				 COUT<<"Using default value for multigrid might lead to not so accurate result!"<<endl;
+				 sim.mg_chi_post_smoothing = 4;
+			}
+
+			if (parseParameter(params, numparam, "MG chi cycle number", sim.mg_chi_cycle_number)){;}
+			else
+			{
+				 COUT<<"Using Multigrid to solve phi, <MG chi cycle number> not set, using default value: 1"<<endl;
+				 COUT<<"Using default value for multigrid might lead to not so accurate result!"<<endl;
+				 sim.mg_chi_cycle_number = 1;
+			}
+
+			if (parseParameter(params, numparam, "MG chi gamma", sim.mg_chi_gamma)){;}
+			else
+			{
+				 COUT<<"Using Multigrid to solve phi, <MG chi gamma> not set, using default value: 2 (W-cycle)"<<endl;
+				 sim.mg_chi_gamma = 2;
 			}
 
 			#ifndef MULTIGRID

@@ -523,7 +523,6 @@ int main(int argc, char **argv)
 									// TODO Remove after debugging -- build phiprime anyway
 									phi.updateHalo();
 									copy_field(phi, phiprime);
-									phiprime.updateHalo();
 									// End remove
 
 					#ifdef BENCHMARK
@@ -546,8 +545,7 @@ int main(int argc, char **argv)
 
 					// TODO Remove after debugging -- build phiprime anyway
 					phi.updateHalo();
-					add_fields(phi, 1., phiprime, -1., phiprime);
-					copy_field(phiprime, phiprime, 1./dtau_old);
+					add_fields(phi, 1./dtau_old, phiprime, -1./dtau_old, phiprime);
 					phiprime.updateHalo();
 					// End remove
 				}
@@ -713,10 +711,14 @@ int main(int argc, char **argv)
 
 		}
 
-		COUT << " ========================= CHECKING FIELDS AT CYCLE " << cycle << " =========================" << endl;
+		COUT << "  =========================  CHECKING FIELDS AT CYCLE " << cycle << "  =========================" << endl;
+		COUT << "      tau = " << tau << endl;
+		COUT << "   Hubble = " << Hconf(a, fourpiG, cosmo) << endl;
+		COUT << " dtau_old = " << dtau_old << endl;
 		check_field(phi, "phi", numpts3d);
 		check_field(chi, "chi", numpts3d);
 		check_field(phiprime, "phiprime", numpts3d);
+		check_vector_field(Bi, "Bi", numpts3d);
 
 		double Hubble = Hconf(a, fourpiG, cosmo);
 
@@ -730,19 +732,24 @@ int main(int argc, char **argv)
 		}
 
 		check_field(residual, "equation", numpts3d);
+
+		build_laplacian(phi, residual, dx);
+		check_field(residual, "laplace(phi)", numpts3d);
+
+		build_laplacian(chi, residual, dx);
+		check_field(residual, "laplace(chi)", numpts3d);
+
+		build_laplacian(phiprime, residual, dx);
+		copy_field(residual, residual, 1./Hubble);
+		check_field(residual, "laplace(phiprime)/H", numpts3d);
+
 		for(x.first(); x.test(); x.next())
 		{
 			residual(x) = fourpiG * ( Bi(x,0) - Bi(x-0,0) + Bi(x,1) - Bi(x-1,1) + Bi(x,2) - Bi(x-2,2) ) / a / a / Hubble / dx;
 		}
 		check_field(residual, "T0i term", numpts3d);
-		build_laplacian(phi, residual, dx);
-		check_field(residual, "laplace(phi)", numpts3d);
-		build_laplacian(chi, residual, dx);
-		check_field(residual, "laplace(chi)", numpts3d);
-		build_laplacian(phiprime, residual, dx);
-		copy_field(residual, residual, 1./Hubble);
-		check_field(residual, "laplace(phiprime)/H", numpts3d);
-		COUT << endl;
+
+		cin.get();
 		// End Remove
 
 

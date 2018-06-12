@@ -266,6 +266,8 @@ void solveModifiedPoisson_linearMGV(MultiGrid & mg_engine,
   }
   COUT << "--------- multigrid end ---------"<<endl;
 }
+
+
 void solveModifiedPoisson_linearGammaCycle(MultiGrid & mg_engine,
                                            MultiField<Real> * source,
                                            MultiField<Real> * phi,
@@ -314,7 +316,7 @@ void solveModifiedPoisson_linearGammaCycle(MultiGrid & mg_engine,
 
 void solveModifiedPoisson_linearMGW(MultiGrid & mg_engine,
                                     MultiField<Real> * source,
-                                    MultiField<Real> * phi,
+                                    MultiField<Real> * field,
                                     MultiField<Real> * residual,
                                     MultiField<Real> * rhs,
                                     double dx,
@@ -336,7 +338,7 @@ void solveModifiedPoisson_linearMGW(MultiGrid & mg_engine,
   {
     solveModifiedPoisson_linearGammaCycle(mg_engine,
                                           source,
-                                          phi,
+                                          field,
                                           residual,
                                           dx2,
                                           modif,
@@ -401,11 +403,6 @@ void solveModifiedPoisson_linearFMS(MultiGrid & mg_engine,
   }
   get_residual(mg_engine,source,phi,residual,1.0/dx2[0],modif,0);
   COUT << "--------- multigrid end ---------"<<endl;
-
-
-
-
-
 }
 
 
@@ -477,21 +474,20 @@ double check_field(Field<FieldType> & field, string field_name, long n3, string 
   sum /= n3;
   hom /= n3;
 
-        COUT << message << scientific << setprecision(prec)
-                         << setw(20) << field_name
-       << "  Max =  " << max;
-        if(hom < 0)
-        {
-                COUT << "  hom = " << hom << endl;
-        }
-        else
-        {
-                COUT << "  hom =  " << hom << endl;
-        }
+  COUT << message << scientific << setprecision(prec) << setw(prec + 4) << field_name << "  Max = " << max;
 
-        std::cout.copyfmt(oldState);
+  if(hom < 0)
+  {
+    COUT << "  hom = " << hom << endl;
+  }
+  else
+  {
+    COUT << "  hom =  " << hom << endl;
+  }
 
-        return max;
+  std::cout.copyfmt(oldState);
+
+  return max;
 }
 
 
@@ -574,5 +570,49 @@ void add_fields(Field<FieldType> & field1, double coeff1, Field<FieldType> & fie
 	{
 		result(x) = coeff1 * field1(x) + coeff2 * field2(x);
 	}
+	return;
+}
+
+template <class FieldType>
+void check_vector_field(Field<FieldType> & field, string field_name, long n3, string message = "") // TODO: correct lattice size
+{
+  Site x(field.lattice());
+	std::ios oldState(nullptr);
+	oldState.copyfmt(std::cout);
+	int prec = 16;
+  double max[3] = {0.,0.,0.},
+				 hom[3] = {0.,0.,0.},
+				 temp;
+
+	COUT << message << scientific << setprecision(prec);
+
+  for(int i=0; i<3; i++)
+  {
+    for(x.first(); x.test(); x.next())
+    {
+      temp = field(x,i);
+      hom[i] += temp;
+      if(fabs(temp) > max[i])
+      {
+        max[i] = fabs(temp);
+      }
+    }
+    parallel.max(max[i]);
+    hom[i] /= n3;
+
+    COUT << setw(17) << field_name << "[" << i << "]";
+    COUT << "  Max = " << setw(prec + 4) << max[i];
+    if(hom[i] < 0)
+    {
+      COUT << "  hom = " << hom[i] << endl;
+    }
+    else
+    {
+      COUT << "  hom =  " << hom[i] << endl;
+    }
+  }
+
+	std::cout.copyfmt(oldState);
+
 	return;
 }

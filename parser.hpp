@@ -1620,6 +1620,13 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 					COUT << " Using simple sequential sweep of sites." << endl;
 				}
 
+				if(!parseParameter(params, numparam, "restrict mode", par_string))
+				{
+					COUT << " No selection for which field to restrict (u or deltaR). Choosing u by default." << endl;
+					sim.restrict_mode = RESTRICT_U;
+				}
+				if(par_string[0] == 'u' || par_string[0] == 'U') sim.restrict_mode = RESTRICT_U;
+				else if(par_string[0] == 'r' || par_string[0] == 'R' || par_string[0] == 'd' || par_string[0] == 'D') sim.restrict_mode = RESTRICT_DELTAR;
 
 				parseParameter(params, numparam, "check shape", sim.multigrid_check_shape);
 				if(parseParameter(params, numparam, "multigrid shape", par_string))
@@ -1808,7 +1815,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	}
 	else if(sim.gr_flag == 0 && sim.z_switch_linearchi <= 0.01)
 	{
-		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": with garavity theory = Newton the switch linear chi redshift must be larger than 0.01." << endl;
+		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": with gravity theory = Newton the switch linear chi redshift must be larger than 0.01." << endl;
 		COUT << "              setting switch linear chi = 0.011" << endl;
 		sim.z_switch_linearchi = 0.011;
 	}

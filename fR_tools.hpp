@@ -67,7 +67,7 @@ Real f(const double R, const metadata & sim, int code)
 	{
 		cout << " f(R) Evaluated to NaN (code " << code << ").\n"
 		     << " R = " << R << ", Rpow = " << Rpow << ", f(R) = " << output << endl;
-		return FR_WRONG_RETURN; // Returns a huge negative number to throw some exception
+		return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 	}
 }
 
@@ -122,7 +122,7 @@ Real fR(const double R, const metadata & sim, int code)
 	{
 		cout << " fR Evaluated to NaN (code " << code << ").\n"
 		     << " R = " << R << ", Rpow = " << Rpow << ", fR = " << output << "\n Closing...\n";
-		return FR_WRONG_RETURN; // Returns a huge negative number to throw some exception
+		return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 	}
 }
 
@@ -185,7 +185,7 @@ Real fRR(const double R, const metadata & sim, int code)
 	{
 		cout << " fRR Evaluated to NaN (code " << code << ").\n"
 		     << " R = " << R << ", Rpow = " << Rpow << ", fRR = " << output << endl;
-		return FR_WRONG_RETURN; // Returns a huge negative number to throw some exception
+		return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 	}
 }
 
@@ -246,7 +246,7 @@ Real fRRR(const double R, const metadata & sim, int code)
 	{
 		cout << " fRRR Evaluated to NaN (code " << code << ").\n"
 		     << " R = " << R << ", Rpow = " << Rpow << ", fRRR = " << output << "\n Closing...\n";
-		return FR_WRONG_RETURN; // Returns a huge negative number to throw some exception
+		return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 	}
 }
 
@@ -334,10 +334,16 @@ double check_field(Field<FieldType> & field, string field_name, long n3, string 
   hom /= n3;
 
 	COUT << message << scientific << setprecision(prec)
-			 << setw(17) << field_name
-       << "  Max = " << setw(prec + 3) << max
-       << "  hom = " << setw(prec + 3) << hom
-       << endl;
+			 << setw(20) << field_name
+       << "  Max =  " << max;
+	if(hom < 0)
+	{
+		COUT << "  hom = " << hom << endl;
+	}
+	else
+	{
+		COUT << "  hom =  " << hom << endl;
+	}
 
 	std::cout.copyfmt(oldState);
 
@@ -605,12 +611,16 @@ void leapfrog_dotxi(Field<FieldType> & xi, Field<FieldType> & zeta, Field<FieldT
 	return;
 }
 
+///// TODO: FOR EVERY INSTANCE OF convert_*_to_*, CHECK WITH
+// if(convert_*_to_*() > FR_WRONG) return FR_WRONG_RETURN;
+// (this could be important)
+
 /////////////////////////////////////////////////
 // Converts deltaR to xi
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
-double convert_deltaR_to_xi(Field<FieldType> & xi, Field<FieldType> & deltaR, double const Rbar, double const fRbar, const metadata & sim)
+double convert_deltaR_to_xi(Field<FieldType> & deltaR, Field<FieldType> & xi, double const Rbar, double const fRbar, const metadata & sim)
 {
 	Site x(xi.lattice());
 	double temp;
@@ -627,11 +637,8 @@ double convert_deltaR_to_xi(Field<FieldType> & xi, Field<FieldType> & deltaR, do
 		for(x.first(); x.test(); x.next())
 		{
 			temp = fR(Rbar + deltaR(x), sim, 832);
-			if(temp < - FR_WRONG)
-			{
-				return FR_WRONG_RETURN; // Returns a huge negative number to throw some exception
-			}
-			xi(x) =  - fRbar;
+			if(temp > FR_WRONG) return FR_WRONG_RETURN; // Returns a huge number to throw some exception
+			xi(x) =  temp - fRbar;
 		}
 	}
 	return 1.;
@@ -643,7 +650,11 @@ double convert_deltaR_to_xi(Field<FieldType> & xi, Field<FieldType> & deltaR, do
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
-double convert_deltaR_to_u(Field<FieldType> & u, Field<FieldType> & deltaR, double const Rbar, double const fRbar, const metadata & sim)
+double convert_deltaR_to_u(Field<FieldType> & deltaR,
+													 Field<FieldType> & u,
+													 double const Rbar,
+													 double const fRbar,
+													 const metadata & sim)
 {
 	Site x(u.lattice());
 	double temp;
@@ -651,7 +662,7 @@ double convert_deltaR_to_u(Field<FieldType> & u, Field<FieldType> & deltaR, doub
 	for(x.first(); x.test(); x.next())
 	{
 		temp = fR(Rbar + deltaR(x), sim, 833);
-		if(temp > FR_WRONG) return FR_WRONG_RETURN; // Returns a huge negative number to throw some exception
+		if(temp > FR_WRONG) return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 
 		u(x) = log(temp/fRbar);
 	}
@@ -667,7 +678,6 @@ template <class FieldType>
 void convert_u_to_xi(Field<FieldType> & u, Field<FieldType> & xi, double const fRbar)
 {
 	Site x(u.lattice());
-	double temp;
 
 	for(x.first(); x.test(); x.next())
 	{
@@ -691,22 +701,6 @@ void convert_xi_to_u(Field<FieldType> & xi, Field<FieldType> & u, double const f
 		u(x) = log(xi(x)/fRbar + 1.);
 	}
 	return;
-}
-
-
-/////////////////////////////////////////////////
-// Initial conditions for xi_prev
-// TODO: Add comments here
-/////////////////////////////////////////////////
-template <class FieldType>
-void xi_prev_initial_conditions(Field<FieldType> & xi_prev, Field<FieldType> & xi)
-{
-  Site x(xi_prev.lattice());
-
-	for(x.first(); x.test(); x.next())
-	{
-		xi_prev(x) = xi(x); // TODO: first approximation, try different initial conditions
-	}
 }
 
 /////////////////////////////////////////////////
@@ -735,7 +729,6 @@ double convert_xi_to_deltaR(Field<FieldType> & eightpiG_deltaT,
 
 	if(sim.fR_type == FR_TYPE_HU_SAWICKI)
 	{
-		double correction = 0.99;
 		double m2 = sim.fR_params[0],
 					 c2 = sim.fR_params[1],
 					  n = sim.fR_params[2],
@@ -748,12 +741,12 @@ double convert_xi_to_deltaR(Field<FieldType> & eightpiG_deltaT,
 				R_temp = -c1 / (xi(x) + fRbar);
 				if(R_temp <= 1.)
 				{
-					xi(x) = - correction * fRbar;
-					R_temp = -c1 / (1. - correction) / fRbar;
+					COUT << " R has become negative at one point. Check what's going on..." << endl;
+					return FR_WRONG_RETURN;
 				}
 				R_temp = m2 / c2 * ( sqrt(R_temp) - 1.);
 				fRR_temp = fabs(fRR(R_temp, sim, 5911));
-				if(fRR_temp > FR_WRONG) return FR_WRONG_RETURN; // Returns a huge negative number to throw some exception
+				if(fRR_temp > FR_WRONG) return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 				if(max_fRR < fRR_temp) max_fRR = fRR_temp;
 				deltaR(x) = R_temp - Rbar;
 			}
@@ -1048,7 +1041,6 @@ double convert_u_to_deltaR(Field<FieldType> & eightpiG_deltaT,
     return fRR(Rbar, sim, 65);
   }
 }
-
 
 // Builds laplacian from field
 template <class FieldType>

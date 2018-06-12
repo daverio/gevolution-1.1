@@ -102,7 +102,7 @@ void writeRestartSettings_fR(metadata & sim,
 		}
 
 		fprintf(outfile, "at redshift z=%f\n\n", (1./a)-1.);
-		fprintf(outfile, "\n#=========================== IC generation ===========================#\n");
+		fprintf(outfile, "\n#==================== IC generation ====================#\n");
 		fprintf(outfile, "IC generator        = restart\n");
 		if(restartcount >= 0)
 		{
@@ -190,12 +190,12 @@ void writeRestartSettings_fR(metadata & sim,
 			fprintf(outfile, "k-domain            = cube\n");
 		}
 
-		fprintf(outfile, "\n#=========================== primordial power spectrum ===========================#\n");
+		fprintf(outfile, "\n#==================== primordial power spectrum ====================#\n");
 		fprintf(outfile, "k_pivot = %lg\n", ic.k_pivot);
 		fprintf(outfile, "A_s     = %lg\n", ic.A_s);
 		fprintf(outfile, "n_s     = %lg\n", ic.n_s);
 
-		fprintf(outfile, "\n#=========================== cosmological parameters ===========================#\n");
+		fprintf(outfile, "\n#==================== cosmological parameters ====================#\n");
 		fprintf(outfile, "h         = %lg\n", cosmo.h);
 		fprintf(outfile, "Omega_cdm = %.15le\n", cosmo.Omega_cdm);
 		fprintf(outfile, "Omega_b   = %.15le\n", cosmo.Omega_b);
@@ -224,7 +224,7 @@ void writeRestartSettings_fR(metadata & sim,
 			fprintf(outfile, "%lg\n", cosmo.deg_ncdm[i]);
 		}
 
-		fprintf(outfile, "\n#=========================== simulation settings ===========================#\n");
+		fprintf(outfile, "\n#==================== simulation settings ====================#\n");
 		if(sim.baryon_flag > 0)
 		{
 			fprintf(outfile, "baryon treatment    = sample\n");
@@ -269,7 +269,7 @@ void writeRestartSettings_fR(metadata & sim,
 		fprintf(outfile, "BACKGROUND_NUMPTS   = %d\n", sim.BACKGROUND_NUMPTS);
 		fprintf(outfile, "gravity theory      = fr\n");
 
-		fprintf(outfile, "\n#=========================== f(R) settings ===========================#\n");
+		fprintf(outfile, "\n#==================== f(R) settings ====================#\n");
 		if(sim.fR_type == FR_TYPE_RN || sim.fR_type == FR_TYPE_R2)
 		{
 			if(sim.fR_type == FR_TYPE_R2)
@@ -311,7 +311,7 @@ void writeRestartSettings_fR(metadata & sim,
 		fprintf(outfile, "quasi-static                = %d\n", sim.quasi_static);
 		fprintf(outfile, "check redshift              = %f\n", sim.z_check);
 
-		fprintf(outfile, "\n#=========================== Multigrid and relaxation ===========================#\n");
+		fprintf(outfile, "\n#==================== Multigrid and relaxation ====================#\n");
 		fprintf(outfile, "relaxation method          = %d\n", sim.relaxation_method);
 		fprintf(outfile, "multigrid pre-smoothing    = %d\n", sim.multigrid_pre_smoothing);
 		fprintf(outfile, "multigrid post-smoothing   = %d\n", sim.multigrid_post_smoothing);
@@ -329,17 +329,13 @@ void writeRestartSettings_fR(metadata & sim,
 		{
 			fprintf(outfile, "multigrid shape            = W\n");
 		}
+		if(sim.restrict_mode == RESTRICT_U) fprintf(outfile, "restrict mode              = u");
+		else fprintf(outfile, "restrict mode              = deltaR");
 
-		if(sim.relaxation_error_method == RELAXATION_ERROR_METHOD_SUM)
-		{
-			fprintf(outfile, "relaxation error method    = SUM\n");
-		}
-		else if(sim.relaxation_error_method == RELAXATION_ERROR_METHOD_MAX)
-		{
-			fprintf(outfile, "relaxation error method    = MAX\n");
-		}
+		if(sim.relaxation_error_method == RELAXATION_ERROR_METHOD_SUM) fprintf(outfile, "relaxation error method    = SUM\n");
+		else if(sim.relaxation_error_method == RELAXATION_ERROR_METHOD_MAX) fprintf(outfile, "relaxation error method    = MAX\n");
 
-		fprintf(outfile, "\n#=========================== output ===========================#\n");
+		fprintf(outfile, "\n#==================== output ====================#\n");
 		fprintf(outfile, "output path        = %s\n", sim.output_path);
 		fprintf(outfile, "generic file base  = %s\n", sim.basename_generic);
 		fprintf(outfile, "snapshot file base = %s\n", sim.basename_snapshot);
@@ -698,7 +694,7 @@ void writeRestartSettings_fR(metadata & sim,
 
 		fprintf(outfile, "Pk bins            = %d\n", sim.numbins);
 
-		fprintf(outfile, "\n#=========================== hibernation ===========================#\n");
+		fprintf(outfile, "\n#==================== hibernation ====================#\n");
 		if(sim.num_restart > 0)
 		{
 			fprintf(outfile, "hibernation redshifts       = ");

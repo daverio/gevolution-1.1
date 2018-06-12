@@ -143,6 +143,10 @@
 #define METHOD_MULTIGRID_U 2
 #define METHOD_FMG 3
 
+// Restrict/prolong u or deltaR
+#define RESTRICT_U 1
+#define RESTRICT_DELTAR 2
+
 // Multigrid shapes
 #define MG_SHAPE_V 1
 #define MG_SHAPE_W 2
@@ -233,6 +237,7 @@ struct metadata
 	int relaxation_method;
 	int relaxation_error_method;
 	int multigrid_shape;
+	int restrict_mode;
 	int multigrid_n_grids;
 	int multigrid_n_cycles;
 	int multigrid_pre_smoothing;

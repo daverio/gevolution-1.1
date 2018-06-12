@@ -334,8 +334,8 @@ double check_field(Field<FieldType> & field, string field_name, long n3, string 
   hom /= n3;
 
 	COUT << message << scientific << setprecision(prec)
-			 << setw(20) << field_name
-       << "  Max =  " << max;
+			 << setw(prec + 4) << field_name
+       << "  Max = " << max;
 	if(hom < 0)
 	{
 		COUT << "  hom = " << hom << endl;
@@ -369,7 +369,7 @@ void check_vector_field(Field<FieldType> & field, string field_name, long n3, st
 
 	COUT << message << scientific << setprecision(prec);
 
-  for(int i=0; i<3; i++)
+	for(int i=0; i<3; i++)
   {
     for(x.first(); x.test(); x.next())
     {
@@ -380,13 +380,19 @@ void check_vector_field(Field<FieldType> & field, string field_name, long n3, st
         max[i] = fabs(temp);
       }
     }
-  parallel.max(max[i]);
-	hom[i] /= n3;
+    parallel.max(max[i]);
+    hom[i] /= n3;
 
-  COUT << setw(14) << field_name << "[" << i << "]"
-       << "  Max = " << setw(prec + 3) << max[i]
-       << "  hom = " << setw(prec + 3) << hom[i]
-       << endl;
+    COUT << setw(17) << field_name << "[" << i << "]";
+    COUT << "  Max = " << setw(prec + 4) << max[i];
+    if(hom[i] < 0)
+    {
+      COUT << "  hom = " << hom[i] << endl;
+    }
+    else
+    {
+      COUT << "  hom =  " << hom[i] << endl;
+    }
   }
 
 	std::cout.copyfmt(oldState);

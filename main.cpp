@@ -854,6 +854,7 @@ int main(int argc, char **argv)
 				COUT << "              tau = " << tau << endl
 						 << "                z = " << (1./a) - 1. << endl
 						 << "                H = " << Hubble << endl
+						 << "         dtau_old = " << dtau_old << endl
 						 << "             Rbar = " << Rbar << endl
 						 << "         dot_Rbar = " << dot_Rbar << endl
 						 << "             fbar = " << fbar << endl
@@ -1212,6 +1213,20 @@ int main(int argc, char **argv)
 
 		chi.updateHalo();  // communicate halo values
 
+		if(do_I_check)
+		{
+			COUT << " After cycle, before hibernate: " << endl;
+			check_field(phi, "phi", numpts3d);
+			check_field(chi, "chi", numpts3d);
+			check_field(phidot, "phidot", numpts3d);
+			check_vector_field(Bi, "Bi", numpts3d);
+			// check_field(eightpiG_deltaT, "eightpiG_deltaT", numpts3d);
+			// check_field(deltaR, "deltaR", numpts3d);
+			// check_field(zeta, "zeta", numpts3d);
+			// check_field(xi, "xi", numpts3d);
+			// check_field(debug_field, "delta(zeta)", numpts3d);
+		}
+
 		// Build lensing potential, proportional to phidot + psidot = 2*phidot - chidot
 		// TODO Remove after debugging
 		subtract_fields(chi, lensing, lensing);
@@ -1232,20 +1247,25 @@ int main(int argc, char **argv)
 		}
 
 		check_field(debug_field3, "equation", numpts3d);
-		check_field(debug_field2, "laplace(chi)", numpts3d);
+
 		build_laplacian(phi, debug_field2, dx);
 		check_field(debug_field2, "laplace(phi)", numpts3d);
+
+		build_laplacian(chi, debug_field2, dx);
+		check_field(debug_field2, "laplace(chi)", numpts3d);
+
+		build_laplacian(phidot, debug_field2, dx);
+		copy_field(debug_field2, debug_field2, 1./Hubble);
+		check_field(debug_field2, "laplace(phidot)/H", numpts3d);
+
 		for(x.first(); x.test(); x.next())
 		{
 			debug_field2(x) = fourpiG * ( Bi(x,0) - Bi(x-0,0) + Bi(x,1) - Bi(x-1,1) + Bi(x,2) - Bi(x-2,2) ) / a / a / Hubble / dx;
 		}
 		check_field(debug_field2, "T0i term", numpts3d);
-		build_laplacian(phidot, debug_field2, dx);
-		copy_field(debug_field2, debug_field2, 1./Hubble);
-		check_field(debug_field2, "laplace(phidot)/H", numpts3d);
+
+		cin.get();
 		// End Remove
-
-
 
 		if(sim.vector_flag == VECTOR_ELLIPTIC) // solve B using elliptic constraint; TODO: check for f(R) -- should be the same
 		{
@@ -1669,18 +1689,6 @@ int main(int argc, char **argv)
 			if(sim.Cf * dx < sim.steplimit / Hconf(a, fourpiG, cosmo)) dtau = sim.Cf * dx;
 			else dtau = sim.steplimit / Hconf(a, fourpiG, cosmo);
 		}
-
-		if(do_I_check)
-		{
-			COUT << " After cycle, before hibernate: " << endl;
-			check_field(phi, "phi", numpts3d);
-			check_field(eightpiG_deltaT, "eightpiG_deltaT", numpts3d);
-			check_field(deltaR, "deltaR", numpts3d);
-			check_field(zeta, "zeta", numpts3d);
-			check_field(xi, "xi", numpts3d);
-			check_field(debug_field, "delta(zeta)", numpts3d);
-		}
-
 
 		if(sim.wallclocklimit > 0. && a <= 1.)   // check for wallclock time limit
 		{

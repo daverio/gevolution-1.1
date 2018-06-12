@@ -33,6 +33,7 @@
 //////////////////////////
 
 #include <stdlib.h>
+#include <iomanip>
 #ifdef HAVE_CLASS
 #include "class.h"
 #undef MAX			// due to macro collision this has to be done BEFORE including LATfield2 headers!
@@ -259,23 +260,24 @@ int main(int argc, char **argv)
 
 	if(sim.solver_type==SOLVER_MG)
 	{
-		sourcechi.initialize(lat,1);
-		sourcechi.alloc();
-		phiprime.initialize(lat,1);
-		phiprime.alloc();
-
-		mg_engine.initialize(&lat,20,2);
-		residual.initialize(lat,1);
-		residual.alloc();
-		errorMG.initialize(lat,1);
-		errorMG.alloc();
-		mg_engine.initialize_Field(&phi,mphi);
-		mg_engine.initialize_Field(&chi,mchi);
-		mg_engine.initialize_Field(&source,msource);
-		mg_engine.initialize_Field(&sourcechi,msourcechi);
-		mg_engine.initialize_Field(&residual,mresidual);
-		mg_engine.initialize_Field(&errorMG,merrorMG);
+		// TODO: Moved all alloc etc outside -- fix after debugging
 	}
+	phiprime.initialize(lat,1);
+	phiprime.alloc();
+	sourcechi.initialize(lat,1);
+	sourcechi.alloc();
+	mg_engine.initialize(&lat, 20, 4);
+	residual.initialize(lat,1);
+	residual.alloc();
+	errorMG.initialize(lat,1);
+	errorMG.alloc();
+	mg_engine.initialize_Field(&phi,mphi);
+	mg_engine.initialize_Field(&chi,mchi);
+	mg_engine.initialize_Field(&source,msource);
+	mg_engine.initialize_Field(&sourcechi,msourcechi);
+	mg_engine.initialize_Field(&residual,mresidual);
+	mg_engine.initialize_Field(&errorMG,merrorMG);
+
 #endif
 
 
@@ -460,6 +462,9 @@ int main(int argc, char **argv)
 					projection_T0i_project(pcls_ncdm+i, &Bi, &phi);
 			}
 			projection_T0i_comm(&Bi);
+
+			// TODO: Needed when taking divergence of T0i
+			Bi.updateHalo();
 		}
 
 		projection_init(&Sij);
@@ -514,6 +519,13 @@ int main(int argc, char **argv)
 									ref2_time= MPI_Wtime();
 					#endif
 									plan_source.execute(FFT_FORWARD);  // go to k-space
+
+									// TODO Remove after debugging -- build phiprime anyway
+									phi.updateHalo();
+									copy_field(phi, phiprime);
+									phiprime.updateHalo();
+									// End remove
+
 					#ifdef BENCHMARK
 									fft_time += MPI_Wtime() - ref2_time;
 									fft_count++;
@@ -531,6 +543,13 @@ int main(int argc, char **argv)
 								fft_count++;
 					#endif
 					solves_first_time = false;
+
+					// TODO Remove after debugging -- build phiprime anyway
+					phi.updateHalo();
+					add_fields(phi, 1., phiprime, -1., phiprime);
+					copy_field(phiprime, phiprime, 1./dtau_old);
+					phiprime.updateHalo();
+					// End remove
 				}
 				else if(sim.solver_type == SOLVER_MG)
 				{
@@ -654,7 +673,82 @@ int main(int argc, char **argv)
 			fft_count++;
 	#endif
 			chi.updateHalo();  // communicate halo values
+		}
+		else if(sim.solver_type == SOLVER_MG)
+		{
+			//chi solver:
+			//COUT<<"Using MG for chi and Bi"<<endl;
 
+			phi.updateHalo();
+			phiprime.updateHalo();
+
+			preparechiSource(source, phi, phiprime,
+			                 Bi,
+			                 Hconf(a, fourpiG, cosmo),
+			                 a*a,
+			                 dx,
+			                 fourpiG);
+
+			solveModifiedPoisson_linearMGW(mg_engine,
+																		 msourcechi,
+																		 mchi,
+																		 mresidual,
+																		 merrorMG,
+																		 dx,
+																		 0,
+																		 sim.mg_chi_pre_smoothing,
+																		 sim.mg_chi_post_smoothing,
+																		 sim.mg_chi_cycle_number,
+																		 sim.mg_chi_gamma);
+
+			//solveModifiedPoissonFT(scalarFT,
+			//											 scalarFT,
+			//											 1. / (dx * dx),
+			//											 0);
+			//prepareFTsource<Real>(phi, Sij, Sij, 2. * fourpiG * dx * dx / a);
+			//plan_Sij.execute(FFT_FORWARD);
+			//projectFTscalar(SijFT, scalarFT);
+			//plan_chi.execute(FFT_BACKWARD);
+			chi.updateHalo();
+
+		}
+
+		COUT << " ========================= CHECKING FIELDS AT CYCLE " << cycle << " =========================" << endl;
+		check_field(phi, "phi", numpts3d);
+		check_field(chi, "chi", numpts3d);
+		check_field(phiprime, "phiprime", numpts3d);
+
+		double Hubble = Hconf(a, fourpiG, cosmo);
+
+		for(x.first(); x.test(); x.next())
+		{
+			residual(x) = chi(x+0) + chi(x-0) + chi(x+1) + chi(x-1) + chi(x+2) + chi(x-2) - 6.*chi(x);
+			residual(x) -= phi(x+0) + phi(x-0) + phi(x+1) + phi(x-1) + phi(x+2) + phi(x-2) - 6.*phi(x);
+			residual(x) -= (phiprime(x+0) + phiprime(x-0) + phiprime(x+1) + phiprime(x-1) + phiprime(x+2) + phiprime(x-2) - 6.*phiprime(x)) / Hubble;
+			residual(x) /= dx*dx;
+			residual(x) -= fourpiG * ( Bi(x,0) - Bi(x-0,0) + Bi(x,1) - Bi(x-1,1) + Bi(x,2) - Bi(x-2,2) ) / a / a / Hubble / dx;
+		}
+
+		check_field(residual, "equation", numpts3d);
+		for(x.first(); x.test(); x.next())
+		{
+			residual(x) = fourpiG * ( Bi(x,0) - Bi(x-0,0) + Bi(x,1) - Bi(x-1,1) + Bi(x,2) - Bi(x-2,2) ) / a / a / Hubble / dx;
+		}
+		check_field(residual, "T0i term", numpts3d);
+		build_laplacian(phi, residual, dx);
+		check_field(residual, "laplace(phi)", numpts3d);
+		build_laplacian(chi, residual, dx);
+		check_field(residual, "laplace(chi)", numpts3d);
+		build_laplacian(phiprime, residual, dx);
+		copy_field(residual, residual, 1./Hubble);
+		check_field(residual, "laplace(phiprime)/H", numpts3d);
+		COUT << endl;
+		// End Remove
+
+
+		// TODO: Solves for Bi -- must be done after checking fields because it rewrites Bi which now contains (a^4 T0i)
+		if(sim.solver_type == SOLVER_FT || solves_first_time)
+		{
 			if (sim.vector_flag == VECTOR_ELLIPTIC)
 			{
 	#ifdef BENCHMARK
@@ -688,59 +782,11 @@ int main(int argc, char **argv)
 		}
 		else if(sim.solver_type == SOLVER_MG)
 		{
-			//chi solver:
-			//COUT<<"Using MG for chi and Bi"<<endl;
-
-			Bi.updateHalo();
-			phi.updateHalo();
-			phiprime.updateHalo();
-
-			preparechiSource(source, phi, phiprime,
-			                 Bi,
-			                 Hconf(a, fourpiG, cosmo),
-			                 a*a,
-			                 dx,
-			                 fourpiG);
-
-			solveModifiedPoisson_linearMGW(mg_engine,
-																		 msourcechi,
-																		 mchi,
-																		 mresidual,
-																		 merrorMG,
-																		 dx,
-																		 0,
-																		 sim.mg_chi_pre_smoothing,
-																		 sim.mg_chi_post_smoothing,
-																		 sim.mg_chi_cycle_number,
-																		 sim.mg_chi_gamma);
-
-			//solveModifiedPoissonFT(scalarFT,
-			//											 scalarFT,
-			//											 1. / (dx * dx),
-			//											 0);
-			//prepareFTsource<Real>(phi, Sij, Sij, 2. * fourpiG * dx * dx / a);
-			//plan_Sij.execute(FFT_FORWARD);
-			//projectFTscalar(SijFT, scalarFT);
-			//plan_chi.execute(FFT_BACKWARD);
-			chi.updateHalo();
-
-			/*
-			Site x(chi.lattice());
-			for(x.first();x.test();x.next())chi(x) = 0;
-
-*/
-		 	plan_Bi.execute(FFT_FORWARD);
-
+			plan_Bi.execute(FFT_FORWARD);
 			projectFTvector(BiFT, BiFT, fourpiG * dx * dx); // soelliptic constraint (k-space)
-
 			plan_Bi.execute(FFT_BACKWARD);  // go back to position space
-
 			Bi.updateHalo();  // communicate halo values
-
 		}
-
-
-
 
 
 #ifdef BENCHMARK

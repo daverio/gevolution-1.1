@@ -1,5 +1,5 @@
 # programming environment
-COMPILER     := CC
+COMPILER     := mpic++
 INCLUDE      := -I../LATfield2
 LIB          := -lfftw3 -lm -lhdf5 -lgsl -lgslcblas
 
@@ -9,7 +9,7 @@ SOURCE       := main.cpp
 HEADERS      := $(wildcard *.hpp ../LATfield2/*.hpp)
 
 # mandatory compiler settings (LATfield2)
-DLATFIELD2   := -DFFT3D -DHDF5 -DMULTIGRID
+DLATFIELD2   := -DFFT3D -DHDF5 -DMULTIGRID -DDEBUG_MULTIGRID
 
 # optional compiler settings (LATfield2)
 DLATFIELD2   += -DH5_HAVE_PARALLEL

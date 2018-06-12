@@ -446,3 +446,133 @@ void preparechiSource(Field<Real> &source,
 
   }
 }
+
+
+// Check scalar fields
+template <class FieldType>
+double check_field(Field<FieldType> & field, string field_name, long n3, string message = "") // TODO: correct lattice size
+{
+  Site x(field.lattice());
+        std::ios oldState(nullptr);
+        oldState.copyfmt(std::cout);
+        int prec = 16;
+        double max = 0.,
+                                 hom = 0.,
+                                 sum = 0.,
+                                 temp;
+
+  for(x.first(); x.test(); x.next())
+  {
+    temp = field(x);
+    hom += temp;
+    sum += fabs(temp);
+    if(fabs(temp) >= max)
+    {
+      max = fabs(temp);
+    }
+  }
+  parallel.max(max);
+  parallel.sum(sum);
+  parallel.sum(hom);
+  sum /= n3;
+  hom /= n3;
+
+        COUT << message << scientific << setprecision(prec)
+                         << setw(20) << field_name
+       << "  Max =  " << max;
+        if(hom < 0)
+        {
+                COUT << "  hom = " << hom << endl;
+        }
+        else
+        {
+                COUT << "  hom =  " << hom << endl;
+        }
+
+        std::cout.copyfmt(oldState);
+
+        return max;
+}
+
+
+/////////////////////////////////////////////////
+// Copies (scalar) fields:
+// TODO: Add comments here
+/////////////////////////////////////////////////
+template <class FieldType>
+void copy_field(Field<FieldType> & source, Field<FieldType> & destination, double coeff = 1.)
+{
+	Site x(source.lattice());
+
+	if(coeff == 1.)
+	{
+		for(x.first(); x.test(); x.next())
+		{
+			destination(x) = source(x);
+		}
+	}
+	else
+	{
+		for(x.first(); x.test(); x.next())
+		{
+			destination(x) = coeff * source(x);
+		}
+	}
+	return;
+}
+
+
+// Builds laplacian from field
+template <class FieldType>
+void build_laplacian(Field<FieldType> & field, Field<FieldType> & laplace, double dx)
+{
+	double dx2 = dx*dx;
+	Site x(field.lattice());
+
+	for(x.first(); x.test(); x.next())
+	{
+		laplace(x) = field(x+0) + field(x-0) + field(x+1) + field(x-1) + field(x+2) + field(x-2) - 6. * field(x);
+		laplace(x) /= dx2;
+	}
+	return;
+}
+
+/////////////////////////////////////////////////
+// Sums (scalar) fields:
+// TODO: Add comments here
+/////////////////////////////////////////////////
+template <class FieldType>
+void add_fields(Field<FieldType> & field1, Field<FieldType> & field2, Field<FieldType> & result)
+{
+	Site x(field1.lattice());
+
+	for(x.first(); x.test(); x.next())
+	{
+		result(x) = field1(x) + field2(x);
+	}
+	return;
+}
+
+template <class FieldType>
+void subtract_fields(Field<FieldType> & field1, Field<FieldType> & field2, Field<FieldType> & result)
+{
+	Site x(field1.lattice());
+
+	for(x.first(); x.test(); x.next())
+	{
+		result(x) = field1(x) - field2(x);
+	}
+	return;
+}
+
+template <class FieldType>
+void add_fields(Field<FieldType> & field1, double coeff1, Field<FieldType> & field2, double coeff2, Field<FieldType> & result)
+{
+	Site x(field1.lattice());
+
+	for(x.first(); x.test(); x.next())
+	{
+		result(x) = coeff1 * field1(x) + coeff2 * field2(x);
+	}
+	return;
+}

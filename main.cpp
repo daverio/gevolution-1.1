@@ -693,6 +693,9 @@ int main(int argc, char **argv)
 			                 dx,
 			                 fourpiG);
 
+			build_laplacian(phi, residual, dx);
+			prepare_chi_extra_source(sourcechi, phi, residual, Bi, dx);
+
 			get_residual(mg_engine, msourcechi, mchi, mresidual, 1.0/dx/dx, 0., 0);
 			check_field(residual, "residual", numpts3d, "Before solving");
 
@@ -774,6 +777,7 @@ int main(int argc, char **argv)
 		check_field(chi, "chi", numpts3d);
 		check_field(phiprime, "phiprime", numpts3d);
 		check_vector_field(Bi, "Bi", numpts3d);
+		check_vector_field(a4_T0i, "a4_T0i", numpts3d);
 
 		double Hubble = Hconf(a, fourpiG, cosmo);
 

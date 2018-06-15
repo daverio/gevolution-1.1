@@ -56,12 +56,9 @@
 #include "radiation.hpp"
 #include "parser.hpp"
 #include "tools.hpp"
+#include "mg_tools.hpp"
 #include "output.hpp"
 #include "hibernation.hpp"
-
-// TODO: Contains some useful functions, remove after debugging if no longer needed
-#include "mg_tools.hpp"
-// End remove
 
 #ifdef MULTIGRID
 	#include "multigrid_solvers.hpp"
@@ -200,7 +197,7 @@ int main(int argc, char **argv)
 	box[1] = sim.numpts;
 	box[2] = sim.numpts;
 
-	Lattice lat(3,box,1);
+	Lattice lat(3,box,2);
 	Lattice latFT;
 	latFT.initializeRealFFT(lat,0);
 
@@ -217,6 +214,7 @@ int main(int argc, char **argv)
 	Field<Real> chi;
 	Field<Real> Sij;
 	Field<Real> Bi;
+	Field<Real> a4_T0i;
 	Field<Real> rho;
 	rho.initialize(lat,1);
 	rho.alloc();
@@ -225,6 +223,7 @@ int main(int argc, char **argv)
 	Field<Cplx> scalarFT;
 	Field<Cplx> SijFT;
 	Field<Cplx> BiFT;
+	Field<Cplx> a4_T0iFT;
 
 	source.initialize(lat,1);
 	phi.initialize(lat,1);
@@ -239,6 +238,9 @@ int main(int argc, char **argv)
 	Bi.initialize(lat,3);
 	BiFT.initialize(latFT,3);
 	PlanFFT<Cplx> plan_Bi(&Bi, &BiFT);
+	a4_T0i.initialize(lat,3);
+	a4_T0iFT.initialize(latFT,3);
+	PlanFFT<Cplx> plan_a4_T0i(&a4_T0i, &a4_T0iFT);
 #ifdef CHECK_B
 	Field<Real> Bi_check;
 	Field<Cplx> BiFT_check;
@@ -456,19 +458,19 @@ int main(int argc, char **argv)
 		if (sim.vector_flag == VECTOR_ELLIPTIC || sim.solver_type == SOLVER_MG)
 		{
 			//COUT<<"projecting T0i"<<endl;
-			projection_init(&Bi);
-			projection_T0i_project(&pcls_cdm, &Bi, &phi);
+			projection_init(&a4_T0i);
+			projection_T0i_project(&pcls_cdm, &a4_T0i, &phi);
 			if (sim.baryon_flag)
-				projection_T0i_project(&pcls_b, &Bi, &phi);
+				projection_T0i_project(&pcls_b, &a4_T0i, &phi);
 			for (i = 0; i < cosmo.num_ncdm; i++)
 			{
 				if (a >= 1. / (sim.z_switch_Bncdm[i] + 1.))
-					projection_T0i_project(pcls_ncdm+i, &Bi, &phi);
+					projection_T0i_project(pcls_ncdm+i, &a4_T0i, &phi);
 			}
-			projection_T0i_comm(&Bi);
+			projection_T0i_comm(&a4_T0i);
 
 			// TODO: Needed when taking divergence of T0i
-			Bi.updateHalo();
+			a4_T0i.updateHalo();
 		}
 
 		projection_init(&Sij);
@@ -509,7 +511,12 @@ int main(int argc, char **argv)
 		{
 			if (dtau_old > 0.)
 			{
-				prepareFTsource<Real>(phi, chi, source, cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo), source, 3. * Hconf(a, fourpiG, cosmo) * dx * dx / dtau_old, fourpiG * dx * dx / a, 3. * Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) * dx * dx);  // prepare nonlinear source for phi update
+				prepareFTsource<Real>(phi, chi, source,
+					 										cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo),
+														  source,
+															3. * Hconf(a, fourpiG, cosmo) * dx * dx / dtau_old,
+															fourpiG * dx * dx / a,
+															3. * Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) * dx * dx);  // prepare nonlinear source for phi update
 
 				if(sim.solver_type == SOLVER_FT || solves_first_time)
 				{
@@ -558,7 +565,17 @@ int main(int argc, char **argv)
 						}
 
 						#ifdef MULTIGRID
-						solveModifiedPoisson_linearMGW(mg_engine, msource, mphi, mresidual, merrorMG, dx, 3. * Hconf(a, fourpiG, cosmo) / dtau_old, sim.mg_phi_pre_smoothing, sim.mg_phi_post_smoothing, sim.mg_phi_cycle_number, sim.mg_phi_gamma);
+						solveModifiedPoisson_linearMGW(mg_engine,
+															 	 				 	 msource,
+															 	 				 	 mphi,
+															 	 				 	 mresidual,
+																				 	 merrorMG,
+																 				 	 dx,
+																 				 	 3. * Hconf(a, fourpiG, cosmo) / dtau_old,
+																			 	 	 sim.mg_phi_pre_smoothing,
+																			 	 	 sim.mg_phi_post_smoothing,
+																			 	 	 sim.mg_phi_cycle_number,
+																				 	 sim.mg_phi_gamma);
 						#else
 						COUT<< "Code not compiled with multigrid support, please recompile with -DMULTIGRID"<<endl;
 						parallel.abortForce();
@@ -669,9 +686,27 @@ int main(int argc, char **argv)
 			phi.updateHalo();
 			phiprime.updateHalo();
 
-			preparechiSource(sourcechi, phi, phiprime, Bi, Hconf(a, fourpiG, cosmo), a*a, dx, fourpiG);
+			preparechiSource(sourcechi, phi, phiprime,
+			                 a4_T0i,
+			                 Hconf(a, fourpiG, cosmo),
+			                 a*a,
+			                 dx,
+			                 fourpiG);
 
-			solveModifiedPoisson_linearMGW(mg_engine, msourcechi, mchi, mresidual, merrorMG, dx, 0, sim.mg_chi_pre_smoothing, sim.mg_chi_post_smoothing, sim.mg_chi_cycle_number, sim.mg_chi_gamma);
+			get_residual(mg_engine, msourcechi, mchi, mresidual, 1.0/dx/dx, 0., 0);
+			check_field(residual, "residual", numpts3d, "Before solving");
+
+			solveModifiedPoisson_linearMGW(mg_engine,
+																		 msourcechi,
+																		 mchi,
+																		 mresidual,
+																		 merrorMG,
+																		 dx,
+																		 0,
+																		 sim.mg_chi_pre_smoothing,
+																		 sim.mg_chi_post_smoothing,
+																		 sim.mg_chi_cycle_number,
+																		 sim.mg_chi_gamma);
 
 			//solveModifiedPoissonFT(scalarFT,
 			//											 scalarFT,
@@ -682,41 +717,14 @@ int main(int argc, char **argv)
 			//projectFTscalar(SijFT, scalarFT);
 			//plan_chi.execute(FFT_BACKWARD);
 			chi.updateHalo();
+
+			get_residual(mg_engine, msourcechi, mchi, mresidual, 1.0/dx/dx, 0., 0);
+			check_field(residual, "residual", numpts3d, " After solving");
 		}
 
-		double Hubble = Hconf(a, fourpiG, cosmo);
-		COUT << "  =========================  CHECKING FIELDS AT CYCLE " << cycle << "  =========================" << endl;
-		COUT << "      tau = " << tau << endl;
-		COUT << "   Hubble = " << Hubble << endl;
-		COUT << " dtau_old = " << dtau_old << endl;
-		check_field(phi, "phi", numpts3d);
-		check_field(chi, "chi", numpts3d);
-		check_field(phiprime, "phiprime", numpts3d);
-
-		get_residual(mg_engine, msourcechi, mchi, mresidual, 1./dx/dx, 0., 0);
-	  check_field(residual, "residual", numpts3d);
-
-		build_laplacian(phi, residual, dx);
-		check_field(residual, "laplace(phi)", numpts3d);
-
-		build_laplacian(chi, residual, dx);
-		check_field(residual, "laplace(chi)", numpts3d);
-
-		build_laplacian(phiprime, residual, dx);
-		copy_field(residual, residual, 1./Hubble);
-		check_field(residual, "laplace(phiprime)/H", numpts3d);
-
-		for(x.first(); x.test(); x.next())
-		{
-			residual(x) = fourpiG * ( Bi(x,0) - Bi(x-0,0) + Bi(x,1) - Bi(x-1,1) + Bi(x,2) - Bi(x-2,2) ) / a / a / Hubble / dx;
-		}
-		check_field(residual, "T0i term", numpts3d);
-
-		cin.get();
-		// End Remove
 
 
-		// TODO: Solves for Bi -- must be done after checking fields because it rewrites Bi which now contains (a^4 T0i)
+		// TODO: Solves for Bi
 		if(sim.solver_type == SOLVER_FT || solves_first_time)
 		{
 			if (sim.vector_flag == VECTOR_ELLIPTIC)
@@ -758,6 +766,50 @@ int main(int argc, char **argv)
 			Bi.updateHalo();  // communicate halo values
 		}
 
+		COUT << "  =========================  CHECKING FIELDS AT CYCLE " << cycle << "  =========================" << endl;
+		COUT << "      tau = " << tau << endl;
+		COUT << "   Hubble = " << Hconf(a, fourpiG, cosmo) << endl;
+		COUT << " dtau_old = " << dtau_old << endl;
+		check_field(phi, "phi", numpts3d);
+		check_field(chi, "chi", numpts3d);
+		check_field(phiprime, "phiprime", numpts3d);
+		check_vector_field(Bi, "Bi", numpts3d);
+
+		double Hubble = Hconf(a, fourpiG, cosmo);
+
+		for(x.first(); x.test(); x.next())
+		{
+			residual(x) = chi(x+0) + chi(x-0) + chi(x+1) + chi(x-1) + chi(x+2) + chi(x-2) - 6.*chi(x);
+			residual(x) -= phi(x+0) + phi(x-0) + phi(x+1) + phi(x-1) + phi(x+2) + phi(x-2) - 6.*phi(x);
+			residual(x) -= (phiprime(x+0) + phiprime(x-0) + phiprime(x+1) + phiprime(x-1) + phiprime(x+2) + phiprime(x-2) - 6.*phiprime(x)) / Hubble;
+			residual(x) /= dx*dx;
+			residual(x) -= fourpiG * ( a4_T0i(x,0) - a4_T0i(x-0,0) + a4_T0i(x,1) - a4_T0i(x-1,1) + a4_T0i(x,2) - a4_T0i(x-2,2) ) / a / a / Hubble / dx;
+		}
+
+		check_field(residual, "equation", numpts3d);
+
+		build_laplacian(phi, residual, dx);
+		check_field(residual, "laplace(phi)", numpts3d);
+
+		zero_field(source);
+		prepare_chi_extra_source(source, phi, residual, Bi, dx);
+		check_field(source, "Extra Bi-Phi term", numpts3d);
+
+		build_laplacian(chi, residual, dx);
+		check_field(residual, "laplace(chi)", numpts3d);
+
+		build_laplacian(phiprime, residual, dx);
+		copy_field(residual, residual, 1./Hubble);
+		check_field(residual, "laplace(phiprime)/H", numpts3d);
+
+		for(x.first(); x.test(); x.next())
+		{
+			residual(x) = fourpiG * ( a4_T0i(x,0) - a4_T0i(x-0,0) + a4_T0i(x,1) - a4_T0i(x-1,1) + a4_T0i(x,2) - a4_T0i(x-2,2) ) / a / a / Hubble / dx;
+		}
+		check_field(residual, "T0i term", numpts3d);
+
+		cin.get();
+		// End Remove
 
 #ifdef BENCHMARK
 		gravity_solver_time += MPI_Wtime() - ref_time;

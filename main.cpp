@@ -74,7 +74,6 @@ using namespace LATfield2;
 
 int main(int argc, char **argv)
 {
-
 	Site ref_site;
 
 	#ifdef BENCHMARK
@@ -85,7 +84,7 @@ int main(int argc, char **argv)
 
 	double initialization_time;
 	double run_time;
-	double cycle_time=0;
+	double cycle_time = 0;
 	double projection_time = 0;
 	double snapshot_output_time = 0;
 	double spectra_output_time = 0;
@@ -706,8 +705,19 @@ int main(int argc, char **argv)
 
 		if(cycle % sim.CYCLE_INFO_INTERVAL == 0) // output some info
 		{
-			COUT << endl << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" << endl
-					 << " cycle " << cycle << endl;
+			COUT << "===================================  CYCLE " << cycle << "  ";
+			if(cycle < 10)
+			{
+				COUT << "==================================" << endl;
+			}
+			else if(cycle < 100)
+			{
+				COUT << "=================================" << endl;
+			}
+			else if(cycle < 1000)
+			{
+				COUT << "================================" << endl;
+			}
 		}
 
 		// For when the full background evolution only starts at sim.z_switch_fR_background
@@ -950,10 +960,9 @@ int main(int argc, char **argv)
 						  COUT << " z = " << 1./a - 1. << endl
 							     << " initial error = " << temp1 << endl;
 
-							temp1 = relaxation_u(xi, laplace_xi, deltaR, eightpiG_deltaT, rhs, a, dx, Rbar, fbar, fRbar, sim);
+							temp1 = relaxation_u(xi, laplace_xi, deltaR, eightpiG_deltaT, rhs, debug_field, a, dx, Rbar, fbar, fRbar, sim, temp1);
 
 							COUT << "   final error = " << temp1 << endl;
-							cin.get();
 						}
 						else if(sim.relaxation_method == METHOD_MULTIGRID_U)
 						{
@@ -971,7 +980,6 @@ int main(int argc, char **argv)
 								else if(temp1 >= 1.)
 								{
 									COUT << " error/trunc_error = " << temp1 << endl;
-									cin.get();
 								}
 							} while(temp1 >= 1.);
 						}
@@ -1029,11 +1037,6 @@ int main(int argc, char **argv)
 				build_laplacian(xi, laplace_xi, dx);
 			}
 
-			// TODO Remove after debugging
-			copy_field(phidot, debug_field);
-			debug_field.updateHalo();
-			// End remove
-
 			//=========================================== EVOLVE phi ===========================================//
 			if(cycle)
 			{
@@ -1048,7 +1051,7 @@ int main(int argc, char **argv)
 				}
 
 				#ifdef BENCHMARK
-					ref2_time= MPI_Wtime();
+					ref2_time = MPI_Wtime();
 				#endif
 
 				plan_source.execute(FFT_FORWARD);  // go to k-space, {source} --> FFT_FORWARD --> {scalarFT}
@@ -1114,11 +1117,6 @@ int main(int argc, char **argv)
 
 		phi.updateHalo();  // communicate halo values
 		phidot.updateHalo();
-
-		// TODO Remove after debugging
-		add_fields(debug_field, dtau_old / (dtau_old + dtau_old_2), phidot, dtau_old_2 / (dtau_old + dtau_old_2), debug_field);
-		debug_field.updateHalo();
-		// End remove
 
 		if(sim.mg_flag == FR && sim.back_to_GR)
 		{
@@ -1215,56 +1213,17 @@ int main(int argc, char **argv)
 
 		if(do_I_check)
 		{
-			COUT << " After cycle, before hibernate: " << endl;
 			check_field(phi, "phi", numpts3d);
-			check_field(chi, "chi", numpts3d);
-			check_field(phidot, "phidot", numpts3d);
-			check_vector_field(Bi, "Bi", numpts3d);
-			// check_field(eightpiG_deltaT, "eightpiG_deltaT", numpts3d);
-			// check_field(deltaR, "deltaR", numpts3d);
-			// check_field(zeta, "zeta", numpts3d);
-			// check_field(xi, "xi", numpts3d);
-			// check_field(debug_field, "delta(zeta)", numpts3d);
+			check_field(xi, "xi", numpts3d);
+			check_field(deltaR, "deltaR", numpts3d);
+			check_field(eightpiG_deltaT, "eightpiG_deltaT", numpts3d);
+			check_field(zeta, "zeta", numpts3d);
 		}
 
 		// Build lensing potential, proportional to phidot + psidot = 2*phidot - chidot
 		// TODO Remove after debugging
 		subtract_fields(chi, lensing, lensing);
 		add_fields(phidot, 2., lensing, -1./dtau_old, lensing);
-		// End Remove
-
-		// TODO: Remove after debugging
-		Bi.updateHalo();
-		zero_field(debug_field3);
-
-		for(x.first(); x.test(); x.next())
-		{
-			debug_field3(x) = chi(x+0) + chi(x-0) + chi(x+1) + chi(x-1) + chi(x+2) + chi(x-2) - 6.*chi(x);
-			debug_field3(x) -= phi(x+0) + phi(x-0) + phi(x+1) + phi(x-1) + phi(x+2) + phi(x-2) - 6.*phi(x);
-			debug_field3(x) -= (phidot(x+0) + phidot(x-0) + phidot(x+1) + phidot(x-1) + phidot(x+2) + phidot(x-2) - 6.*phidot(x)) / Hubble;
-			debug_field3(x) /= dx*dx;
-			debug_field3(x) -= fourpiG * ( Bi(x,0) - Bi(x-0,0) + Bi(x,1) - Bi(x-1,1) + Bi(x,2) - Bi(x-2,2) ) / a / a / Hubble / dx;
-		}
-
-		check_field(debug_field3, "equation", numpts3d);
-
-		build_laplacian(phi, debug_field2, dx);
-		check_field(debug_field2, "laplace(phi)", numpts3d);
-
-		build_laplacian(chi, debug_field2, dx);
-		check_field(debug_field2, "laplace(chi)", numpts3d);
-
-		build_laplacian(phidot, debug_field2, dx);
-		copy_field(debug_field2, debug_field2, 1./Hubble);
-		check_field(debug_field2, "laplace(phidot)/H", numpts3d);
-
-		for(x.first(); x.test(); x.next())
-		{
-			debug_field2(x) = fourpiG * ( Bi(x,0) - Bi(x-0,0) + Bi(x,1) - Bi(x-1,1) + Bi(x,2) - Bi(x-2,2) ) / a / a / Hubble / dx;
-		}
-		check_field(debug_field2, "T0i term", numpts3d);
-
-		cin.get();
 		// End Remove
 
 		if(sim.vector_flag == VECTOR_ELLIPTIC) // solve B using elliptic constraint; TODO: check for f(R) -- should be the same

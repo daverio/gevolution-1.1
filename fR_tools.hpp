@@ -333,9 +333,8 @@ double check_field(Field<FieldType> & field, string field_name, long n3, string 
   sum /= n3;
   hom /= n3;
 
-	COUT << message << scientific << setprecision(prec)
-			 << setw(prec + 4) << field_name
-       << "  Max = " << max;
+	COUT << message << scientific << setprecision(prec) << setw(prec + 4) << field_name << "  Max = " << max;
+
 	if(hom < 0)
 	{
 		COUT << "  hom = " << hom << endl;
@@ -1078,6 +1077,49 @@ void prepareFTsource_leapfrog_R2(Field<FieldType> & eightpiG_deltaT, Field<Field
 	}
 	return;
 }
+
+
+// Trim field to remove "spikes" -- TODO very brute approach, try something better!
+template <class FieldType>
+void trim_field(Field<FieldType> & field)
+{
+  SiteRedBlack3d x(field.lattice());
+  double max = 0.,
+         temp = 0.;
+  for(x.first(); x.test(); x.next())
+  {
+    temp = field(x);
+    if(fabs(temp) >= max)
+    {
+      max = fabs(temp);
+    }
+  }
+
+  parallel.max(max);
+  max *= 0.5;
+
+	for(int j=0; j<3; j++)
+	{
+		for(x.first(); x.test(); x.next())
+		{
+			if(fabs(field(x)) > max)
+			{
+				// Only first neighbours
+				field(x) = field(x+0) + field(x-0) + field(x+1) + field(x-1) + field(x+2) + field(x-2);
+				field(x) /= 6.;
+
+				// Second neighbours
+				field(x) /= 2.;
+				field(x) += (field(x+0+1) + field(x+0-1) + field(x-0+1) + field(x-0-1) + field(x+2+1) + field(x+2-1) + field(x-2+1) + field(x-2-1) + field(x+0+2) + field(x+0-2) + field(x-0+2) + field(x-0-2)) / 24.;
+
+				// Third neighbours
+				field(x) *= 6./7.;
+				field(x) += (field(x+0+1+2) + field(x+0+1-2) + field(x+0-1+2) + field(x+0-1-2) + field(x-0+1+2) + field(x-0+1-2) + field(x-0-1+2) + field(x-0-1-2)) / 56.;
+			}
+		}
+	}
+}
+
 
 
 

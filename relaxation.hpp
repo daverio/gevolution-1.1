@@ -36,10 +36,31 @@ void build_diff_u(Field<FieldType> & u,
 {
   Site x(u.lattice());
   double dx2 = dx*dx;
+  double aplus, aminus;
 
   for(x.first(); x.test(); x.next())
   {
+    // TODO: Check which definition works best
+
+    // Option 1: laplace (exp(u))
     diff_u(x) = exp(u(x+0)) + exp(u(x-0)) + exp(u(x+1)) + exp(u(x-1)) + exp(u(x+2)) + exp(u(x-2)) - 6.*exp(u(x));
+    // End Option 1
+
+    // Option 2: div ( exp(u) * grad(u) )
+    // diff_u(x) = 0.;
+    // aplus = exp(u(x+0)) + exp(u(x));
+    // aminus = exp(u(x)) + exp(u(x-0));
+    // diff_u(x) += aplus * ( u(x+0) - u(x) ) - aminus * ( u(x) - u(x-0) );
+    // aplus = exp(u(x+1)) + exp(u(x));
+    // aminus = exp(u(x)) + exp(u(x-1));
+    // diff_u(x) += aplus * ( u(x+1) - u(x) ) - aminus * ( u(x) - u(x-1) );
+    // aplus = exp(u(x+2)) + exp(u(x));
+    // aminus = exp(u(x)) + exp(u(x-2));
+    // diff_u(x) += aplus * ( u(x+2) - u(x) ) - aminus * ( u(x) - u(x-2) );
+    // diff_u(x) /= 2.;
+    // End Option 2
+
+    // Common for both options
     diff_u(x) *= fRbar / dx2;
   }
   return;
@@ -64,8 +85,10 @@ double residual(const double u,
          temp;
 
   temp = deltaR;
-  // Additional terms
+  // TODO Additional terms
   temp = temp * (1 - fR(R, sim, 885)) + 2. * (f(R, sim, 884) - fbar) - Rbar * fRbar * (exp(u) - 1.);
+  // End additional terms
+
   return diff_u - coeff1 * temp - rhs;
 }
 
@@ -87,11 +110,14 @@ inline double dresidual_du(const double u,
          R = Rbar + deltaR;
 
   temp2 = fR(R, sim, 737);
-  temp = temp2/fRR(R, sim, 738);
-  // Additional terms
+  temp = temp2 / fRR(R, sim, 738);
+  // TODO Additional terms
   temp = temp * (1. + temp2) - temp2 * deltaR - Rbar * fRbar * exp(u);
+  // End additional terms
 
-  return diff_u - coeff1 * temp;
+  // TODO: Check diff_u or not
+  // return diff_u - coeff1 * temp;
+  return - coeff1 * temp;
 }
 
 //////////////////////////
@@ -111,11 +137,11 @@ double Euclidean_norm(Field<FieldType> & field,
     for(x.first(); x.test(); x.next())
     {
       temp = field(x);
-      error += temp*temp;
+      error += temp * temp;
     }
   }
   parallel.layer(engine.player(level)).sum(error);
-  error = sqrt(error)/numpts3d;
+  error = sqrt(error) / numpts3d;
 
   return error;
 }
@@ -325,6 +351,7 @@ void update_u_red_black(Field<FieldType> & u,
   }
 
   u.updateHalo();
+
   build_diff_u(u, diff_u, dx, fRbar);
 
   return;
@@ -366,7 +393,8 @@ double relaxation_u(Field<FieldType> & u,
   while(true)
   {
     i++;
-    COUT << setw(24) << i << " -- ";
+
+    // Attempt new guess, writing on u_temp
     if(sim.multigrid_red_black)
     {
       update_u_red_black(u_temp, diff_u, deltaR, rhs, dx, coeff1, Rbar, fbar, fRbar, sim);
@@ -379,12 +407,11 @@ double relaxation_u(Field<FieldType> & u,
     if(convert_u_to_deltaR(eightpiG_deltaT, deltaR, u_temp, Rbar, fRbar, sim) > FR_WRONG) return FR_WRONG_RETURN;
 
     error = compute_error(u_temp, diff_u, deltaR, rhs, coeff1, Rbar, fbar, fRbar, sim, numpts3d);
-    COUT << "error = " << error << ", target = " << sim.relaxation_error / numpts3d << endl;
 
     // If error is increasing instead of decreasing
     if(error > 1.1 * initial_error)
     {
-      COUT << " Error is increasing. Trying one step back." << endl;
+      // TODO: Check this trimming thing
       error_increased++;
       copy_field(u, u_temp);
       trim_field(u_temp);
@@ -394,7 +421,6 @@ double relaxation_u(Field<FieldType> & u,
       if(convert_u_to_deltaR(eightpiG_deltaT, deltaR, u_temp, Rbar, fRbar, sim) > FR_WRONG) return FR_WRONG_RETURN;
 
       error = compute_error(u_temp, diff_u, deltaR, rhs, coeff1, Rbar, fbar, fRbar, sim, numpts3d);
-      COUT << "error (after trimming) = " << error << endl;
     }
     else
     {
@@ -403,6 +429,7 @@ double relaxation_u(Field<FieldType> & u,
     }
 
     if(error < sim.relaxation_error / numpts3d || i > sim.multigrid_pre_smoothing) break;
+
     else if(error_increased > 100)
     {
       COUT << " Tried to trim 100 times, accepting current error = " << error << endl;

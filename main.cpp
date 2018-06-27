@@ -952,13 +952,9 @@ int main(int argc, char **argv)
 
 						if(sim.relaxation_method == METHOD_U)
 						{
-							// TODO: remove after debug
-							sim.multigrid_red_black = 0;
-
 							temp1 = compute_error(laplace_xi, xi, deltaR, rhs, a*a/3., Rbar, fbar, fRbar, sim, numpts3d);
 
-						  COUT << " z = " << 1./a - 1. << endl
-							     << " initial error = " << temp1 << endl;
+						  COUT << " z = " << 1./a - 1. << endl << " initial error = " << temp1 << endl;
 
 							temp1 = relaxation_u(xi, laplace_xi, deltaR, eightpiG_deltaT, rhs, debug_field, a, dx, Rbar, fbar, fRbar, sim, temp1);
 
@@ -966,8 +962,6 @@ int main(int argc, char **argv)
 						}
 						else if(sim.relaxation_method == METHOD_MULTIGRID_U)
 						{
-							// TODO: remove after debug
-							sim.restrict_mode = RESTRICT_U;
 							do
 							{
 								temp1 = multigrid_u(mg_u, mg_diff_u, mg_deltaR, mg_eightpiG_deltaT, mg_rhs, mg_residual, mg_err, mg_engine, a, dx, Rbar, fbar, fRbar, sim);

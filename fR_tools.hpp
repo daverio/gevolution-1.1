@@ -24,6 +24,9 @@ void hold()
 
 ///////////////////// f(R) FUNCTIONS /////////////////////
 
+///////////////////////////////////////////////////////////////////
+// f(R)
+///////////////////////////////////////////////////////////////////
 Real f(const double R, const metadata & sim, int code)
 {
 	double output,
@@ -71,7 +74,9 @@ Real f(const double R, const metadata & sim, int code)
 	}
 }
 
+///////////////////////////////////////////////////////////////////
 // fR(R) -- First derivative with respect to R
+///////////////////////////////////////////////////////////////////
 Real fR(const double R, const metadata & sim, int code)
 {
 	double output,
@@ -126,7 +131,9 @@ Real fR(const double R, const metadata & sim, int code)
 	}
 }
 
+///////////////////////////////////////////////////////////////////
 // F_{RR}(R) -- Second derivative with respect to R
+///////////////////////////////////////////////////////////////////
 Real fRR(const double R, const metadata & sim, int code)
 {
 	double output,
@@ -189,7 +196,9 @@ Real fRR(const double R, const metadata & sim, int code)
 	}
 }
 
+///////////////////////////////////////////////////////////////////
 // F_{RRR}(R) -- Third derivative with respect to R
+///////////////////////////////////////////////////////////////////
 Real fRRR(const double R, const metadata & sim, int code)
 {
 	double output,
@@ -250,7 +259,9 @@ Real fRRR(const double R, const metadata & sim, int code)
 	}
 }
 
+///////////////////////////////////////////////////////////////////
 // Print out f(R) model details
+///////////////////////////////////////////////////////////////////
 void fR_details(const cosmology cosmo, metadata * sim, const double fourpiG)
 {
 	if(sim->fR_type == FR_TYPE_HU_SAWICKI)
@@ -271,11 +282,11 @@ void fR_details(const cosmology cosmo, metadata * sim, const double fourpiG)
 		sim->fR_params[0] *= fourpiG * cosmo.Omega_m / 1.5;
 		sim->fR_params[1] = 4. * fourpiG * (1. - cosmo.Omega_m - cosmo.Omega_rad) / sim->fR_params[1] / pow(12./cosmo.Omega_m - 9., sim->fR_params[2] + 1.) / sim->fR_params[0];
 		sim->fR_params[3] = sim->fR_params[1] * 4. * fourpiG * (1. - cosmo.Omega_m - cosmo.Omega_rad) / sim->fR_params[0];
-		COUT << sim->fR_params[0] << endl;
-		COUT << "      c1 = " << sim->fR_params[3] << endl
-				 << "      c2 = " << sim->fR_params[1] << endl
-				 << "      n  = " << sim->fR_params[2] << endl
-				 << "so |fR0| ~ -n*c1/c2^2/(12/Omega_m - 9)^(n+1) = " << sim->fR_params[2] * sim->fR_params[3] / sim->fR_params[1]/sim->fR_params[1] / pow( 12. / cosmo.Omega_m - 9., sim->fR_params[2] + 1.) << " (should be << 1)\n";
+		COUT << sim->fR_params[0] << endl
+		<< "      c1 = " << sim->fR_params[3] << endl
+		<< "      c2 = " << sim->fR_params[1] << endl
+		<< "      n  = " << sim->fR_params[2] << endl
+		<< "so |fR0| ~ -n*c1/c2^2/(12/Omega_m - 9)^(n+1) = " << sim->fR_params[2] * sim->fR_params[3] / sim->fR_params[1]/sim->fR_params[1] / pow( 12. / cosmo.Omega_m - 9., sim->fR_params[2] + 1.) << " (should be << 1)\n";
 	}
 	else if(sim->fR_type == FR_TYPE_RN)
 	{
@@ -291,31 +302,30 @@ void fR_details(const cosmology cosmo, metadata * sim, const double fourpiG)
 	{
 		double temp = sim->fR_params[0];
 		sim->fR_params[0] *= 2 * fourpiG * cosmo.Omega_m;
-		COUT << " f(R) model: a * (R/a)^(1+delta) - R" << endl
-				 << " with    a = " << temp << " * 8piG * rho_{m0} = " << sim->fR_params[0] << endl
-				 << "         delta = " << sim->fR_params[1] << endl;
+		COUT
+		<< " f(R) model: a * (R/a)^(1+delta) - R" << endl
+		<< " with    a = " << temp << " * 8piG * rho_{m0} = " << sim->fR_params[0] << endl
+		<< "         delta = " << sim->fR_params[1] << endl;
 	}
 }
 
 
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 // Check (scalar) field:
 // Max = max(fabs(field))
 // |hom| = sum(field)/number_of_points
 // |avg| average of fabs(field), not fabs(average)!
 // TODO: Add comments here
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 template <class FieldType>
 double check_field(Field<FieldType> & field, string field_name, long n3, string message = "") // TODO: correct lattice size
 {
   Site x(field.lattice());
 	std::ios oldState(nullptr);
 	oldState.copyfmt(std::cout);
+
 	int prec = 16;
-	double max = 0.,
-				 hom = 0.,
-				 sum = 0.,
-				 temp;
+	double max = 0., hom = 0., sum = 0., temp;
 
   for(x.first(); x.test(); x.next())
   {
@@ -351,12 +361,11 @@ double check_field(Field<FieldType> & field, string field_name, long n3, string 
 	return max;
 }
 
-
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 // Checks vector field, each component separately
 // Quantities are the same as check_field
 // TODO: Add comments here
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 template <class FieldType>
 void check_vector_field(Field<FieldType> & field, string field_name, long n3, string message = "") // TODO: correct lattice size
 {
@@ -364,9 +373,7 @@ void check_vector_field(Field<FieldType> & field, string field_name, long n3, st
 	std::ios oldState(nullptr);
 	oldState.copyfmt(std::cout);
 	int prec = 16;
-  double max[3] = {0.,0.,0.},
-				 hom[3] = {0.,0.,0.},
-				 temp;
+  double max[3] = {0.,0.,0.}, hom[3] = {0.,0.,0.}, temp;
 
 	COUT << scientific << setprecision(prec);
 
@@ -403,9 +410,10 @@ void check_vector_field(Field<FieldType> & field, string field_name, long n3, st
 }
 
 
-void check_particles(metadata sim,
-										 Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm
-										 )
+///////////////////////////////////////////////////////////////////
+// Check particles (with some ID#, TODO: make this more universal, not with random ID
+///////////////////////////////////////////////////////////////////
+void check_particles(metadata sim, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm)
 {
 	int i, num[8] = {0, 262143, 1, 26, 30000, 180024, 220023, 262142};
 
@@ -416,8 +424,10 @@ void check_particles(metadata sim,
 	MPI_Barrier(MPI_COMM_WORLD);
 }
 
+///////////////////////////////////////////////////////////////////
 // Compute max of fRR
 // TODO Add description
+///////////////////////////////////////////////////////////////////
 template <class FieldType>
 double compute_max_fRR(Field<FieldType> &deltaR, double Rbar, const metadata & sim)
 {
@@ -445,11 +455,10 @@ double compute_max_fRR(Field<FieldType> &deltaR, double Rbar, const metadata & s
 		return max;
 	}
 }
-
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 // Flips (scalar) fields:
 // TODO: Add comments here
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 template <class FieldType>
 void flip_fields(Field<FieldType> & field1, Field<FieldType> & field2)
 {
@@ -465,7 +474,9 @@ void flip_fields(Field<FieldType> & field1, Field<FieldType> & field2)
 	return;
 }
 
+///////////////////////////////////////////////////////////////////
 // Writes field1 --> field2, field2 --> field3, field3 --> field1
+///////////////////////////////////////////////////////////////////
 template <class FieldType>
 void flip_fields(Field<FieldType> & field1, Field<FieldType> & field2, Field<FieldType> & field3)
 {
@@ -482,10 +493,9 @@ void flip_fields(Field<FieldType> & field1, Field<FieldType> & field2, Field<Fie
 	return;
 }
 
-
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 // Sets whole field to zero
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 template <class FieldType>
 void zero_field(Field<FieldType> & field)
 {
@@ -496,10 +506,10 @@ void zero_field(Field<FieldType> & field)
 	}
 }
 
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 // Copies (scalar) fields:
 // TODO: Add comments here
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 template <class FieldType>
 void copy_field(Field<FieldType> & source, Field<FieldType> & destination, double coeff = 1.)
 {
@@ -522,10 +532,10 @@ void copy_field(Field<FieldType> & source, Field<FieldType> & destination, doubl
 	return;
 }
 
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 // Sums (scalar) fields:
 // TODO: Add comments here
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 template <class FieldType>
 void add_fields(Field<FieldType> & field1, Field<FieldType> & field2, Field<FieldType> & result)
 {
@@ -577,9 +587,9 @@ void scatter_field(Field<FieldType> & field1, double c1, Field<FieldType> & fiel
 	return;
 }
 
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 // TODO: Add comments here
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 template <class FieldType>
 void leapfrog_dotR(Field<FieldType> & deltaR, Field<FieldType> & deltaT, Field<FieldType> & dot_deltaR_old, Field<FieldType> & dot_deltaR_new, double Hubble, double coeff, double dtau_old, double dtau, double dx2)
 {
@@ -598,9 +608,9 @@ void leapfrog_dotR(Field<FieldType> & deltaR, Field<FieldType> & deltaT, Field<F
 	return;
 }
 
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 // TODO: Add comments here
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 template <class FieldType>
 void leapfrog_dotxi(Field<FieldType> & xi, Field<FieldType> & zeta, Field<FieldType> & dot_xi_old, Field<FieldType> & dot_xi_new, double Hubble, double a2, double dtau_old, double dtau, double dx2)
 {
@@ -623,10 +633,10 @@ void leapfrog_dotxi(Field<FieldType> & xi, Field<FieldType> & zeta, Field<FieldT
 // if(convert_*_to_*() > FR_WRONG) return FR_WRONG_RETURN;
 // (this could be important)
 
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 // Converts deltaR to xi
 // TODO: Add comments here
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 template <class FieldType>
 double convert_deltaR_to_xi(Field<FieldType> & deltaR, Field<FieldType> & xi, double const Rbar, double const fRbar, const metadata & sim)
 {
@@ -653,16 +663,19 @@ double convert_deltaR_to_xi(Field<FieldType> & deltaR, Field<FieldType> & xi, do
 }
 
 
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 // Converts deltaR to u
 // TODO: Add comments here
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 template <class FieldType>
-double convert_deltaR_to_u(Field<FieldType> & deltaR,
-													 Field<FieldType> & u,
-													 double const Rbar,
-													 double const fRbar,
-													 const metadata & sim)
+double convert_deltaR_to_u(
+	Field<FieldType> & deltaR,
+	Field<FieldType> & u,
+	double const Rbar,
+	double const fRbar,
+	const metadata & sim
+)
+
 {
 	Site x(u.lattice());
 	double temp;
@@ -678,10 +691,10 @@ double convert_deltaR_to_u(Field<FieldType> & deltaR,
 }
 
 
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 // Converts u to xi
 // TODO: Add comments here
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 template <class FieldType>
 void convert_u_to_xi(Field<FieldType> & u, Field<FieldType> & xi, double const fRbar)
 {
@@ -695,10 +708,10 @@ void convert_u_to_xi(Field<FieldType> & u, Field<FieldType> & xi, double const f
 }
 
 
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 // Converts xi to u
 // TODO: Add comments here
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 template <class FieldType>
 void convert_xi_to_u(Field<FieldType> & xi, Field<FieldType> & u, double const fRbar)
 {
@@ -711,19 +724,22 @@ void convert_xi_to_u(Field<FieldType> & xi, Field<FieldType> & u, double const f
 	return;
 }
 
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 // Computes zeta and deltaR
 //
 // Returns maximum value of fRR over the entire lattice.
 // the typical oscillation frenquency will be of order a/(sqrt(3*fRR_max))
-/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 template <class FieldType>
-double convert_xi_to_deltaR(Field<FieldType> & eightpiG_deltaT,
-                      	 		Field<FieldType> & deltaR,
-									    	 		Field<FieldType> & xi,
-									    	 		const double Rbar,
-								 	    	 		const double fRbar,
-								 	    	 		const metadata & sim)
+double convert_xi_to_deltaR(
+	Field<FieldType> & eightpiG_deltaT,
+	Field<FieldType> & deltaR,
+	Field<FieldType> & xi,
+	const double Rbar,
+	const double fRbar,
+	const metadata & sim
+)
+
 {
   // Using Newton-Raphson Method
   Site x(xi.lattice());
@@ -873,14 +889,19 @@ double convert_xi_to_deltaR(Field<FieldType> & eightpiG_deltaT,
   }
 }
 
+/////////////////////////////////////////////////
 // Convert u = log(xi/fRbar + 1.)
+/////////////////////////////////////////////////
 template <class FieldType>
-double convert_u_to_deltaR(Field<FieldType> & eightpiG_deltaT,
-                      	 	 Field<FieldType> & deltaR,
-									    	 	 Field<FieldType> & u,
-									    	 	 const double Rbar,
-								 	    	 	 const double fRbar,
-								 	    	 	 const metadata & sim)
+double convert_u_to_deltaR(
+	Field<FieldType> & eightpiG_deltaT,
+	Field<FieldType> & deltaR,
+	Field<FieldType> & u,
+	const double Rbar,
+	const double fRbar,
+	const metadata & sim
+)
+
 {
   // Using Newton-Raphson Method
   Site x(u.lattice());
@@ -1050,7 +1071,9 @@ double convert_u_to_deltaR(Field<FieldType> & eightpiG_deltaT,
   }
 }
 
+/////////////////////////////////////////////////
 // Builds laplacian from field
+/////////////////////////////////////////////////
 template <class FieldType>
 void build_laplacian(Field<FieldType> & field, Field<FieldType> & laplace, double dx)
 {
@@ -1065,8 +1088,9 @@ void build_laplacian(Field<FieldType> & field, Field<FieldType> & laplace, doubl
 	return;
 }
 
-
+/////////////////////////////////////////////////
 // TODO: Maybe put this in gevolution.hpp?
+/////////////////////////////////////////////////
 template <class FieldType>
 void prepareFTsource_leapfrog_R2(Field<FieldType> & eightpiG_deltaT, Field<FieldType> & source, const double dx)
 {
@@ -1081,8 +1105,10 @@ void prepareFTsource_leapfrog_R2(Field<FieldType> & eightpiG_deltaT, Field<Field
 	return;
 }
 
-
-// Trim field to remove "spikes" -- TODO very brute approach, try something better!
+/////////////////////////////////////////////////
+// Trim field to remove "spikes"
+// TODO very brute approach, try something better!
+/////////////////////////////////////////////////
 template <class FieldType>
 void trim_field(Field<FieldType> & field)
 {

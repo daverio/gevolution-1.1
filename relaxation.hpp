@@ -14,10 +14,12 @@
 
 
 template <class FieldType>
-void initial_guess_deltaR(Field<FieldType> & deltaR,
-                               Field<FieldType> & eightpiG_deltaT,
-                               Field<FieldType> & zeta,
-                               const metadata & sim)
+void initial_guess_deltaR(
+  Field<FieldType> & deltaR,
+  Field<FieldType> & eightpiG_deltaT,
+  Field<FieldType> & zeta,
+  const metadata & sim
+)
 {
   copy_field(eightpiG_deltaT, deltaR, -1.);
   // zero_field(deltaR);
@@ -29,10 +31,12 @@ void initial_guess_deltaR(Field<FieldType> & deltaR,
 // Builds diff_u term
 //////////////////////////
 template <class FieldType>
-void build_diff_u(Field<FieldType> & u,
-                  Field<FieldType> & diff_u,
-                  const double dx,
-                  const double fRbar)
+void build_diff_u(
+  Field<FieldType> & u,
+  Field<FieldType> & diff_u,
+  const double dx,
+  const double fRbar
+)
 {
   Site x(u.lattice());
   double dx2 = dx*dx;
@@ -71,15 +75,17 @@ void build_diff_u(Field<FieldType> & u,
 // of equation Y[u] == 0
 // TODO: Details here
 //////////////////////////
-double residual(const double u,
-                const double diff_u,
-                const double deltaR,
-                const double rhs,
-                const double coeff1,
-                const double Rbar,
-                const double fbar,
-                const double fRbar,
-                const metadata & sim)
+double residual(
+  const double u,
+  const double diff_u,
+  const double deltaR,
+  const double rhs,
+  const double coeff1,
+  const double Rbar,
+  const double fbar,
+  const double fRbar,
+  const metadata & sim
+)
 {
   double R = Rbar + deltaR,
          temp;
@@ -97,13 +103,15 @@ double residual(const double u,
 // from equation Y[u] == 0
 // Needed for next guess u^{i+1} = u^{i} - Y^{i}/(dY/du)^{i}
 //////////////////////////
-inline double dresidual_du(const double u,
-                           const double diff_u,
-                           const double deltaR,
-                           const double coeff1,
-                           const double Rbar,
-                           const double fRbar,
-                           const metadata & sim)
+inline double dresidual_du(
+  const double u,
+  const double diff_u,
+  const double deltaR,
+  const double coeff1,
+  const double Rbar,
+  const double fRbar,
+  const metadata & sim
+)
 {
   double temp,
          temp2,
@@ -124,10 +132,12 @@ inline double dresidual_du(const double u,
 // Euclidean Norm
 //////////////////////////
 template <class FieldType>
-double Euclidean_norm(Field<FieldType> & field,
-                     MultiGrid & engine,
-                     const int level,
-                     const long numpts3d)
+double Euclidean_norm(
+  Field<FieldType> & field,
+  MultiGrid & engine,
+  const int level,
+  const long numpts3d
+)
 {
   double error = 0,
          temp;
@@ -151,18 +161,20 @@ double Euclidean_norm(Field<FieldType> & field,
 //
 //////////////////////////
 template <class FieldType>
-double compute_error(Field<FieldType> & u,
-                     Field<FieldType> & diff_u,
-                     Field<FieldType> & deltaR,
-                     Field<FieldType> & rhs,
-                     MultiGrid & engine,
-                     const double coeff1,
-                     const double Rbar,
-                     const double fbar,
-                     const double fRbar,
-                     const metadata & sim,
-                     const int level,
-                     const long numpts3d)
+double compute_error(
+  Field<FieldType> & u,
+  Field<FieldType> & diff_u,
+  Field<FieldType> & deltaR,
+  Field<FieldType> & rhs,
+  MultiGrid & engine,
+  const double coeff1,
+  const double Rbar,
+  const double fbar,
+  const double fRbar,
+  const metadata & sim,
+  const int level,
+  const long numpts3d
+)
 {
   double temp,
          error = 0.;
@@ -203,16 +215,18 @@ double compute_error(Field<FieldType> & u,
 // Error on finest layer -- no need for multigrid engine
 //////////////////////////
 template <class FieldType>
-double compute_error(Field<FieldType> & u,
-                     Field<FieldType> & diff_u,
-                     Field<FieldType> & deltaR,
-                     Field<FieldType> & rhs,
-                     const double coeff1,
-                     const double Rbar,
-                     const double fbar,
-                     const double fRbar,
-                     const metadata & sim,
-                     const long numpts3d)
+double compute_error(
+  Field<FieldType> & u,
+  Field<FieldType> & diff_u,
+  Field<FieldType> & deltaR,
+  Field<FieldType> & rhs,
+  const double coeff1,
+  const double Rbar,
+  const double fbar,
+  const double fRbar,
+  const metadata & sim,
+  const long numpts3d
+)
 {
   double temp,
          error = 0.;
@@ -250,19 +264,22 @@ double compute_error(Field<FieldType> & u,
 //
 //////////////////////////
 template <class FieldType>
-void build_residual_u(Field<FieldType> & u,
-                      Field<FieldType> & diff_u,
-                      Field<FieldType> & deltaR,
-                      Field<FieldType> & rhs,
-                      Field<FieldType> & destination_for_residual,
-                      MultiGrid & engine,
-                      const double coeff1,
-                      const double Rbar,
-                      const double fbar,
-                      const double fRbar,
-                      const metadata & sim,
-                      const int level)
+void build_residual_u(
+  Field<FieldType> & u,
+  Field<FieldType> & diff_u,
+  Field<FieldType> & deltaR,
+  Field<FieldType> & rhs,
+  Field<FieldType> & destination_for_residual,
+  MultiGrid & engine,
+  const double coeff1,
+  const double Rbar,
+  const double fbar,
+  const double fRbar,
+  const metadata & sim,
+  const int level
+)
 {
+
   double temp,
          error = 0.;
   Site x(u.lattice());
@@ -286,16 +303,18 @@ void build_residual_u(Field<FieldType> & u,
 //////////////////////////
 
 template <class FieldType>
-void update_u(Field<FieldType> & u,
-              Field<FieldType> & diff_u,
-              Field<FieldType> & deltaR,
-              Field<FieldType> & rhs,
-              const double dx,
-              const double coeff1,
-              const double Rbar,
-              const double fbar,
-              const double fRbar,
-              const metadata & sim)
+void update_u(
+  Field<FieldType> & u,
+  Field<FieldType> & diff_u,
+  Field<FieldType> & deltaR,
+  Field<FieldType> & rhs,
+  const double dx,
+  const double coeff1,
+  const double Rbar,
+  const double fbar,
+  const double fRbar,
+  const metadata & sim
+)
 {
   Site x(u.lattice());
   double Y, dY, temp, temp2;
@@ -321,16 +340,18 @@ void update_u(Field<FieldType> & u,
 
 
 template <class FieldType>
-void update_u_red_black(Field<FieldType> & u,
-                        Field<FieldType> & diff_u,
-                        Field<FieldType> & deltaR,
-                        Field<FieldType> & rhs,
-                        const double dx,
-                        const double coeff1,
-                        const double Rbar,
-                        const double fbar,
-                        const double fRbar,
-                        const metadata & sim)
+void update_u_red_black(
+  Field<FieldType> & u,
+  Field<FieldType> & diff_u,
+  Field<FieldType> & deltaR,
+  Field<FieldType> & rhs,
+  const double dx,
+  const double coeff1,
+  const double Rbar,
+  const double fbar,
+  const double fRbar,
+  const metadata & sim
+)
 {
   SiteRedBlack3d x(u.lattice());
   double Y,
@@ -366,19 +387,21 @@ void update_u_red_black(Field<FieldType> & u,
 // TODO: Details here
 //////////////////////////
 template <class FieldType>
-double relaxation_u(Field<FieldType> & u,
-                    Field<FieldType> & diff_u,
-                    Field<FieldType> & deltaR,
-                    Field<FieldType> & eightpiG_deltaT,
-                    Field<FieldType> & rhs,
-                    Field<FieldType> & u_temp,
-                    const double a,
-                    const double dx,
-                    const double Rbar,
-                    const double fbar,
-                    const double fRbar,
-                    const metadata & sim,
-                    double err)
+double relaxation_u(
+  Field<FieldType> & u,
+  Field<FieldType> & diff_u,
+  Field<FieldType> & deltaR,
+  Field<FieldType> & eightpiG_deltaT,
+  Field<FieldType> & rhs,
+  Field<FieldType> & u_temp,
+  const double a,
+  const double dx,
+  const double Rbar,
+  const double fbar,
+  const double fRbar,
+  const metadata & sim,
+  double err
+)
 {
   int i = 0,
       error_increased = 0;
@@ -444,9 +467,7 @@ double relaxation_u(Field<FieldType> & u,
 // TODO: add description
 //////////////////////////
 template <class FieldType>
-void restrict_to_level(MultiField<FieldType> * field,
-                       MultiGrid & engine,
-                       const int target_level)
+void restrict_to_level(MultiField<FieldType> * field, MultiGrid & engine, const int target_level)
 {
   for(int i=0; i<target_level; i++)
   {
@@ -460,20 +481,22 @@ void restrict_to_level(MultiField<FieldType> * field,
 // TODO: Details here
 //////////////////////////
 template <class FieldType>
-double multigrid_u(MultiField<FieldType> * u,
-                   MultiField<FieldType> * diff_u,
-                   MultiField<FieldType> * deltaR,
-                   MultiField<FieldType> * eightpiG_deltaT,
-                   MultiField<FieldType> * rhs,
-                   MultiField<FieldType> * temp,
-                   MultiField<FieldType> * trunc,
-                   MultiGrid & engine,
-                   const double a,
-                   const double DX,
-                   const double Rbar,
-                   const double fbar,
-                   const double fRbar,
-                   const metadata & sim)
+double multigrid_u(
+  MultiField<FieldType> * u,
+  MultiField<FieldType> * diff_u,
+  MultiField<FieldType> * deltaR,
+  MultiField<FieldType> * eightpiG_deltaT,
+  MultiField<FieldType> * rhs,
+  MultiField<FieldType> * temp,
+  MultiField<FieldType> * trunc,
+  MultiGrid & engine,
+  const double a,
+  const double DX,
+  const double Rbar,
+  const double fbar,
+  const double fRbar,
+  const metadata & sim
+)
 {
   int i;
   long numpts3d[sim.multigrid_n_grids];
@@ -528,20 +551,22 @@ double multigrid_u(MultiField<FieldType> * u,
 // TODO: Details here
 //////////////////////////
 template <class FieldType>
-double multigrid_FMG(MultiField<FieldType> * u,
-                     MultiField<FieldType> * diff_u,
-                     MultiField<FieldType> * deltaR,
-                     MultiField<FieldType> * eightpiG_deltaT,
-                     MultiField<FieldType> * rhs,
-                     MultiField<FieldType> * temp,
-                     MultiField<FieldType> * trunc,
-                     MultiGrid & engine,
-                     const double a,
-                     const double DX,
-                     const double Rbar,
-                     const double fbar,
-                     const double fRbar,
-                     const metadata & sim)
+double multigrid_FMG(
+  MultiField<FieldType> * u,
+  MultiField<FieldType> * diff_u,
+  MultiField<FieldType> * deltaR,
+  MultiField<FieldType> * eightpiG_deltaT,
+  MultiField<FieldType> * rhs,
+  MultiField<FieldType> * temp,
+  MultiField<FieldType> * trunc,
+  MultiGrid & engine,
+  const double a,
+  const double DX,
+  const double Rbar,
+  const double fbar,
+  const double fRbar,
+  const metadata & sim
+)
 {
   int i,
       j,
@@ -650,22 +675,24 @@ double multigrid_FMG(MultiField<FieldType> * u,
 // // Solves: diff_u - coeff1 * deltaR == rhs
 //////////////////////////
 template <class FieldType>
-double gamma_cycle(MultiField<FieldType> * u,
-                   MultiField<FieldType> * diff_u,
-                   MultiField<FieldType> * deltaR,
-                   MultiField<FieldType> * eightpiG_deltaT,
-                   MultiField<FieldType> * rhs,
-                   MultiField<FieldType> * temp,
-                   MultiField<FieldType> * trunc,
-                   MultiGrid & engine,
-                   const double a,
-                   double * dx,
-                   long * numpts3d,
-                   const double Rbar,
-                   const double fbar,
-                   const double fRbar,
-                   const metadata & sim,
-                   const int level)
+double gamma_cycle(
+  MultiField<FieldType> * u,
+  MultiField<FieldType> * diff_u,
+  MultiField<FieldType> * deltaR,
+  MultiField<FieldType> * eightpiG_deltaT,
+  MultiField<FieldType> * rhs,
+  MultiField<FieldType> * temp,
+  MultiField<FieldType> * trunc,
+  MultiGrid & engine,
+  const double a,
+  double * dx,
+  long * numpts3d,
+  const double Rbar,
+  const double fbar,
+  const double fRbar,
+  const metadata & sim,
+  const int level
+)
 {
   double coeff1 = a*a/3.,
          error = 0.,

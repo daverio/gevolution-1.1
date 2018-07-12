@@ -151,14 +151,14 @@ int main(int argc, char **argv)
 				break;
 			case 'i':
 			#ifndef EXTERNAL_IO
-				cout << "EXTERNAL_IO needs to be set at compilation to use the I/O server"<<endl;
+				cout << "EXTERNAL_IO needs to be set at compilation to use the I/O server" << endl;
 				exit(-1000);
 			#endif
 				io_size =  atoi(argv[++i]);
 				break;
 			case 'g':
 			#ifndef EXTERNAL_IO
-				cout << "EXTERNAL_IO needs to be set at compilation to use the I/O server"<<endl;
+				cout << "EXTERNAL_IO needs to be set at compilation to use the I/O server" << endl;
 				exit(-1000);
 			#endif
 				io_group_size = atoi(argv[++i]);
@@ -177,10 +177,11 @@ int main(int argc, char **argv)
 		{
 	#endif
 
-	COUT << "   __  ___                 _        _    _            " << endl
- 			 << "  / _|| _ \\ ___ __ __ ___ | | _  _ | |_ (_) ___  _ _  " << endl
- 		 	 << " |  _||   // -_)\\ V // _ \\| || || ||  _|| |/ _ \\| ' \\ " << endl
- 		 	 << " |_|  |_|_\\\\___| \\_/ \\___/|_| \\_,_| \\__||_|\\___/|_||_| version 1.0 running on " << n*m << " cores." << endl;
+	COUT
+	<< "   __  ___                 _        _    _            " << endl
+	<< "  / _|| _ \\ ___ __ __ ___ | | _  _ | |_ (_) ___  _ _  " << endl
+	<< " |  _||   // -_)\\ V // _ \\| || || ||  _|| |/ _ \\| ' \\ " << endl
+	<< " |_|  |_|_\\\\___| \\_/ \\___/|_| \\_,_| \\__||_|\\___/|_||_| version 1.0 running on " << n*m << " cores." << endl;
 
 	COUT << COLORTEXT_RESET << endl;
 
@@ -498,12 +499,15 @@ int main(int argc, char **argv)
 			wid = 6;
 			bgoutfile << scientific << setprecision(wid);
 			wid += 9;
-			bgoutfile << "# background statistics\n#" << setw(8)
-				    		<< "cycle" << setw(wid)
-								<< "tau/boxsize" << setw(wid)
-								<< "a" << setw(wid)
-								<< "conformal H" << setw(wid)
-								<< "R";
+
+			bgoutfile
+			<< "# background statistics\n#" << setw(8)
+			<< "cycle" << setw(wid)
+			<< "tau/boxsize" << setw(wid)
+			<< "a" << setw(wid)
+			<< "conformal H" << setw(wid)
+			<< "R";
+
 			if(sim.mg_flag == FR)
 			{
 				bgoutfile << setw(wid) << "dR/R";
@@ -546,8 +550,20 @@ int main(int argc, char **argv)
 			{
 				if(sim.mg_flag != FR || tau >= tau_print)
 				{
-					cout << " cycle " << cycle << "\tz = " << 1./a - 1. << "\ttau = " << tau << "\tdtau = " << dtau << endl;
-					bgoutfile << setw(9) << cycle << setw(wid) << tau	<< setw(wid) << a	<< setw(wid) << Hubble << setw(wid) << Rbar;
+					cout
+					<< " cycle " << cycle
+					<< "\tz = " << 1./a - 1.
+					<< "\ttau = " << tau
+					<< "\tdtau = " << dtau
+					<< endl;
+
+					bgoutfile
+					<< setw(9) << cycle
+					<< setw(wid) << tau
+					<< setw(wid) << a
+					<< setw(wid) << Hubble
+					<< setw(wid) << Rbar;
+
 					if(sim.mg_flag == FR)
 					{
 						tau_print += dtau_print;
@@ -567,8 +583,20 @@ int main(int argc, char **argv)
 			if(sim.mg_flag == FR)
 			{
 				cout << " FINAL STEP:\n";
-				cout << " cycle " << cycle << "\tz = " << 1./a - 1. << "\ttau = " << tau << "\tdtau = " << dtau << endl;
-				bgoutfile << setw(9) << cycle	<< setw(wid) << tau	<< setw(wid) << a	<< setw(wid) << Hubble << setw(wid) << Rbar	<< "\n";
+				cout
+				<< " cycle " << cycle
+				<< "\tz = " << 1./a - 1.
+				<< "\ttau = " << tau
+				<< "\tdtau = " << dtau
+				<< endl;
+
+				bgoutfile
+				<< setw(9) << cycle
+				<< setw(wid) << tau
+				<< setw(wid) << a
+				<< setw(wid) << Hubble
+				<< setw(wid) << Rbar
+				<< endl;
 			}
 
 			bgoutfile.close();
@@ -718,6 +746,10 @@ int main(int argc, char **argv)
 			{
 				COUT << "================================" << endl;
 			}
+			else if(cycle < 10000)
+			{
+				COUT << "===============================" << endl;
+			}
 		}
 
 		// For when the full background evolution only starts at sim.z_switch_fR_background
@@ -861,17 +893,19 @@ int main(int argc, char **argv)
 
 			if(cycle % sim.CYCLE_INFO_INTERVAL == 0) // output some info
 			{
-				COUT << "              tau = " << tau << endl
-						 << "                z = " << (1./a) - 1. << endl
-						 << "                H = " << Hubble << endl
-						 << "         dtau_old = " << dtau_old << endl
-						 << "             Rbar = " << Rbar << endl
-						 << "         dot_Rbar = " << dot_Rbar << endl
-						 << "             fbar = " << fbar << endl
-						 << "            fRbar = " << fRbar << endl
-						 << "           fRRbar = " << fRRbar << endl
-						 << " background model = " << cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo) << endl
-						 << " avg/rescaled T00 = " << T00_hom*a*a*a << " / " << T00_hom_rescaled_a3 << endl << endl;
+				COUT
+				<< "              tau = " << tau << endl
+				<< "                z = " << (1./a) - 1. << endl
+				<< "                H = " << Hubble << endl
+				<< "         dtau_old = " << dtau_old << endl
+				<< "             Rbar = " << Rbar << endl
+				<< "         dot_Rbar = " << dot_Rbar << endl
+				<< "             fbar = " << fbar << endl
+				<< "            fRbar = " << fRbar << endl
+				<< "           fRRbar = " << fRRbar << endl
+				<< " background model = " << cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo) << endl
+				<< " avg/rescaled T00 = " << T00_hom*a*a*a << " / " << T00_hom_rescaled_a3 << endl
+				<< endl;
 			}
 
 			//=========================================== EVOLVE deltaR, zeta, xi ===========================================//
@@ -1136,15 +1170,16 @@ int main(int argc, char **argv)
 				bgoutfile << scientific << setprecision(wid);
 				wid += 9;
 
-				bgoutfile << "# background statistics\n#"
-									<< setw(8) 	 << "cycle"
-									<< setw(wid) << "tau/boxsize"
-									<< setw(wid) << "a"
-									<< setw(wid) << "conformal H"
-									<< setw(wid) << "R"
-							 		<< setw(wid) << "phi(k=0)"
-									<< setw(wid) << "T00(k=0)"
-									<< "\n";
+				bgoutfile
+				<< "# background statistics\n#"
+				<< setw(8) 	 << "cycle"
+				<< setw(wid) << "tau/boxsize"
+				<< setw(wid) << "a"
+				<< setw(wid) << "conformal H"
+				<< setw(wid) << "R"
+				<< setw(wid) << "phi(k=0)"
+				<< setw(wid) << "T00(k=0)"
+				<< endl;
 			}
 			else
 			{
@@ -1156,7 +1191,15 @@ int main(int argc, char **argv)
 				}
 			}
 
-			bgoutfile << setw(9) << cycle << setw(wid) << tau	<< setw(wid) << a	<< setw(wid) << Hubble << setw(wid) << Rbar	<< setw(wid) << phi_hom << setw(wid) << -T00_hom_rescaled_a3 << "\n";
+			bgoutfile
+			<< setw(9) << cycle
+			<< setw(wid) << tau
+			<< setw(wid) << a
+			<< setw(wid) << Hubble
+			<< setw(wid) << Rbar
+			<< setw(wid) << phi_hom
+			<< setw(wid) << -T00_hom_rescaled_a3
+			<< endl;
 
 			bgoutfile.close();
 		}
@@ -1737,6 +1780,44 @@ int main(int argc, char **argv)
 		#endif
 	}
 
+	COUT
+	<< "===================================  CYCLE " << cycle << "  ";
+	if(cycle < 10)
+	{
+		COUT << "==================================" << endl;
+	}
+	else if(cycle < 100)
+	{
+		COUT << "=================================" << endl;
+	}
+	else if(cycle < 1000)
+	{
+		COUT << "================================" << endl;
+	}
+	else if(cycle < 10000)
+	{
+		COUT << "===============================" << endl;
+	}
+
+  COUT
+	<< "              tau = " << tau << endl
+	<< "                z = " << (1./a) - 1. << endl
+	<< "                H = " << Hubble << endl
+	<< "         dtau_old = " << dtau_old << endl
+	<< "             Rbar = " << Rbar << endl
+	<< "         dot_Rbar = " << dot_Rbar << endl
+	<< "             fbar = " << fbar << endl
+	<< "            fRbar = " << fRbar << endl
+	<< "           fRRbar = " << fRRbar << endl
+	<< " background model = " << cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo) << endl
+	<< " avg/rescaled T00 = " << T00_hom*a*a*a << " / " << T00_hom_rescaled_a3 << endl << endl;
+
+	check_field(phi, "phi", numpts3d);
+	check_field(xi, "xi", numpts3d);
+	check_field(deltaR, "deltaR", numpts3d);
+	check_field(eightpiG_deltaT, "eightpiG_deltaT", numpts3d);
+	check_field(zeta, "zeta", numpts3d);
+
 	bgoutfile.close();
 
 	COUT << COLORTEXT_GREEN << " simulation complete." << COLORTEXT_RESET << endl;
@@ -1761,21 +1842,21 @@ int main(int argc, char **argv)
 		parallel.sum(update_q_time);
 		parallel.sum(moveParts_time);
 
-		COUT << endl << "BENCHMARK" << endl;
-		COUT << "total execution time  : "<<hourMinSec(run_time) << endl;
-		COUT << "total number of cycles: "<< cycle << endl;
-		COUT << "time consumption breakdown:" << endl;
-		COUT << "initialization   : "  << hourMinSec(initialization_time) << " ; " << 100. * initialization_time/run_time <<"%."<<endl;
-		COUT << "main loop        : "  << hourMinSec(cycle_time) << " ; " << 100. * cycle_time/run_time <<"%."<<endl;
-
-		COUT << "----------- main loop: components -----------"<<endl;
-		COUT << "projections                : "<< hourMinSec(projection_time) << " ; " << 100. * projection_time/cycle_time <<"%."<<endl;
-		COUT << "snapshot outputs           : "<< hourMinSec(snapshot_output_time) << " ; " << 100. * snapshot_output_time/cycle_time <<"%."<<endl;
-		COUT << "power spectra outputs      : "<< hourMinSec(spectra_output_time) << " ; " << 100. * spectra_output_time/cycle_time <<"%."<<endl;
-		COUT << "update momenta (count: "<<update_q_count <<"): "<< hourMinSec(update_q_time) << " ; " << 100. * update_q_time/cycle_time <<"%."<<endl;
-		COUT << "move particles (count: "<< moveParts_count <<"): "<< hourMinSec(moveParts_time) << " ; " << 100. * moveParts_time/cycle_time <<"%."<<endl;
-		COUT << "gravity solver             : "<< hourMinSec(gravity_solver_time) << " ; " << 100. * gravity_solver_time/cycle_time <<"%."<<endl;
-		COUT << "-- thereof Fast Fourier Transforms (count: " << fft_count <<"): "<< hourMinSec(fft_time) << " ; " << 100. * fft_time/gravity_solver_time << "%." << endl;
+		COUT
+		<< endl << "BENCHMARK" << endl
+		<< "total execution time  : "<< hourMinSec(run_time) << endl
+		<< "total number of cycles: "<< cycle << endl
+		<< "time consumption breakdown:" << endl
+		<< "initialization   : "  << hourMinSec(initialization_time) << " ; " << 100. * initialization_time/run_time << "%." << endl
+		<< "main loop        : "  << hourMinSec(cycle_time) << " ; " << 100. * cycle_time/run_time << "%." << endl
+		<< "----------- main loop: components -----------" << endl
+		<< "projections                : "<< hourMinSec(projection_time) << " ; " << 100. * projection_time/cycle_time << "%." << endl
+		<< "snapshot outputs           : "<< hourMinSec(snapshot_output_time) << " ; " << 100. * snapshot_output_time/cycle_time << "%." << endl
+		<< "power spectra outputs      : "<< hourMinSec(spectra_output_time) << " ; " << 100. * spectra_output_time/cycle_time << "%." << endl
+		<< "update momenta (count: "<< update_q_count <<"): "<< hourMinSec(update_q_time) << " ; " << 100. * update_q_time/cycle_time << "%." << endl
+		<< "move particles (count: "<< moveParts_count <<"): "<< hourMinSec(moveParts_time) << " ; " << 100. * moveParts_time/cycle_time << "%." << endl
+		<< "gravity solver             : "<< hourMinSec(gravity_solver_time) << " ; " << 100. * gravity_solver_time/cycle_time << "%." << endl
+		<< "-- thereof Fast Fourier Transforms (count: " << fft_count <<"): "<< hourMinSec(fft_time) << " ; " << 100. * fft_time/gravity_solver_time << "%." << endl;
 	#endif
 
 #ifdef EXTERNAL_IO

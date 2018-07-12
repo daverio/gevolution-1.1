@@ -1136,6 +1136,12 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		parallel.abortForce();
 	}
 
+	if(sim.numpts != ic.numtile[0] * 4)
+	{
+		// TODO Check if this is correct
+		COUT << " /!\\ Warning! Ngrid and tiling factor are probably inconsistent! Don't be surprised if something weird happens :)" << endl;
+	}
+
 	if(parseParameter(params, numparam, "downgrade factor", sim.downgrade_factor))
 	{
 		if(sim.downgrade_factor < 1 || sim.downgrade_factor >= sim.numpts || !isfinite(sim.downgrade_factor))
@@ -1323,6 +1329,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	}
 
 	cosmo.Omega_m = cosmo.Omega_cdm + cosmo.Omega_b;
+	
 	for(i=0; i<cosmo.num_ncdm; i++)
 	{
 		cosmo.Omega_m += cosmo.Omega_ncdm[i];
@@ -1331,11 +1338,14 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	if(cosmo.Omega_m <= 0. || cosmo.Omega_m > 1.)
 	{
 		COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": total matter density out of range!" << endl;
+		COUT << " cosmo.Omega_m = " << cosmo.Omega_m << endl;
 		parallel.abortForce();
 	}
 	else if(cosmo.Omega_rad < 0. || cosmo.Omega_rad > 1. - cosmo.Omega_m)
 	{
 		COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": total radiation energy density out of range!" << endl;
+		COUT << " cosmo.Omega_rad = " << cosmo.Omega_rad << endl;
+		COUT << " 1 - cosmo.Omega_m = " << 1 - cosmo.Omega_m << endl;
 		parallel.abortForce();
 	}
 

@@ -842,7 +842,7 @@ void readIC_fR(metadata & sim,
 			chi->updateHalo();
 		}
 
-		if(sim.mg_flag == FR)
+		if(sim.mg_flag == FLAG_FR)
 		{
 			int j=3;
 			filename.assign(ic.metricfile[j]);

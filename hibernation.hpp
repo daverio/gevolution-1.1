@@ -258,6 +258,7 @@ void writeRestartSettings_fR(metadata & sim,
 		fprintf(outfile, "initial redshift    = %lg\n", sim.z_in);
 		fprintf(outfile, "boxsize             = %lg\n", sim.boxsize);
 		fprintf(outfile, "Ngrid               = %d\n", sim.numpts);
+		fprintf(outfile, "tiling factor       = %d\n", ic.numtile[0]);
 		fprintf(outfile, "Courant factor      = %lg\n", sim.Cf);
 		fprintf(outfile, "time step limit     = %lg\n", sim.steplimit);
 		if(cosmo.num_ncdm > 0)
@@ -272,6 +273,7 @@ void writeRestartSettings_fR(metadata & sim,
 		fprintf(outfile, "\n#==================== f(R) settings ====================#\n");
 		if(sim.fR_type == FR_TYPE_RN || sim.fR_type == FR_TYPE_R2)
 		{
+			// TODO: Check that comments are well written -- need something for FR_TYPE_DELTA too?
 			if(sim.fR_type == FR_TYPE_R2)
 			{
 				fprintf(outfile, "# WARNING: f(R) parameters for R + R^2 model hav already been rescaled. See fR_tools.hpp for additional information.\n");
@@ -303,8 +305,8 @@ void writeRestartSettings_fR(metadata & sim,
 		fprintf(outfile, "background only             = %d\n", sim.background_only);
 		if(sim.background_only)
 		{
-			fprintf(outfile, "background initial redshift = %lg\n", sim.bg_initial_redshift);
-			fprintf(outfile, "background final redshift   = %lg\n", sim.bg_final_redshift);
+			fprintf(outfile, "background initial redshift = %lg\n", sim.z_in);
+			fprintf(outfile, "background final redshift   = %lg\n", sim.z_fin);
 		}
 		fprintf(outfile, "lcdm background             = %d\n", sim.lcdm_background);
 		fprintf(outfile, "switch to f(R) redshift     = %f\n", sim.z_switch_fR_background);
@@ -1598,7 +1600,7 @@ void hibernate_fR(metadata & sim,
 		}
 	#endif
 
-	if(sim.mg_flag == FR)
+	if(sim.mg_flag == FLAG_FR)
 	{
 		xi.saveHDF5_server_open(h5filename + "_xi.h5");
 		xi_prev.saveHDF5_server_open(h5filename + "_xi_prev.h5");
@@ -1667,7 +1669,7 @@ void hibernate_fR(metadata & sim,
 	#endif
 	Bi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 
-	if(sim.mg_flag == FR)
+	if(sim.mg_flag == FLAG_FR)
 	{
 		xi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 		xi_prev.saveHDF5_server_write(NUMBER_OF_IO_FILES);
@@ -1747,7 +1749,7 @@ void hibernate_fR(metadata & sim,
 		}
 	#endif
 
-	if(sim.mg_flag == FR)
+	if(sim.mg_flag == FLAG_FR)
 	{
 		xi.saveHDF5(h5filename + "_xi.h5");
 		xi_prev.saveHDF5(h5filename + "_xi_prev.h5");

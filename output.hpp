@@ -878,4 +878,115 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 	free(occupation);
 }
 
+
+
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+// Print background info.
+// Simplifies things in f(R) when we need more points in the background file
+// than the quasi_static timesteps
+// TODO More info here?
+/////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+bool print_background(
+	const int cycle,
+	std::ofstream &bgoutfile,
+	const string bgfilename,
+	const double tau,
+	const double a,
+	const double Hubble,
+	const double Rbar
+)
+{
+	if(parallel.rank() == 0)
+	{
+		bgoutfile.open(bgfilename, std::ofstream::app);
+		if(!bgoutfile.is_open())
+		{
+			cout << " error opening file for background output!" << endl;
+			return 1;
+		}
+
+		int wid = 6;
+		bgoutfile << scientific << setprecision(wid);
+		wid += 9;
+
+		bgoutfile
+		<< setw(9) << cycle
+		<< setw(wid) << tau
+		<< setw(wid) << a
+		<< setw(wid) << Hubble
+		<< setw(wid) << Rbar
+		<< endl;
+
+		bgoutfile.close();
+	}
+
+	return 0;
+}
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
+bool print_background(
+	const int cycle,
+	std::ofstream &bgoutfile,
+	const string bgfilename,
+	const double tau,
+	const double a,
+	const double Hubble,
+	const double Rbar,
+	const double phi_hom,
+	const double T00_hom_rescaled_a3
+)
+{
+	if(parallel.rank() == 0)
+	{
+		bgoutfile.open(bgfilename, std::ofstream::app);
+		if(!bgoutfile.is_open())
+		{
+			cout << " error opening file for background output!" << endl;
+			return 1;
+		}
+
+		int wid = 6;
+		bgoutfile << scientific << setprecision(wid);
+		wid += 9;
+
+		bgoutfile
+		<< setw(9) << cycle
+		<< setw(wid) << tau
+		<< setw(wid) << a
+		<< setw(wid) << Hubble
+		<< setw(wid) << Rbar
+		<< setw(wid) << phi_hom
+		<< setw(wid) << -T00_hom_rescaled_a3
+		<< endl;
+
+		bgoutfile.close();
+	}
+
+	return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #endif

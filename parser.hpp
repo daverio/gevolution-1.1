@@ -773,7 +773,398 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	ic.restart_Rbar = -1.;
 	ic.restart_dot_Rbar = -1.;
 
-	parseParameter(params, numparam, "seed", ic.seed);
+	// parse metadata
+	sim.numpts = 0;
+	sim.downgrade_factor = 1;
+	for(i=0; i<MAX_PCL_SPECIES; i++)
+	{
+		sim.numpcl[i] = 0;
+	}
+	sim.vector_flag = VECTOR_PARABOLIC;
+	sim.gr_flag = 0;
+	sim.mg_flag = 0;
+	sim.out_pk = 0;
+	sim.out_snapshot = 0;
+	sim.out_check = 0;
+	sim.num_pk = MAX_OUTPUTS;
+	sim.numbins = 0;
+	sim.num_snapshot = MAX_OUTPUTS;
+	sim.num_restart = MAX_OUTPUTS;
+	for(i=0; i<MAX_PCL_SPECIES; i++) sim.tracer_factor[i] = 1;
+	sim.Cf = 1.;
+	sim.steplimit = 1.;
+	sim.boxsize = -1.;
+	sim.wallclocklimit = -1.;
+	sim.z_in = 0.;
+	sim.fR_type = 0;
+	for(i=0; i<MAX_FR_PARAMS; i++) sim.fR_params[i] = 0;
+	sim.num_fR_params = MAX_FR_PARAMS;
+	sim.BACKGROUND_NUMPTS;
+
+	// parse cosmological parameters
+	if(!parseParameter(params, numparam, "h", cosmo.h))
+	{
+		cosmo.h = P_HUBBLE;
+	}
+
+	cosmo.num_ncdm = MAX_PCL_SPECIES-2;
+	if(!parseParameter(params, numparam, "m_ncdm", cosmo.m_ncdm, cosmo.num_ncdm))
+	{
+		for(i=0; i<MAX_PCL_SPECIES-2; i++)
+		{
+			cosmo.m_ncdm[i] = 0.;
+		}
+		cosmo.num_ncdm = 0;
+	}
+
+	if(parseParameter(params, numparam, "N_ncdm", i))
+	{
+		if(i<0 || !isfinite(i))
+		{
+			COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": number of ncdm species not set properly!" << endl;
+			parallel.abortForce();
+		}
+		if(i>cosmo.num_ncdm)
+		{
+			COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": N_ncdm = " << i << " is larger than the number of mass parameters specified (" << cosmo.num_ncdm << ")!" << endl;
+			parallel.abortForce();
+		}
+		cosmo.num_ncdm = i;
+	}
+	else if(cosmo.num_ncdm > 0)
+	{
+		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": N_ncdm not specified, inferring from number of mass parameters in m_ncdm (" << cosmo.num_ncdm << ")!" << endl;
+	}
+
+	for(i=0; i<MAX_PCL_SPECIES-2; i++)
+	{
+		cosmo.T_ncdm[i] = P_T_NCDM;
+		cosmo.deg_ncdm[i] = 1.0;
+	}
+	parseParameter(params, numparam, "T_ncdm", cosmo.T_ncdm, i);
+	i = MAX_PCL_SPECIES-2;
+	parseParameter(params, numparam, "deg_ncdm", cosmo.deg_ncdm, i);
+
+	for(i=0; i<cosmo.num_ncdm; i++)
+	{
+		cosmo.Omega_ncdm[i] = cosmo.m_ncdm[i] * cosmo.deg_ncdm[i] / P_NCDM_MASS_OMEGA / cosmo.h / cosmo.h;
+	}
+
+	if(parseParameter(params, numparam, "T_cmb", cosmo.Omega_g))
+	{
+		cosmo.Omega_g = cosmo.Omega_g * cosmo.Omega_g / cosmo.h;
+		cosmo.Omega_g = cosmo.Omega_g * cosmo.Omega_g * C_PLANCK_LAW; // Planck's law
+	}
+	else if(parseParameter(params, numparam, "omega_g", cosmo.Omega_g))
+	{
+		cosmo.Omega_g /= cosmo.h * cosmo.h;
+	}
+	else if(!parseParameter(params, numparam, "Omega_g", cosmo.Omega_g))
+	{
+		cosmo.Omega_g = 0.;
+	}
+
+	if(parseParameter(params, numparam, "N_ur", cosmo.Omega_ur))
+	{
+		cosmo.Omega_ur *= (7./8.) * pow(4./11., 4./3.) * cosmo.Omega_g;
+	}
+	else if(parseParameter(params, numparam, "N_eff", cosmo.Omega_ur))
+	{
+		cosmo.Omega_ur *= (7./8.) * pow(4./11., 4./3.) * cosmo.Omega_g;
+	}
+	else if(parseParameter(params, numparam, "omega_ur", cosmo.Omega_ur))
+	{
+		cosmo.Omega_ur /= cosmo.h * cosmo.h;
+	}
+	else if(!parseParameter(params, numparam, "Omega_ur", cosmo.Omega_ur))
+	{
+		cosmo.Omega_ur = P_N_UR * (7./8.) * pow(4./11., 4./3.) * cosmo.Omega_g;
+	}
+
+	cosmo.Omega_rad = cosmo.Omega_g + cosmo.Omega_ur;
+	if(parseParameter(params, numparam, "omega_b", cosmo.Omega_b))
+	{
+		cosmo.Omega_b /= cosmo.h * cosmo.h;
+	}
+	else if(!parseParameter(params, numparam, "Omega_b", cosmo.Omega_b))
+	{
+		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": Omega_b not found in settings file, setting to default (0)." << endl;
+		cosmo.Omega_b = 0.;
+	}
+
+	if(parseParameter(params, numparam, "omega_cdm", cosmo.Omega_cdm))
+	{
+		cosmo.Omega_cdm /= cosmo.h * cosmo.h;
+	}
+	else if(!parseParameter(params, numparam, "Omega_cdm", cosmo.Omega_cdm))
+	{
+		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": Omega_cdm not found in settings file, setting to default (1)." << endl;
+		cosmo.Omega_cdm = 1.;
+	}
+
+	cosmo.Omega_m = cosmo.Omega_cdm + cosmo.Omega_b;
+
+	for(i=0; i<cosmo.num_ncdm; i++)
+	{
+		cosmo.Omega_m += cosmo.Omega_ncdm[i];
+	}
+
+	if(cosmo.Omega_m <= 0. || cosmo.Omega_m > 1.)
+	{
+		COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": total matter density out of range!" << endl;
+		COUT << " cosmo.Omega_m = " << cosmo.Omega_m << endl;
+		parallel.abortForce();
+	}
+	else if(cosmo.Omega_rad < 0. || cosmo.Omega_rad > 1. - cosmo.Omega_m)
+	{
+		COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": total radiation energy density out of range!" << endl;
+		COUT << " cosmo.Omega_rad = " << cosmo.Omega_rad << endl;
+		COUT << " 1 - cosmo.Omega_m = " << 1 - cosmo.Omega_m << endl;
+		parallel.abortForce();
+	}
+
+	cosmo.Omega_Lambda = 1. - cosmo.Omega_m - cosmo.Omega_rad;
+
+	parseParameter(params, numparam, "boxsize", sim.boxsize);
+	if(sim.boxsize <= 0. || !isfinite(sim.boxsize))
+	{
+		COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": simulation box size not set properly!" << endl;
+		parallel.abortForce();
+	}
+
+	// Parse Gravity Theory
+	if(parseParameter(params, numparam, "gravity theory", par_string))
+	{
+		if(par_string[0] == 'N' || par_string[0] == 'n')
+		{
+			COUT << " gravity theory set to: " << COLORTEXT_CYAN << "Newtonian" << COLORTEXT_RESET << endl;
+			sim.gr_flag = 0;
+			if(ic.pkfile[0] == '\0' && ic.tkfile[0] != '\0'
+			#ifdef ICGEN_PREVOLUTION
+				&& ic.generator != ICGEN_PREVOLUTION
+			#endif
+				)
+			{
+				COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": gauge transformation to N-body gauge can only be performed for the positions; the transformation for" << endl;
+				COUT << "              the velocities requires time derivatives of transfer functions. Call CLASS directly to avoid this issue." << endl;
+			}
+		}
+		else if(par_string[0] == 'G' || par_string[0] == 'g')
+		{
+			COUT << " gravity theory set to: " << COLORTEXT_CYAN << "General Relativity" << COLORTEXT_RESET << endl;
+			sim.gr_flag = 1;
+		}
+		else if(par_string[0] == 'F' || par_string[0] == 'f')
+		{
+			COUT << " Gravity theory set to: " << COLORTEXT_CYAN << "f(R)" << COLORTEXT_RESET << endl;
+
+			if(!parseParameter(params, numparam, "lcdm background", sim.lcdm_background))
+			{
+				sim.lcdm_background = 0;
+			}
+			if(sim.lcdm_background)
+			{
+				COUT << " Background is LCDM.\n";
+			}
+			else // Only switch between LCDM and f(R) background if sim.lcdm_background is not flagged
+			{
+				if(!parseParameter(params, numparam, "switch to f(R) redshift", sim.z_switch_fR_background))
+				{
+					sim.z_switch_fR_background = -100.;
+				}
+				if(sim.z_switch_fR_background > 0. && sim.z_switch_fR_background < sim.z_in)
+				{
+					COUT << " Full f(R) background expansion will start after z = " << sim.z_switch_fR_background << endl;
+					sim.lcdm_background = 1;
+				}
+			}
+
+			sim.gr_flag = 1;
+			sim.mg_flag = FLAG_FR;
+
+			//TODO: read f(R) params and type
+			parseParameter(params, numparam, "f(R) parameters", sim.fR_params, sim.num_fR_params);
+			if(parseParameter(params, numparam, "f(R) type", par_string))
+			{
+				if(par_string[0] == 'R' || par_string[0] == 'r')
+				{
+					if(sim.fR_params[0] <= 0.)
+					{
+						COUT << " The coefficient a of f(R) = a * R^n is <= 0. This leads to a tachyonic instability for the scalaron. Closing...\n";
+						parallel.abortForce();
+					}
+					else if(sim.fR_params[1] < 0.)
+					{
+						COUT << " The coefficient n of f(R) = a * R^n is <= 0. Closing...\n";
+						parallel.abortForce();
+					}
+					else if(sim.fR_params[1] == 0)
+					{
+						COUT << " The exponent n of f(R) = a*R^n is set to 0, which corresponds to a pure Lambda term. Closing...\n";
+						parallel.abortForce();
+					}
+					else if(sim.fR_params[1] == 1. || sim.fR_params[1] == 1)
+					{
+						COUT << " The exponent n of f(R) = a*R^n is set to 1. This is just a redefinition of Newton's constant. Closing...\n";
+						parallel.abortForce();
+					}
+					else if(sim.fR_params[1] == 2. || sim.fR_params[1] == 2)
+					{
+						sim.fR_type = FR_TYPE_R2;
+					}
+					else
+					{
+						sim.fR_type = FR_TYPE_RN;
+					}
+				}
+				else if(par_string[0] == 'H' || par_string[0] == 'h')
+				{
+					if(sim.num_fR_params < 3)
+					{
+						COUT << " Not enough parameters for Hu-Sawicki model! Closing...\n";
+						parallel.abortForce();
+					}
+					else if(sim.fR_params[0] <= 0)
+					{
+						COUT << " The parameter m2 of Hu-Sawicki model should be strictly positive. Closing...\n";
+						parallel.abortForce();
+						// TODO: Check that parameter n of Hu-Sawicki is >= 1
+					}
+
+					sim.fR_type = FR_TYPE_HU_SAWICKI;
+					if(sim.lcdm_background)
+					{
+						COUT << " Hu-Sawicki Model selected, but LCDM background, so Omega_Lambda = 1 - Omega_m - Omega_r = " << cosmo.Omega_Lambda << endl;
+					}
+					else
+					{
+						cosmo.Omega_Lambda = 0.;
+						COUT << " Hu-Sawicki model, Omega_Lambda automatically set to zero.\n";
+					}
+				}
+				else if(par_string[0] == 'D' || par_string[0] == 'd')
+				{
+					if(sim.num_fR_params < 2)
+					{
+						COUT << " Not enough parameters for Hu-Sawicki model! Closing...\n";
+						parallel.abortForce();
+					}
+					else if(sim.fR_params[0] <= 0)
+					{
+						COUT << " The parameter a of a * (R/a)^(1+delta) model must be positive. Closing...\n";
+						parallel.abortForce();
+					}
+
+					sim.fR_type = FR_TYPE_DELTA;
+				}
+
+				// Added parser for Omega_Lambda in f(R) gravity -- Lambda will typically be zero, but can be nonzero
+				if(sim.fR_type != FR_TYPE_HU_SAWICKI && !sim.lcdm_background)
+				{
+					COUT << " Using f(R) with" << COLORTEXT_YELLOW << " EXPLICIT " << COLORTEXT_RESET << "Lambda term, Omega_Lambda = ";
+					if(parseParameter(params, numparam, "Omega_Lambda", cosmo.Omega_Lambda) && cosmo.Omega_Lambda > 0 && cosmo.Omega_Lambda <= 1 - cosmo.Omega_m - cosmo.Omega_rad)
+					{
+						COUT << cosmo.Omega_Lambda << endl; // TODO: might not be needed
+					}
+					else if(cosmo.Omega_Lambda > 1 - cosmo.Omega_m - cosmo.Omega_rad)
+					{
+						cosmo.Omega_Lambda = 1. - cosmo.Omega_m - cosmo.Omega_rad;
+						COUT << "1 - Omega_m - Omega_rad." << endl;
+					}
+					else
+					{
+						cosmo.Omega_Lambda = 0.;
+						COUT << " 0." << endl;
+					}
+				}
+			}
+			else
+			{
+				//TODO: error if the number of param does not fit the type
+			}
+
+			parseParameter(params, numparam, "f(R) epsilon background", sim.fR_epsilon_bg);
+		}
+		else
+		{
+			COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": gravity theory unknown, using default (General Relativity)" << endl;
+			sim.gr_flag = 1;
+		}
+	}
+	else
+	{
+		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": gravity theory not selected, using default (General Relativity)" << endl;
+		sim.gr_flag = 1;
+	}
+
+	COUT
+	<< " cosmological parameters:" << endl
+	<< "               Omega_m0 = " << cosmo.Omega_m << endl
+	<< "             Omega_rad0 = " << cosmo.Omega_rad << endl
+	<< "           Omega_Lambda = " << cosmo.Omega_Lambda << endl
+	<< "                      h = " << cosmo.h << endl;
+
+	if(!parseParameter(params, numparam, "initial redshift", sim.z_in))
+	{
+		COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": initial redshift not specified!" << endl;
+		parallel.abortForce();
+	}
+
+	parseParameter(params, numparam, "time step limit", sim.steplimit);
+
+	if(!parseParameter(params, numparam, "generic file base", sim.basename_generic))
+	{
+		if(sim.mg_flag == FLAG_FR) strcpy(sim.basename_generic, "fR");
+		else if(sim.gr_flag) strcpy(sim.basename_generic, "lcdm");
+		else strcpy(sim.basename_generic, "Newton");
+	}
+
+	if(!parseParameter(params, numparam, "output path", sim.output_path))
+	{
+		sim.output_path[0] = '\0';
+	}
+
+	if(!parseParameter(params, numparam, "hibernation path", sim.restart_path))
+	{
+		strcpy(sim.restart_path, sim.output_path);
+	}
+
+	if(!parseParameter(params, numparam, "hibernation file base", sim.basename_restart))
+	{
+		strcpy(sim.basename_restart, "restart");
+	}
+
+	if(!parseParameter(params, numparam, "BACKGROUND_NUMPTS", sim.BACKGROUND_NUMPTS))
+	{
+		sim.BACKGROUND_NUMPTS = -1;
+	}
+
+	// FIRST: BACKGROUND ONLY MODE -- Most parameters unused
+	if(!parseParameter(params, numparam, "background only", sim.background_only))
+	{
+		sim.background_only = 0;
+	}
+
+	if(sim.background_only)
+	{
+		if(!parseParameter(params, numparam, "background final redshift", sim.z_fin))
+		{
+			sim.z_fin = 0.;
+		}
+
+		COUT
+		<< " Background only mode. Initial redshift = " << sim.z_in << endl
+		<< "                         Final redshift = " << sim.z_fin << endl;
+
+		for(i=0; i<numparam; i++)
+		{
+			if(params[i].used) usedparams++;
+		}
+
+		return usedparams;
+	}
+
+	// FULL EVOLUTION
 	if(parseParameter(params, numparam, "IC generator", par_string))
 	{
 		if(par_string[0] == 'B' || par_string[0] == 'b')
@@ -785,22 +1176,22 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			ic.generator = ICGEN_READ_FROM_DISK;
 		}
 		#ifdef ICGEN_PREVOLUTION
-			else if(par_string[0] == 'P' || par_string[0] == 'p')
-			{
-				ic.generator = ICGEN_PREVOLUTION;
-			}
+		else if(par_string[0] == 'P' || par_string[0] == 'p')
+		{
+			ic.generator = ICGEN_PREVOLUTION;
+		}
 		#endif
 		#ifdef ICGEN_SONG
-			else if(par_string[0] == 'S' || par_string[0] == 's')
-			{
-				ic.generator = ICGEN_SONG;
-			}
+		else if(par_string[0] == 'S' || par_string[0] == 's')
+		{
+			ic.generator = ICGEN_SONG;
+		}
 		#endif
 		#ifdef ICGEN_FALCONIC
-			else if(par_string[0] == 'F' || par_string[0] == 'f')
-			{
-				ic.generator = ICGEN_FALCONIC;
-			}
+		else if(par_string[0] == 'F' || par_string[0] == 'f')
+		{
+			ic.generator = ICGEN_FALCONIC;
+		}
 		#endif
 		else
 		{
@@ -813,6 +1204,8 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": IC generator not specified, selecting default (basic)" << endl;
 		ic.generator = ICGEN_BASIC;
 	}
+
+	parseParameter(params, numparam, "seed", ic.seed);
 
 	for(i=0; i<MAX_PCL_SPECIES; i++)
 	{
@@ -1016,6 +1409,18 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			pptr[i] = ic.metricfile[i];
 		}
 
+		if(sim.mg_flag == FLAG_FR)
+		{
+			parseParameter(params, numparam, "dtau_old", ic.restart_dtau_old);
+			parseParameter(params, numparam, "dtau_old_2", ic.restart_dtau_old_2);
+			parseParameter(params, numparam, "dtau_osci", ic.restart_dtau_osci);
+			parseParameter(params, numparam, "dtau_bg", ic.restart_dtau_bg);
+			parseParameter(params, numparam, "scale_factor", ic.restart_a);
+			parseParameter(params, numparam, "Hubble", ic.restart_Hubble);
+			parseParameter(params, numparam, "Rbar", ic.restart_Rbar);
+			parseParameter(params, numparam, "dot_Rbar", ic.restart_dot_Rbar);
+		}
+
 		parseParameter(params, numparam, "metric file", pptr, i);
 		if(parseParameter(params, numparam, "gevolution version", ic.restart_version))
 		{
@@ -1074,35 +1479,8 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": pivot scale not specified, using default value (0.05 / Mpc)" << endl;
 	}
 
-	// parse metadata
-
-	sim.numpts = 0;
-	sim.downgrade_factor = 1;
-	for(i=0; i<MAX_PCL_SPECIES; i++)
-	{
-		sim.numpcl[i] = 0;
-	}
-	sim.vector_flag = VECTOR_PARABOLIC;
-	sim.gr_flag = 0;
-	sim.mg_flag = GENREL;
-	sim.out_pk = 0;
-	sim.out_snapshot = 0;
-	sim.num_pk = MAX_OUTPUTS;
-	sim.numbins = 0;
-	sim.num_snapshot = MAX_OUTPUTS;
-	sim.num_restart = MAX_OUTPUTS;
-	for(i=0; i<MAX_PCL_SPECIES; i++) sim.tracer_factor[i] = 1;
-	sim.Cf = 1.;
-	sim.steplimit = 1.;
-	sim.boxsize = -1.;
-	sim.wallclocklimit = -1.;
-	sim.z_in = 0.;
-	sim.fR_type = 0;
-	for(i=0; i<MAX_FR_PARAMS; i++) sim.fR_params[i] = 0;
-	sim.num_fR_params = MAX_FR_PARAMS;
-
 	parseParameter(params, numparam, "CYCLE_INFO_INTERVAL", sim.CYCLE_INFO_INTERVAL); // Defaults to 10
-	parseParameter(params, numparam, "BACKGROUND_NUMPTS", sim.BACKGROUND_NUMPTS);
+
 	if(parseParameter(params, numparam, "vector method", par_string))
 	{
 		if(par_string[0] == 'p' || par_string[0] == 'P')
@@ -1122,13 +1500,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		}
 	}
 
-	parseParameter(params, numparam, "boxsize", sim.boxsize);
-	if(sim.boxsize <= 0. || !isfinite(sim.boxsize))
-	{
-		COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": simulation box size not set properly!" << endl;
-		parallel.abortForce();
-	}
-
 	parseParameter(params, numparam, "Ngrid", sim.numpts);
 	if(sim.numpts < 2 || !isfinite(sim.numpts))
 	{
@@ -1140,6 +1511,8 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	{
 		// TODO Check if this is correct
 		COUT << " /!\\ Warning! Ngrid and tiling factor are probably inconsistent! Don't be surprised if something weird happens :)" << endl;
+		COUT << "sim.numpts = " << sim.numpts << endl;
+		COUT << "ic.numtile[0] = " << ic.numtile[0] << endl;
 	}
 
 	if(parseParameter(params, numparam, "downgrade factor", sim.downgrade_factor))
@@ -1159,12 +1532,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	if(!parseParameter(params, numparam, "move limit", sim.movelimit))
 	{
 		sim.movelimit = (double) sim.numpts;
-	}
-
-	if(!parseParameter(params, numparam, "initial redshift", sim.z_in))
-	{
-		COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": initial redshift not specified!" << endl;
-		parallel.abortForce();
 	}
 
 	if(ic.z_relax < -1.)
@@ -1227,341 +1594,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		ic.Cf = sim.Cf;
 	}
 
-	// parse cosmological parameters
-	if(!parseParameter(params, numparam, "h", cosmo.h))
-	{
-		cosmo.h = P_HUBBLE;
-	}
-
-	cosmo.num_ncdm = MAX_PCL_SPECIES-2;
-	if(!parseParameter(params, numparam, "m_ncdm", cosmo.m_ncdm, cosmo.num_ncdm))
-	{
-		for(i=0; i<MAX_PCL_SPECIES-2; i++)
-		{
-			cosmo.m_ncdm[i] = 0.;
-		}
-		cosmo.num_ncdm = 0;
-	}
-
-	if(parseParameter(params, numparam, "N_ncdm", i))
-	{
-		if(i<0 || !isfinite(i))
-		{
-			COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": number of ncdm species not set properly!" << endl;
-			parallel.abortForce();
-		}
-		if(i>cosmo.num_ncdm)
-		{
-			COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": N_ncdm = " << i << " is larger than the number of mass parameters specified (" << cosmo.num_ncdm << ")!" << endl;
-			parallel.abortForce();
-		}
-		cosmo.num_ncdm = i;
-	}
-	else if(cosmo.num_ncdm > 0)
-	{
-		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": N_ncdm not specified, inferring from number of mass parameters in m_ncdm (" << cosmo.num_ncdm << ")!" << endl;
-	}
-
-	for(i=0; i<MAX_PCL_SPECIES-2; i++)
-	{
-		cosmo.T_ncdm[i] = P_T_NCDM;
-		cosmo.deg_ncdm[i] = 1.0;
-	}
-	parseParameter(params, numparam, "T_ncdm", cosmo.T_ncdm, i);
-	i = MAX_PCL_SPECIES-2;
-	parseParameter(params, numparam, "deg_ncdm", cosmo.deg_ncdm, i);
-
-	for(i=0; i<cosmo.num_ncdm; i++)
-	{
-		cosmo.Omega_ncdm[i] = cosmo.m_ncdm[i] * cosmo.deg_ncdm[i] / P_NCDM_MASS_OMEGA / cosmo.h / cosmo.h;
-	}
-
-	if(parseParameter(params, numparam, "T_cmb", cosmo.Omega_g))
-	{
-		cosmo.Omega_g = cosmo.Omega_g * cosmo.Omega_g / cosmo.h;
-		cosmo.Omega_g = cosmo.Omega_g * cosmo.Omega_g * C_PLANCK_LAW; // Planck's law
-	}
-	else if(parseParameter(params, numparam, "omega_g", cosmo.Omega_g))
-	{
-		cosmo.Omega_g /= cosmo.h * cosmo.h;
-	}
-	else if(!parseParameter(params, numparam, "Omega_g", cosmo.Omega_g))
-	{
-		cosmo.Omega_g = 0.;
-	}
-
-	if(parseParameter(params, numparam, "N_ur", cosmo.Omega_ur))
-	{
-		cosmo.Omega_ur *= (7./8.) * pow(4./11., 4./3.) * cosmo.Omega_g;
-	}
-	else if(parseParameter(params, numparam, "N_eff", cosmo.Omega_ur))
-	{
-		cosmo.Omega_ur *= (7./8.) * pow(4./11., 4./3.) * cosmo.Omega_g;
-	}
-	else if(parseParameter(params, numparam, "omega_ur", cosmo.Omega_ur))
-	{
-		cosmo.Omega_ur /= cosmo.h * cosmo.h;
-	}
-	else if(!parseParameter(params, numparam, "Omega_ur", cosmo.Omega_ur))
-	{
-		cosmo.Omega_ur = P_N_UR * (7./8.) * pow(4./11., 4./3.) * cosmo.Omega_g;
-	}
-
-	cosmo.Omega_rad = cosmo.Omega_g + cosmo.Omega_ur;
-	if(parseParameter(params, numparam, "omega_b", cosmo.Omega_b))
-	{
-		cosmo.Omega_b /= cosmo.h * cosmo.h;
-	}
-	else if(!parseParameter(params, numparam, "Omega_b", cosmo.Omega_b))
-	{
-		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": Omega_b not found in settings file, setting to default (0)." << endl;
-		cosmo.Omega_b = 0.;
-	}
-
-	if(parseParameter(params, numparam, "omega_cdm", cosmo.Omega_cdm))
-	{
-		cosmo.Omega_cdm /= cosmo.h * cosmo.h;
-	}
-	else if(!parseParameter(params, numparam, "Omega_cdm", cosmo.Omega_cdm))
-	{
-		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": Omega_cdm not found in settings file, setting to default (1)." << endl;
-		cosmo.Omega_cdm = 1.;
-	}
-
-	cosmo.Omega_m = cosmo.Omega_cdm + cosmo.Omega_b;
-	
-	for(i=0; i<cosmo.num_ncdm; i++)
-	{
-		cosmo.Omega_m += cosmo.Omega_ncdm[i];
-	}
-
-	if(cosmo.Omega_m <= 0. || cosmo.Omega_m > 1.)
-	{
-		COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": total matter density out of range!" << endl;
-		COUT << " cosmo.Omega_m = " << cosmo.Omega_m << endl;
-		parallel.abortForce();
-	}
-	else if(cosmo.Omega_rad < 0. || cosmo.Omega_rad > 1. - cosmo.Omega_m)
-	{
-		COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": total radiation energy density out of range!" << endl;
-		COUT << " cosmo.Omega_rad = " << cosmo.Omega_rad << endl;
-		COUT << " 1 - cosmo.Omega_m = " << 1 - cosmo.Omega_m << endl;
-		parallel.abortForce();
-	}
-
-	// Background-only mode
-	if(!parseParameter(params, numparam, "background only", sim.background_only))
-	{
-		sim.background_only = 0;
-	}
-
-	if(sim.background_only)
-	{
-		if(!parseParameter(params, numparam, "background initial redshift", sim.bg_initial_redshift))
-		{
-			sim.bg_initial_redshift = sim.z_in;
-		}
-
-		if(!parseParameter(params, numparam, "background final redshift", sim.bg_final_redshift))
-		{
-			sim.bg_final_redshift = 0.;
-		}
-
-		COUT << " Background only mode. Initial redshift = " << sim.bg_initial_redshift << endl
-				 << "                         Final redshift = " << sim.bg_final_redshift << endl;
-	}
-
-	// Parse Gravity Theory
-	if(parseParameter(params, numparam, "gravity theory", par_string))
-	{
-		if(par_string[0] == 'N' || par_string[0] == 'n')
-		{
-			COUT << " gravity theory set to: " << COLORTEXT_CYAN << "Newtonian" << COLORTEXT_RESET << endl;
-			sim.gr_flag = 0;
-			cosmo.Omega_Lambda = 1. - cosmo.Omega_m - cosmo.Omega_rad; //In Newton, set total Omega = 1
-			if(ic.pkfile[0] == '\0' && ic.tkfile[0] != '\0'
-			#ifdef ICGEN_PREVOLUTION
-				&& ic.generator != ICGEN_PREVOLUTION
-			#endif
-				)
-			{
-				COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": gauge transformation to N-body gauge can only be performed for the positions; the transformation for" << endl;
-				COUT << "              the velocities requires time derivatives of transfer functions. Call CLASS directly to avoid this issue." << endl;
-			}
-		}
-		else if(par_string[0] == 'G' || par_string[0] == 'g')
-		{
-			COUT << " gravity theory set to: " << COLORTEXT_CYAN << "General Relativity" << COLORTEXT_RESET << endl;
-			sim.gr_flag = 1;
-			cosmo.Omega_Lambda = 1. - cosmo.Omega_m - cosmo.Omega_rad; //In GR, set total Omega = 1
-		}
-		else if(par_string[0] == 'F' || par_string[0] == 'f')
-		{
-			COUT << " Gravity theory set to: " << COLORTEXT_CYAN << "f(R)" << COLORTEXT_RESET << endl;
-			if(ic.generator == ICGEN_READ_FROM_DISK)
-			{
-				parseParameter(params, numparam, "dtau_old", ic.restart_dtau_old);
-				parseParameter(params, numparam, "dtau_old_2", ic.restart_dtau_old_2);
-				parseParameter(params, numparam, "dtau_osci", ic.restart_dtau_osci);
-				parseParameter(params, numparam, "dtau_bg", ic.restart_dtau_bg);
-				parseParameter(params, numparam, "scale_factor", ic.restart_a);
-				parseParameter(params, numparam, "Hubble", ic.restart_Hubble);
-				parseParameter(params, numparam, "Rbar", ic.restart_Rbar);
-				parseParameter(params, numparam, "dot_Rbar", ic.restart_dot_Rbar);
-			}
-
-			sim.gr_flag = 1;
-			sim.mg_flag = FR;
-
-			if(!parseParameter(params, numparam, "lcdm background", sim.lcdm_background))
-			{
-				sim.lcdm_background = 0;
-			}
-
-			if(sim.lcdm_background)
-			{
-				if(sim.background_only)
-				{
-					COUT << " /!\\ background only mode: ON. LCDM Background option ignored\n";
-					sim.lcdm_background = 0;
-				}
-				else
-				{
-					COUT << " Background is LCDM.\n";
-					parseParameter(params, numparam, "switch to f(R) redshift", sim.z_switch_fR_background);
-					if(sim.z_switch_fR_background > 0. && sim.z_switch_fR_background < sim.z_in)
-					{
-						COUT << " Full f(R) background expansion computed after z = " << sim.z_switch_fR_background << endl;
-					}
-					else
-					{
-						sim.z_switch_fR_background = -100.;
-					}
-				}
-			}
-
-			//TODO: read f(R) params and type
-			parseParameter(params, numparam, "f(R) parameters", sim.fR_params, sim.num_fR_params);
-			if(parseParameter(params, numparam, "f(R) type", par_string))
-			{
-				if(par_string[0] == 'R' || par_string[0] == 'r')
-				{
-					if(sim.fR_params[0] <= 0)
-					{
-						COUT << " The coefficient a of f(R) = a * R^n is <= 0. This leads to a tachyonic instability for the scalaron. Closing...\n";
-						parallel.abortForce();
-					}
-					else if(sim.fR_params[1] < 0)
-					{
-						COUT << " The coefficient n of f(R) = a * R^n is <= 0. Closing...\n";
-						parallel.abortForce();
-					}
-					else if(sim.fR_params[1] == 0)
-					{
-						COUT << " The exponent n of f(R) = a*R^n is set to 0, which corresponds to a pure Lambda term. Closing...\n";
-						parallel.abortForce();
-					}
-					else if(sim.fR_params[1] == 1)
-					{
-						COUT << " The exponent n of f(R) = a*R^n is set to 1. This is just a redefinition of Newton's constant. Closing...\n";
-						parallel.abortForce();
-					}
-					else if(sim.fR_params[1] == 2)
-					{
-						sim.fR_type = FR_TYPE_R2;
-					}
-					else
-					{
-						sim.fR_type = FR_TYPE_RN;
-					}
-				}
-				else if(par_string[0] == 'H' || par_string[0] == 'h')
-				{
-					if(sim.num_fR_params < 3)
-					{
-						COUT << " Not enough parameters for Hu-Sawicki model! Closing...\n";
-						parallel.abortForce();
-					}
-					else if(sim.fR_params[0] <= 0)
-					{
-						COUT << " The parameter m2 of Hu-Sawicki model should be strictly positive. Closing...\n";
-						parallel.abortForce();
-						// TODO: Check that parameter n of Hu-Sawicki is >= 1
-					}
-
-					sim.fR_type = FR_TYPE_HU_SAWICKI;
-					if(sim.lcdm_background)
-					{
-						cosmo.Omega_Lambda = 1. - cosmo.Omega_m - cosmo.Omega_rad;
-						COUT << " Hu-Sawicki Model selected, but LCDM background, so Omega_Lambda = 1 - Omega_m - Omega_r = " << cosmo.Omega_Lambda << endl;
-					}
-					else
-					{
-						cosmo.Omega_Lambda = 0.;
-						COUT << " Hu-Sawicki model, Omega_Lambda automatically set to zero.\n";
-					}
-				}
-				else if(par_string[0] == 'D' || par_string[0] == 'd')
-				{
-					if(sim.num_fR_params < 2)
-					{
-						COUT << " Not enough parameters for Hu-Sawicki model! Closing...\n";
-						parallel.abortForce();
-					}
-					else if(sim.fR_params[0] <= 0)
-					{
-						COUT << " The parameter a of a * (R/a)^(1+delta) model must be positive. Closing...\n";
-						parallel.abortForce();
-					}
-
-					sim.fR_type = FR_TYPE_DELTA;
-				}
-
-				// Added parser for Omega_Lambda in f(R) gravity -- Lambda will typically be zero, but can be nonzero
-				if(sim.fR_type != FR_TYPE_HU_SAWICKI)
-				{
-					if(sim.lcdm_background)
-					{
-						cosmo.Omega_Lambda = 1. - cosmo.Omega_m - cosmo.Omega_rad;
-					}
-					else
-					{
-						COUT << " Using f(R) with" << COLORTEXT_YELLOW << " EXPLICIT " << COLORTEXT_RESET << "Lambda term, Omega_Lambda = ";
-						if(parseParameter(params, numparam, "Omega_Lambda", cosmo.Omega_Lambda) && cosmo.Omega_Lambda > 0 && cosmo.Omega_Lambda <= 1 - cosmo.Omega_m - cosmo.Omega_rad)
-						{
-							 COUT << cosmo.Omega_Lambda << endl; // TODO: might not be needed
-						}
-						else if(cosmo.Omega_Lambda > 1 - cosmo.Omega_m - cosmo.Omega_rad)
-						{
-							cosmo.Omega_Lambda = 1. - cosmo.Omega_m - cosmo.Omega_rad;
-							COUT << "1 - Omega_m - Omega_rad." << endl;
-						}
-						else
-						{
-							cosmo.Omega_Lambda = 0.;
-							COUT << " 0." << endl;
-						}
-					}
-				}
-			}
-			else
-			{
-				//TODO: error if the number of param does not fit the type
-			}
-
-		}
-		else
-		{
-			COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": gravity theory unknown, using default (General Relativity)" << endl;
-			sim.gr_flag = 1;
-		}
-	}
-	else
-	{
-		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": gravity theory not selected, using default (General Relativity)" << endl;
-		sim.gr_flag = 1;
-	}
-
 	if(!parseParameter(params, numparam, "multigrid n-grids", sim.multigrid_n_grids))
 	{
 		sim.multigrid_n_grids = 1; //  TODO: Must default to 1 otherwise it gives malloc() errors
@@ -1572,7 +1604,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		sim.back_to_GR = 0;
 	}
 
-	if(sim.mg_flag == FR)
+	if(sim.mg_flag == FLAG_FR)
 	{
 		parseParameter(params, numparam, "quasi-static", sim.quasi_static);
 		if(sim.back_to_GR)
@@ -1688,8 +1720,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 			parseParameter(params, numparam, "f(R) epsilon fields", sim.fR_epsilon_fields);
 		}
-
-		parseParameter(params, numparam, "f(R) epsilon background", sim.fR_epsilon_bg);// TODO: put some of these only for f(R)
 	}
 
 	if(!parseParameter(params, numparam, "check fields", sim.check_fields))
@@ -1706,39 +1736,13 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	}
 
 	parseParameter(params, numparam, "check redshift", sim.z_check);
-	parseParameter(params, numparam, "time step limit", sim.steplimit);
-
 	parseFieldSpecifiers(params, numparam, "snapshot outputs", sim.out_snapshot);
 	parseFieldSpecifiers(params, numparam, "Pk outputs", sim.out_pk);
+	parseFieldSpecifiers(params, numparam, "check outputs", sim.out_check);
 
 	if((sim.num_snapshot <= 0 || sim.out_snapshot == 0) && (sim.num_pk <= 0 || sim.out_pk == 0))
 	{
 		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": no output specified!" << endl;
-	}
-
-	if(!parseParameter(params, numparam, "generic file base", sim.basename_generic))
-	{
-		if(sim.mg_flag == FR)
-		{
-			if(sim.background_only)
-			{
-				strcpy(sim.basename_generic, "fR_background_only");
-			}
-			else if(sim.quasi_static)
-			{
-				strcpy(sim.basename_generic, "fR_quasi-static");
-			}
-			else if(sim.back_to_GR)
-			{
-				strcpy(sim.basename_generic, "fR_back-to-GR");
-			}
-			else
-			{
-				strcpy(sim.basename_generic, "fR");
-			}
-		}
-		else if(sim.gr_flag) strcpy(sim.basename_generic, "lcdm");
-		else strcpy(sim.basename_generic, "Newton");
 	}
 
 	if(!parseParameter(params, numparam, "snapshot file base", sim.basename_snapshot))
@@ -1749,21 +1753,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	if(!parseParameter(params, numparam, "Pk file base", sim.basename_pk))
 	{
 		strcpy(sim.basename_pk, "pk");
-	}
-
-	if(!parseParameter(params, numparam, "output path", sim.output_path))
-	{
-		sim.output_path[0] = '\0';
-	}
-
-	if(!parseParameter(params, numparam, "hibernation path", sim.restart_path))
-	{
-		strcpy(sim.restart_path, sim.output_path);
-	}
-
-	if(!parseParameter(params, numparam, "hibernation file base", sim.basename_restart))
-	{
-		strcpy(sim.basename_restart, "restart");
 	}
 
 	if(parseParameter(params, numparam, "particle save mode", par_string))
@@ -1782,11 +1771,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			COUT << " Wrong particle save mode specified for hibernation. Defaults to HDF5." << endl;
 		}
 	}
-
-	COUT << " cosmological parameters are: Omega_m0 = " << cosmo.Omega_m
-			 << ", Omega_rad0 = " << cosmo.Omega_rad
-			 << ", Omega_Lambda = " << cosmo.Omega_Lambda
-			 << ", h = " << cosmo.h << endl;
 
 	if(!parseParameter(params, numparam, "switch delta_rad", sim.z_switch_deltarad))
 	{

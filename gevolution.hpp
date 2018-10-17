@@ -173,7 +173,7 @@ void prepareFTsource_S00(Field<FieldType> & minus_a3_T00, // -a^3 * T00
 	double laplace = 0.;
   double a2 = a*a;
   double threeH2 = 3. * Hubble * Hubble;
-	double grad[3];
+	double gradphi[3], gradxi[3];
   int i = 0;
 
   if(sim.back_to_GR) // If back_to_GR
@@ -185,18 +185,18 @@ void prepareFTsource_S00(Field<FieldType> & minus_a3_T00, // -a^3 * T00
       {
         xn = x+i;
         xp = x-i;
-        grad[i] = phi(xn) - phi(xp);
-        grad[i] *= grad[i];
+        gradphi[i] = phi(xn) - phi(xp);
+        gradphi[i] *= gradphi[i];
       }
       source(x) *= 1. - 4. * phi(x);
       source(x) += threeH2 * (phi(x) - chi(x));
       source(x) -= 3. * Hubble * phi(x) / dtau;
   		source(x) *= dx2; // Multiply by dx^2 all terms not containing derivatives
       // gradient squared
-  		source(x) -= 0.375 * (grad[0] + grad[1] + grad[2]);
+  		source(x) -= 0.375 * (gradphi[0] + gradphi[1] + gradphi[2]);
      }
 	}
-  else if(sim.quasi_static) // Quasi-static approximation -- Modified Newtonian
+  else // F(R) - TODO: For the moment, same for quasi-static and full, modify if needed
   {
     for(x.first(); x.test(); x.next())
     {
@@ -211,15 +211,17 @@ void prepareFTsource_S00(Field<FieldType> & minus_a3_T00, // -a^3 * T00
         xn = x+i;
         xp = x-i;
         laplace += xi_new(xn) + xi_new(xp);
-        grad[i] = phi(xn) - phi(xp);
-        grad[i] *= grad[i];
+        gradphi[i] = phi(xn) - phi(xp);
+        gradphi[i] *= gradphi[i];
+        gradxi[i] = xi_new(xn) - xi_new(xp);
+        gradxi[i] *= gradxi[i];
       }
       laplace -= 6. * xi_new(x);
 			laplace /= dx2;
 
       // F(R) terms --  TODO: Optimize this, e.g. combining with the previous terms
 			source(x) -= fourpiG_over_a * (minus_a3_T00(x) - minus_a3_T00_hom) * (xi_new(x) + fRbar) / 2.;
-			source(x) += laplace * (1. - 4. * phi(x) - (xi_new(x) + fRbar) / 2.);
+			source(x) += 0.5 * laplace * (1. - 2. * phi(x) - (xi_new(x) + fRbar) / 2.);
 			source(x) -= 1.5 * Hubble * (xi_new(x) - xi_old(x)) / dtau; //TODO: Do we want to keep this in the Quasi-static limit?
 			source(x) -= threeH2 * xi_new(x) / 2.;
       source(x) += 0.25 * a2 * (Rbar * xi_new(x) + fbar - f(Rbar + deltaR(x), sim, 110));
@@ -228,35 +230,12 @@ void prepareFTsource_S00(Field<FieldType> & minus_a3_T00, // -a^3 * T00
       source(x) *= dx2;
 
       // gradient squared
-      source(x) -= 0.375 * (grad[0] + grad[1] + grad[2]);
+      source(x) -= 0.375 * (gradphi[0] + gradphi[1] + gradphi[2]);
+			// F(R) term
+			source(x) -= 0.125 * (gradxi[0] + gradxi[1] + gradxi[2]);
     }
   }
-  else // Full F(R), with all time derivatives
-  {
-    for(x.first(); x.test(); x.next())
-    {
-      source(x) = fourpiG_over_a * (minus_a3_T00(x) - minus_a3_T00_hom);// 4piG * (-a^3*T00 + a^3*Tbar00) = -4piG * a^3 * dT00
-      for(i=0; i<3; i++)
-      {
-        xn = x+i;
-        xp = x-i;
-        laplace += xi_new(xn) + xi_new(xp);
-        grad[i] = phi(xn) - phi(xp);
-        grad[i] *= grad[i];
-      }
-      laplace -= 6.*xi_new(x);
-      source(x) = (source(x) + 0.5 * laplace / dx2) * (1. - 4.*phi(x) + 0.5 * (xi_new(x) + fRbar));
-      source(x) += threeH2 * (phi(x) - chi(x) - 0.5 * xi_new(x));
-      source(x) -= 1.5 * Hubble * (2. * phi(x) + xi_new(x) - xi_old(x)) / dtau;//TODO: check that this is the right interpolation
 
-      // F(R) terms
-      source(x) += 0.25 * a2 * (Rbar * xi_new(x) + fbar - f(Rbar + deltaR(x), sim, 111));
-      source(x) *= dx2; // Multiply by dx^2 all terms not containing derivatives
-
-      // gradient squared
-      source(x) -= 0.375 * (grad[0] + grad[1] + grad[2]);
-    }
-  }
   return;
 }
 

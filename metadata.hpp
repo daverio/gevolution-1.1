@@ -125,8 +125,7 @@
 #define HIB_SAVE_GADGET2 1
 
 //Modified gravity types
-#define GENREL 0 // General Relativity
-#define FR 1   // f(R)
+#define FLAG_FR 1   // f(R)
 
 //f(R) models
 #define FR_TYPE_RN 1
@@ -212,6 +211,7 @@ struct metadata
 	int radiation_flag;
 	int out_pk;
 	int out_snapshot;
+	int out_check;
 	int num_pk;
 	int numbins;
 	int num_snapshot;
@@ -219,8 +219,7 @@ struct metadata
 	int num_fR_params;
 	int quasi_static;
 	int background_only;
-	double bg_initial_redshift;
-	double bg_final_redshift;
+	double z_fin;
 	int lcdm_background;
 	double Cf;
 	int back_to_GR;
@@ -258,7 +257,6 @@ struct metadata
 	double z_switch_linearchi;
 	double z_switch_deltancdm[MAX_PCL_SPECIES-2];
 	double z_switch_Bncdm[MAX_PCL_SPECIES-2];
-
 	char basename_snapshot[PARAM_MAX_LENGTH];
 	char basename_pk[PARAM_MAX_LENGTH];
 	char basename_generic[PARAM_MAX_LENGTH];
@@ -302,8 +300,7 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "num_fR_params: " << sim.num_fR_params << "\n";
 	os << "quasi_static: " << sim.quasi_static << "\n";
 	os << "background_only: " << sim.background_only << "\n";
-	os << "bg_initial_redshift: " << sim.bg_initial_redshift << "\n";
-	os << "bg_final_redshift: " << sim.bg_final_redshift << "\n";
+	os << "background final redshift: " << sim.z_fin << "\n";
 	os << "lcdm_background: " << sim.lcdm_background << "\n";
 
 	os << "back_to_GR: " << sim.back_to_GR << "\n";
@@ -386,7 +383,7 @@ struct icsettings
 	char pkfile[PARAM_MAX_LENGTH];
 	char tkfile[PARAM_MAX_LENGTH];
 	char metricfile[METRICFILE_LENGTH][PARAM_MAX_LENGTH];
-	double restart_tau;
+ 	double restart_tau;
 	double restart_dtau;
 	double restart_version;
 	double z_ic;

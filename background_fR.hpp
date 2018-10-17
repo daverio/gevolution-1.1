@@ -4,12 +4,11 @@
 //
 // code components related to background evolution for the f(R) model
 //
-// Author: David Daverio (Cambridge University)
-//         Lorenzo Reverberi (CEICO - Czech Academy of Sciences, Prague)
+// Authors:
+// David Daverio (Cambridge University)
+// Lorenzo Reverberi (CEICO - Czech Academy of Sciences, Prague)
 //
-// Last modified: February 2016
-//
-// Note: Some methods have been copy pasted from background.hpp
+// Note: Some methods have been copied and pasted from background.hpp
 //
 //////////////////////////
 
@@ -147,7 +146,7 @@ double Y_dot_RungeKutta_trace(const double a,
 
 	if(frr)
 	{
-		res = fr * R - 2.*f0 - R - 2. * fourpiG * Trace_hom;
+		res = fr * R - 2. * f0 - R - 2. * fourpiG * Trace_hom;
 		res *= a * a / 3.;
 		res -= frrr * Y * Y;
 		res /= frr;

@@ -17,7 +17,6 @@ template <class FieldType>
 void initial_guess_deltaR(
   Field<FieldType> & deltaR,
   Field<FieldType> & eightpiG_deltaT,
-  Field<FieldType> & zeta,
   const metadata & sim
 )
 {
@@ -72,12 +71,12 @@ void build_diff_u(
 
 //////////////////////////
 // in-place calculation of residual Y
-// of equation Y[u] == 0
+// of equation Y[xi] == 0
 // TODO: Details here
 //////////////////////////
-double residual(
-  const double u,
-  const double diff_u,
+double residual_xi(
+  const double xi,
+  const double laplace_xi,
   const double deltaR,
   const double rhs,
   const double coeff1,
@@ -91,15 +90,73 @@ double residual(
          temp;
 
   temp = deltaR;
-  // TODO Additional terms
-  temp = temp * (1 - fR(R, sim, 885)) + 2. * (f(R, sim, 884) - fbar) - Rbar * fRbar * (exp(u) - 1.);
+  // TODO Additional terms -- see if necessary
+  temp = temp * (1 - fRbar - xi) + 2. * (f(R, sim, 884) - fbar) - Rbar * xi;
+  // End additional terms
+
+  return laplace_xi - coeff1 * temp - rhs;
+}
+
+//////////////////////////
+// in-place calculation of residual Y
+// of equation Y[u] == 0
+// TODO: Details here
+//////////////////////////
+double residual_u(
+  const double u,
+  const double diff_u,
+  const double deltaR,
+  const double rhs,
+  const double coeff1,
+  const double Rbar,
+  const double fbar,
+  const double fRbar,
+  const metadata & sim
+)
+{
+  double R = Rbar + deltaR,
+         temp,
+         temp2;
+
+  temp = deltaR;
+  // TODO Additional terms -- see if necessary
+  temp2 = exp(u);
+  temp = temp * (1 - fRbar * temp2) + 2. * (f(R, sim, 884) - fbar) - Rbar * fRbar * (temp2 - 1.);
   // End additional terms
 
   return diff_u - coeff1 * temp - rhs;
 }
 
+
 //////////////////////////
-// in-place calculation of d(residual)/du = dY/du
+// In-place calculation of d(residual)/d(xi) = dY/d(xi)
+// from equation Y[xi] == 0
+// Needed for next guess xi^{i+1} = xi^{i} - Y^{i}/(dY/d(xi))^{i}
+//////////////////////////
+inline double dresidual_dxi(
+  const double xi,
+  const double laplace_xi,
+  const double deltaR,
+  const double coeff1,
+  const double Rbar,
+  const double fRbar,
+  const metadata & sim
+)
+{
+  double temp,
+         R = Rbar + deltaR;
+
+  temp = 1. / fRR(R, sim, 738);
+  // TODO Additional terms -- see if necessary
+  temp = temp * (1. + fRbar + xi) - R;
+  // End additional terms
+
+  return - coeff1 * temp;
+}
+
+
+//////////////////////////
+// In-place calculation of d(residual)/du = dY/du
 // from equation Y[u] == 0
 // Needed for next guess u^{i+1} = u^{i} - Y^{i}/(dY/du)^{i}
 //////////////////////////
@@ -114,25 +171,24 @@ inline double dresidual_du(
 )
 {
   double temp,
-         temp2,
+         fr,
          R = Rbar + deltaR;
 
-  temp2 = fR(R, sim, 737);
-  temp = temp2 / fRR(R, sim, 738);
-  // TODO Additional terms
-  temp = temp * (1. + temp2) - temp2 * deltaR - Rbar * fRbar * exp(u);
+  fr = fRbar * exp(u);
+  temp = fr / fRR(R, sim, 738);
+  // TODO Additional terms -- see if necessary
+  temp = temp * (1. + fr) - R * fr;
   // End additional terms
 
-  // TODO: Check diff_u or not
-  // return diff_u - coeff1 * temp;
   return - coeff1 * temp;
 }
+
 
 //////////////////////////
 // Euclidean Norm
 //////////////////////////
 template <class FieldType>
-double Euclidean_norm(
+double euclidean_norm(
   Field<FieldType> & field,
   MultiGrid & engine,
   const int level,
@@ -186,18 +242,18 @@ double compute_error(
     {
       for(x.first(); x.test(); x.next())
       {
-        temp = residual(u(x), diff_u(x), deltaR(x), rhs(x), coeff1, Rbar, fbar, fRbar, sim);
+        temp = residual_u(u(x), diff_u(x), deltaR(x), rhs(x), coeff1, Rbar, fbar, fRbar, sim);
         error += temp*temp;
       }
     }
     parallel.layer(engine.player(level)).sum(error);
-    error = sqrt(error)/numpts3d;
+    error = sqrt(error) / numpts3d;
   }
   else if(sim.relaxation_error_method == RELAXATION_ERROR_METHOD_MAX) // TODO: Probably wrong, just an attempt
   {
     for(x.first(); x.test(); x.next())
     {
-      temp = residual(u(x), diff_u(x), deltaR(x), rhs(x), coeff1, Rbar, fbar, fRbar, sim);
+      temp = residual_u(u(x), diff_u(x), deltaR(x), rhs(x), coeff1, Rbar, fbar, fRbar, sim);
       temp = fabs(temp);
       if(temp > error)
       {
@@ -236,7 +292,7 @@ double compute_error(
   {
     for(x.first(); x.test(); x.next())
     {
-      temp = residual(u(x), diff_u(x), deltaR(x), rhs(x), coeff1, Rbar, fbar, fRbar, sim);
+      temp = residual_u(u(x), diff_u(x), deltaR(x), rhs(x), coeff1, Rbar, fbar, fRbar, sim);
       error += temp*temp;
     }
     parallel.sum(error);
@@ -246,7 +302,7 @@ double compute_error(
   {
     for(x.first(); x.test(); x.next())
     {
-      temp = residual(u(x), diff_u(x), deltaR(x), rhs(x), coeff1, Rbar, fbar, fRbar, sim);
+      temp = residual_u(u(x), diff_u(x), deltaR(x), rhs(x), coeff1, Rbar, fbar, fRbar, sim);
       temp = fabs(temp);
       if(temp > error)
       {
@@ -288,7 +344,7 @@ void build_residual_u(
   {
     for(x.first(); x.test(); x.next())
     {
-      destination_for_residual(x) = residual(u(x), diff_u(x), deltaR(x), rhs(x), coeff1, Rbar, fbar, fRbar, sim);
+      destination_for_residual(x) = residual_u(u(x), diff_u(x), deltaR(x), rhs(x), coeff1, Rbar, fbar, fRbar, sim);
     }
   }
   return;
@@ -320,15 +376,17 @@ void update_u(
   double Y, dY, temp, temp2;
   for(x.first(); x.test(); x.next())
   {
-    Y = residual(u(x), diff_u(x), deltaR(x), rhs(x), coeff1, Rbar, fbar, fRbar, sim);
+    Y = residual_u(u(x), diff_u(x), deltaR(x), rhs(x), coeff1, Rbar, fbar, fRbar, sim);
     dY = dresidual_du(u(x), diff_u(x), deltaR(x), coeff1, Rbar, fRbar, sim);
     if(dY)
     {
-      temp = sim.overrelaxation_coeff * Y/dY;
-      if(u(x) > temp)
-      {
-        u(x) -= temp;
-      }
+      temp = sim.overrelaxation_coeff * Y / dY;
+      u(x) -= temp;
+    }
+    else
+    {
+      cout << " Warning: dY evaluates to zero!" << endl;
+      cout << u(x) << ", " << diff_u(x) << ", " << deltaR(x) << ", " << Y << endl;
     }
   }
 
@@ -354,12 +412,10 @@ void update_u_red_black(
 )
 {
   SiteRedBlack3d x(u.lattice());
-  double Y,
-         dY,
-         temp;
+  double Y, dY, temp;
   for(x.first(); x.test(); x.next())
   {
-    Y = residual(u(x), diff_u(x), deltaR(x), rhs(x), coeff1, Rbar, fbar, fRbar, sim);
+    Y = residual_u(u(x), diff_u(x), deltaR(x), rhs(x), coeff1, Rbar, fbar, fRbar, sim);
     dY = dresidual_du(u(x), diff_u(x), deltaR(x), coeff1, Rbar, fRbar, sim);
     if(dY)
     {
@@ -372,14 +428,10 @@ void update_u_red_black(
   }
 
   u.updateHalo();
-
   build_diff_u(u, diff_u, dx, fRbar);
 
   return;
 }
-
-
-
 
 
 //////////////////////////
@@ -403,14 +455,13 @@ double relaxation_u(
   double err
 )
 {
-  int i = 0,
-      error_increased = 0;
+  int i = 0, error_increased = 0;
   double coeff1 = a*a/3.,
          initial_error = err,
+         check_fr_wrong,
          error = 0.;
   long numpts3d = (long) sim.numpts * sim.numpts * sim.numpts;
 
-  copy_field(eightpiG_deltaT, rhs, coeff1);
   copy_field(u, u_temp);
 
   while(true)
@@ -427,31 +478,20 @@ double relaxation_u(
       update_u(u_temp, diff_u, deltaR, rhs, dx, coeff1, Rbar, fbar, fRbar, sim);
     }
 
-    if(convert_u_to_deltaR(eightpiG_deltaT, deltaR, u_temp, Rbar, fRbar, sim) > FR_WRONG) return FR_WRONG_RETURN;
+    check_fr_wrong = convert_u_to_deltaR(eightpiG_deltaT, deltaR, u_temp, Rbar, fRbar, sim);
+    if(check_fr_wrong > FR_WRONG)
+    {
+      //TODO REMOVE after debugging
+      cout << parallel.rank() << " check_fr_wrong = FR_WRONG in relaxation_u" << endl;
+      //END REMOVE
+      return FR_WRONG_RETURN;
+    }
 
     error = compute_error(u_temp, diff_u, deltaR, rhs, coeff1, Rbar, fbar, fRbar, sim, numpts3d);
 
-    // If error is increasing instead of decreasing
-    if(error > 1.1 * initial_error)
-    {
-      // TODO: Check this trimming thing
-      error_increased++;
-      copy_field(u, u_temp);
-      trim_field(u_temp);
-      u_temp.updateHalo();
-      build_diff_u(u_temp, diff_u, dx, fRbar);
-
-      if(convert_u_to_deltaR(eightpiG_deltaT, deltaR, u_temp, Rbar, fRbar, sim) > FR_WRONG) return FR_WRONG_RETURN;
-
-      error = compute_error(u_temp, diff_u, deltaR, rhs, coeff1, Rbar, fbar, fRbar, sim, numpts3d);
-    }
-    else
-    {
-      initial_error = error;
-      copy_field(u_temp, u);
-    }
-
-    if(error < sim.relaxation_error / numpts3d || i > sim.multigrid_pre_smoothing) break;
+    // if(error < sim.relaxation_error / numpts3d || i > sim.multigrid_pre_smoothing) break;
+    // TODO: Check if this condition is ok
+    if(i > sim.multigrid_pre_smoothing) break;
 
     else if(error_increased > 100)
     {
@@ -498,13 +538,15 @@ double multigrid_u(
   const metadata & sim
 )
 {
-  int i;
+  int i,
+      max_level = sim.multigrid_n_grids-1;
   long numpts3d[sim.multigrid_n_grids];
   double dx[sim.multigrid_n_grids],
          coeff1 = a*a/3.,
          initial_error = 0.,
          error = 0.,
-         trunc_error = 0.;
+         trunc_error = 0.,
+         check_fr_wrong;
   numpts3d[0] = (long) sim.numpts * sim.numpts * sim.numpts;
   dx[0] = DX;
   for(i=1; i<sim.multigrid_n_grids; i++)
@@ -514,35 +556,41 @@ double multigrid_u(
   }
 
   // Build eightpiG_deltaT on each level (it will not change)
-  restrict_to_level(eightpiG_deltaT, engine, sim.multigrid_n_grids-1);
+  restrict_to_level(eightpiG_deltaT, engine, max_level);
   copy_field(eightpiG_deltaT[0], rhs[0], coeff1);
   // Compute initial error
   // TODO: remove after debugging
   initial_error = compute_error(u[0], diff_u[0], deltaR[0], rhs[0], engine, coeff1, Rbar, fbar, fRbar, sim, 0, numpts3d[0]);
 
-  COUT << " z = " << 1./a - 1. << ", initial error = " << initial_error << endl << endl;
-  // check_field(eightpiG_deltaT[0], "eightpiG_deltaT[0]", numpts3d[0]);
-  // check_field(deltaR[0], "deltaR[0]", numpts3d[0]);
-  // check_field(u[0], "u[0]", numpts3d[0]);
-  // check_field(diff_u[0], "diff_u[0]", numpts3d[0]);
-  // check_field(rhs[0], "rhs[0]", numpts3d[0]);
+  COUT << " z = " << 1./a - 1. << endl;
 
-  trunc_error = gamma_cycle(u, diff_u, deltaR, eightpiG_deltaT, rhs, temp, trunc, engine, a, dx, numpts3d, Rbar, fbar, fRbar, sim, 0) / 3.;
+  trunc_error = gamma_cycle(u, diff_u, deltaR, eightpiG_deltaT, rhs, temp, trunc, engine, a, dx, numpts3d, Rbar, fbar, fRbar, sim, 0);
 
-  if(trunc_error > FR_WRONG) return FR_WRONG_RETURN;
-
+  if(trunc_error > FR_WRONG)
+  {
+    //TODO REMOVE after debugging
+    cout << parallel.rank() << " trunc_error = FR_WRONG in multigrid_u" << endl;
+    //END REMOVE
+    return FR_WRONG_RETURN;
+  }
   u[0].updateHalo();
   build_diff_u(u[0], diff_u[0], dx[0], fRbar);
 
-  if(convert_u_to_deltaR(eightpiG_deltaT[0], deltaR[0], u[0], Rbar, fRbar, sim) > FR_WRONG) return FR_WRONG_RETURN;
+  check_fr_wrong = convert_u_to_deltaR(eightpiG_deltaT[0], deltaR[0], u[0], Rbar, fRbar, sim);
+  if(check_fr_wrong > FR_WRONG)
+  {
+    //TODO REMOVE after debugging
+    cout << parallel.rank() << " check_fr_wrong = FR_WRONG in multigrid_u" << endl;
+    //END REMOVE
+    return FR_WRONG_RETURN;
+  }
 
-  copy_field(eightpiG_deltaT[0], rhs[0], coeff1);
-  //
   error = compute_error(u[0], diff_u[0], deltaR[0], rhs[0], engine, coeff1, Rbar, fbar, fRbar, sim, 0, numpts3d[0]);
-  COUT << "            error = " << error << endl
-       << "(1/3)*trunc_error = " << trunc_error << endl;
 
-  return error / trunc_error;
+  COUT << " (1/3) * trunc_error = " << trunc_error / 3. << endl;
+  COUT << "               error = " << error << endl;
+
+  return 3. * error / trunc_error;
 }
 
 
@@ -574,6 +622,7 @@ double multigrid_FMG(
   long numpts3d[sim.multigrid_n_grids];
   double dx[sim.multigrid_n_grids],
          error,
+         check_fr_wrong,
          coeff1 = a*a/3.;
 
   numpts3d[0] = (long) (sim.numpts * sim.numpts * sim.numpts);
@@ -607,7 +656,14 @@ double multigrid_FMG(
     u[max_level].updateHalo();
     build_diff_u(u[max_level], diff_u[max_level], dx[max_level], fRbar);
 
-    if(convert_u_to_deltaR(eightpiG_deltaT[max_level], deltaR[max_level], u[max_level], Rbar, fRbar, sim) > FR_WRONG) return FR_WRONG_RETURN;
+    check_fr_wrong = convert_u_to_deltaR(eightpiG_deltaT[max_level], deltaR[max_level], u[max_level], Rbar, fRbar, sim);
+    if(check_fr_wrong > FR_WRONG)
+    {
+      //TODO REMOVE after debugging
+      cout << parallel.rank() << " check_fr_wrong = FR_WRONG in multigrid_FMG" << endl;
+      //END REMOVE
+      return FR_WRONG_RETURN;
+    }
 
     while(true)
     {
@@ -620,7 +676,14 @@ double multigrid_FMG(
         update_u(u[max_level], diff_u[max_level], deltaR[max_level], rhs[max_level], dx[max_level], coeff1, Rbar, fbar, fRbar, sim);
       }
 
-      if(convert_u_to_deltaR(eightpiG_deltaT[max_level], deltaR[max_level], u[max_level], Rbar, fRbar, sim) > FR_WRONG) return FR_WRONG_RETURN;
+      check_fr_wrong = convert_u_to_deltaR(eightpiG_deltaT[max_level], deltaR[max_level], u[max_level], Rbar, fRbar, sim);
+      if(check_fr_wrong > FR_WRONG)
+      {
+        //TODO REMOVE after debugging
+        cout << parallel.rank() << " check_fr_wrong = FR_WRONG in multigrid_FMG" << endl;
+        //END REMOVE
+        return FR_WRONG_RETURN;
+      }
 
       error = compute_error(u[max_level], diff_u[max_level], deltaR[max_level], rhs[max_level], engine, coeff1, Rbar, fbar, fRbar, sim, max_level, numpts3d[max_level]);
 
@@ -640,8 +703,14 @@ double multigrid_FMG(
 
     for(j=0; j<sim.multigrid_n_cycles; j++)
     {
-      if(gamma_cycle(u, diff_u, deltaR, eightpiG_deltaT, rhs, temp, trunc, engine, a, dx, numpts3d, Rbar, fbar, fRbar, sim, i) > FR_WRONG)
-       return FR_WRONG_RETURN;
+      check_fr_wrong = gamma_cycle(u, diff_u, deltaR, eightpiG_deltaT, rhs, temp, trunc, engine, a, dx, numpts3d, Rbar, fbar, fRbar, sim, i);
+      if(check_fr_wrong > FR_WRONG)
+      {
+        //TODO REMOVE after debugging
+        cout << parallel.rank() << " check_fr_wrong = FR_WRONG in multigrid_FMG" << endl;
+        //END REMOVE
+        return FR_WRONG_RETURN;
+      }
       if(sim.multigrid_check_shape && i && j == sim.multigrid_n_cycles-1)
       {
         for(int k=0; k<i; k++)
@@ -660,8 +729,14 @@ double multigrid_FMG(
 
   u[0].updateHalo();
   build_diff_u(u[0], diff_u[0], dx[0], fRbar);
-
-  if(convert_u_to_deltaR(eightpiG_deltaT[0], deltaR[0], u[0], Rbar, fRbar, sim) > FR_WRONG) return FR_WRONG_RETURN;
+  check_fr_wrong = convert_u_to_deltaR(eightpiG_deltaT[0], deltaR[0], u[0], Rbar, fRbar, sim);
+  if(check_fr_wrong > FR_WRONG)
+  {
+    //TODO REMOVE after debugging
+    cout << parallel.rank() << " check_fr_wrong = FR_WRONG in multigrid_FMG" << endl;
+    //END REMOVE
+    return FR_WRONG_RETURN;
+  }
 
   copy_field(eightpiG_deltaT[0], rhs[0], coeff1);
   error = compute_error(u[0], diff_u[0], deltaR[0], rhs[0], engine, coeff1, Rbar, fbar, fRbar, sim, 0, numpts3d[0]);
@@ -696,8 +771,9 @@ double gamma_cycle(
 {
   double coeff1 = a*a/3.,
          error = 0.,
-         trunc_error = 0.;
-  int max_level = sim.multigrid_n_grids-1;
+         trunc_error = 0.,
+         check_fr_wrong;
+  int max_level = sim.multigrid_n_grids-1, count = 0;
 
   if(engine.isPartLayer(level))
   {
@@ -706,7 +782,8 @@ double gamma_cycle(
 
     // TODO remove after debug
     error = compute_error(u[level], diff_u[level], deltaR[level], rhs[level], engine, coeff1, Rbar, fbar, fRbar, sim, level, numpts3d[level]);
-    COUT << level << "    Before pre-smoothing -- Error = " << error << endl;
+    // for(int jj=0; jj<level; jj++) COUT << "     ";
+    // COUT << " Level " << level << ",  in. error = " << error << endl;
     // End remove
 
     for(int j=0; j<sim.multigrid_pre_smoothing; j++)
@@ -719,20 +796,24 @@ double gamma_cycle(
       {
         update_u(u[level], diff_u[level], deltaR[level], rhs[level], dx[level], coeff1, Rbar, fbar, fRbar, sim);
       }
-
-      if(convert_u_to_deltaR(eightpiG_deltaT[level], deltaR[level], u[level], Rbar, fRbar, sim) > FR_WRONG) return FR_WRONG_RETURN;
+      check_fr_wrong = convert_u_to_deltaR(eightpiG_deltaT[level], deltaR[level], u[level], Rbar, fRbar, sim);
+      if(check_fr_wrong > FR_WRONG)
+      {
+        //TODO REMOVE after debugging
+        cout << parallel.rank() << " check_fr_wrong = FR_WRONG in gamma_cycle" << endl;
+        //END REMOVE
+        return FR_WRONG_RETURN;
+      }
     }
 
     build_residual_u(u[level], diff_u[level], deltaR[level], rhs[level], temp[level], engine, coeff1, Rbar, fbar, fRbar, sim, level);
 
     // TODO remove after debug
     error = compute_error(u[level], diff_u[level], deltaR[level], rhs[level], engine, coeff1, Rbar, fbar, fRbar, sim, level, numpts3d[level]);
-    COUT << level << "     After pre-smoothing -- Error = " << error << endl;
+    // COUT << level << "     After pre-smoothing -- Error = " << error << endl;
     // End remove
-
   }
 
-  // Restrict from level to level+1
   if(sim.multigrid_check_shape)
   {
     for(int k=0; k<level; k++) COUT << "  ";
@@ -741,7 +822,7 @@ double gamma_cycle(
     COUT << " \\" << endl;
   }
 
-  // Restrict u or delta R
+  // Restrict from level to level+1
   if(sim.restrict_mode == RESTRICT_U) engine.restrict(u, level);
   else engine.restrict(deltaR, level);
 
@@ -750,18 +831,20 @@ double gamma_cycle(
 
   if(engine.isPartLayer(level+1))
   {
-    if(sim.restrict_mode == RESTRICT_U)
+    if(sim.restrict_mode == RESTRICT_U) check_fr_wrong = convert_u_to_deltaR(eightpiG_deltaT[level+1], deltaR[level+1], u[level+1], Rbar, fRbar, sim);
+    else check_fr_wrong = convert_deltaR_to_u(deltaR[level+1], u[level+1], Rbar, fRbar, sim);
+
+    if(check_fr_wrong > FR_WRONG)
     {
-      if(convert_u_to_deltaR(eightpiG_deltaT[level+1], deltaR[level+1], u[level+1], Rbar, fRbar, sim) > FR_WRONG) return FR_WRONG_RETURN;
-    }
-    else
-    {
-      if(convert_deltaR_to_u(deltaR[level+1], u[level+1], Rbar, fRbar, sim) > FR_WRONG) return FR_WRONG_RETURN;
+      //TODO REMOVE after debugging
+      //END REMOVE
+      cout << parallel.rank() << " check_fr_wrong = FR_WRONG in gamma_cycle 2" << endl;
+      return FR_WRONG_RETURN;
     }
 
     u[level+1].updateHalo();
     build_diff_u(u[level+1], diff_u[level+1], dx[level+1], fRbar);
-    build_residual_u(u[level+1], diff_u[level+1], deltaR[level+1], rhs[level+1], trunc[level+1], engine, coeff1, Rbar, fbar, fRbar, sim, level);
+    build_residual_u(u[level+1], diff_u[level+1], deltaR[level+1], rhs[level+1], trunc[level+1], engine, coeff1, Rbar, fbar, fRbar, sim, level+1);
     subtract_fields(trunc[level+1], temp[level+1], trunc[level+1]);
     add_fields(rhs[level+1], trunc[level+1], rhs[level+1]);
   }
@@ -770,9 +853,10 @@ double gamma_cycle(
   {
     if(engine.isPartLayer(max_level))
     {
+      error = compute_error(u[max_level], diff_u[max_level], deltaR[max_level], rhs[max_level], engine, coeff1, Rbar, fbar, fRbar, sim, max_level, numpts3d[max_level]);
       while(true)
       {
-        trunc_error = error;
+        trunc_error = error; // Saving the original error
         if(sim.multigrid_red_black)
         {
           update_u_red_black(u[max_level], diff_u[max_level], deltaR[max_level], rhs[max_level], dx[max_level], coeff1, Rbar, fbar, fRbar, sim);
@@ -782,13 +866,22 @@ double gamma_cycle(
           update_u(u[max_level], diff_u[max_level], deltaR[max_level], rhs[max_level], dx[max_level], coeff1, Rbar, fbar, fRbar, sim);
         }
 
-        if(convert_u_to_deltaR(eightpiG_deltaT[max_level], deltaR[max_level], u[max_level], Rbar, fRbar, sim) > FR_WRONG) return FR_WRONG_RETURN;
+        check_fr_wrong = convert_u_to_deltaR(eightpiG_deltaT[max_level], deltaR[max_level], u[max_level], Rbar, fRbar, sim);
+        if(check_fr_wrong > FR_WRONG)
+        {
+          //TODO REMOVE after debugging
+          cout << parallel.rank() << " check_fr_wrong = FR_WRONG in gamma_cycle 3" << endl;
+          //END REMOVE
+          return FR_WRONG_RETURN;
+        }
 
         error = compute_error(u[max_level], diff_u[max_level], deltaR[max_level], rhs[max_level], engine, coeff1, Rbar, fbar, fRbar, sim, max_level, numpts3d[max_level]);
 
         // TODO: Check if this convergence condition makes sense
-        if(error < sim.relaxation_error || fabs(trunc_error/error - 1.) < 1.E-2) break;
-
+        if(error < sim.relaxation_error/numpts3d[max_level])
+        {
+          break;
+        }
       }
     }
   }
@@ -796,11 +889,16 @@ double gamma_cycle(
   {
     for(int j=0; j<sim.multigrid_shape; j++)
     {
-      if(gamma_cycle(u, diff_u, deltaR, eightpiG_deltaT, rhs, temp, trunc, engine, a, dx, numpts3d, Rbar, fbar, fRbar, sim, level+1) > FR_WRONG)
+      check_fr_wrong = gamma_cycle(u, diff_u, deltaR, eightpiG_deltaT, rhs, temp, trunc, engine, a, dx, numpts3d, Rbar, fbar, fRbar, sim, level+1);
+      if(check_fr_wrong > FR_WRONG)
+      {
+        //TODO REMOVE after debugging
+        cout << parallel.rank() << " check_fr_wrong = FR_WRONG in gamma_cycle 4" << endl;
+        //END REMOVE
         return FR_WRONG_RETURN;
+      }
     }
   }
-
 
   if(sim.restrict_mode == RESTRICT_U)
   {
@@ -834,21 +932,30 @@ double gamma_cycle(
     if(sim.restrict_mode == RESTRICT_U)
     {
       add_fields(u[level], trunc[level], u[level]);
-      if(convert_u_to_deltaR(eightpiG_deltaT[level], deltaR[level], u[level], Rbar, fRbar, sim) > FR_WRONG) return FR_WRONG_RETURN;
+      check_fr_wrong = convert_u_to_deltaR(eightpiG_deltaT[level], deltaR[level], u[level], Rbar, fRbar, sim);
+      if(check_fr_wrong > FR_WRONG)
+      {
+        //TODO REMOVE after debugging
+        cout << parallel.rank() << " check_fr_wrong = FR_WRONG in gamma_cycle 5" << endl;
+        //END REMOVE
+        return FR_WRONG_RETURN;
+      }
     }
     else
     {
       add_fields(deltaR[level], trunc[level], deltaR[level]);
-      if(convert_deltaR_to_u(deltaR[level], u[level], Rbar, fRbar, sim) > FR_WRONG) return FR_WRONG_RETURN;
+      check_fr_wrong = convert_deltaR_to_u(deltaR[level], u[level], Rbar, fRbar, sim);
+      if(check_fr_wrong > FR_WRONG)
+      {
+        //TODO REMOVE after debugging
+        cout << parallel.rank() << " check_fr_wrong = FR_WRONG in gamma_cycle 6" << endl;
+        //END REMOVE
+        return FR_WRONG_RETURN;
+      }
     }
 
     u[level].updateHalo();
     build_diff_u(u[level], diff_u[level], dx[level], fRbar);
-
-    // TODO remove after debug
-    error = compute_error(u[level], diff_u[level], deltaR[level], rhs[level], engine, coeff1, Rbar, fbar, fRbar, sim, level, numpts3d[level]);
-    COUT << level << "   Before post-smoothing -- Error = " << error << endl;
-    // End remove
 
     for(int j=0; j<sim.multigrid_post_smoothing; j++)
     {
@@ -861,23 +968,26 @@ double gamma_cycle(
         update_u(u[level], diff_u[level], deltaR[level], rhs[level], dx[level], coeff1, Rbar, fbar, fRbar, sim);
       }
 
-      if(convert_u_to_deltaR(eightpiG_deltaT[level], deltaR[level], u[level], Rbar, fRbar, sim) > FR_WRONG) return FR_WRONG_RETURN;
+      check_fr_wrong = convert_u_to_deltaR(eightpiG_deltaT[level], deltaR[level], u[level], Rbar, fRbar, sim);
+      if(check_fr_wrong > FR_WRONG)
+      {
+        //TODO REMOVE after debugging
+        cout << parallel.rank() << " check_fr_wrong = FR_WRONG in gamma_cycle 7" << endl;
+        //END REMOVE
+        return FR_WRONG_RETURN;
+      }
     }
 
     // TODO remove after debug
-    error = compute_error(u[level], diff_u[level], deltaR[level], rhs[level], engine, coeff1, Rbar, fbar, fRbar, sim, level, numpts3d[level]);
-    COUT << level << "    After post-smoothing -- Error = " << error << endl;
+    // error = compute_error(u[level], diff_u[level], deltaR[level], rhs[level], engine, coeff1, Rbar, fbar, fRbar, sim, level, numpts3d[level]);
+    // for(int jj=0; jj<level; jj++) COUT << "     ";
+    // COUT << " Level " << level << ", fin. error = " << error << endl;
     // End remove
   }
 
-  if(!level)
-  {
-    // Compute truncation error
-    trunc_error = Euclidean_norm(trunc[level+1], engine, level+1, numpts3d[level+1]);
-  }
+  trunc_error = euclidean_norm(trunc[1], engine, 1, numpts3d[1]);
 
   return trunc_error;
-
 }
 
 

@@ -320,7 +320,7 @@ void writeRestartSettings_fR(metadata & sim,
 		fprintf(outfile, "multigrid n-grids          = %d\n", sim.multigrid_n_grids);
 		fprintf(outfile, "multigrid n-cycles         = %d\n", sim.multigrid_n_cycles);
 		fprintf(outfile, "relaxation error           = %e\n", sim.relaxation_error);
-		fprintf(outfile, "overrelaxation coefficient = %e\n", sim.overrelaxation_coeff);
+		fprintf(outfile, "overrelaxation coefficient = %e\n", sim.relaxation_overrel_coeff);
 		fprintf(outfile, "red black                  = %d\n", sim.multigrid_red_black);
 		fprintf(outfile, "check shape                = %d\n", sim.multigrid_check_shape);
 		if(sim.multigrid_shape == MG_SHAPE_V)
@@ -331,7 +331,7 @@ void writeRestartSettings_fR(metadata & sim,
 		{
 			fprintf(outfile, "multigrid shape            = W\n");
 		}
-		if(sim.restrict_mode == RESTRICT_U) fprintf(outfile, "restrict mode              = u");
+		if(sim.multigrid_restrict_mode == RESTRICT_U) fprintf(outfile, "restrict mode              = u");
 		else fprintf(outfile, "restrict mode              = deltaR");
 
 		if(sim.relaxation_error_method == RELAXATION_ERROR_METHOD_SUM) fprintf(outfile, "relaxation error method    = SUM\n");

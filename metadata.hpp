@@ -197,7 +197,7 @@ struct gadget2_header
 
 struct metadata
 {
-	int CYCLE_INFO_INTERVAL; // Previously fixed. #define CYCLE_INFO_INTERVAL = 10
+	int CYCLE_INFO_INTERVAL; // Previously fixed: #define CYCLE_INFO_INTERVAL = 10
 	int BACKGROUND_NUMPTS;
 	int numpts;
 	int downgrade_factor;
@@ -232,11 +232,11 @@ struct metadata
 	double fR_target_precision;
 	double fR_count_max;
 	double relaxation_error;
-	double overrelaxation_coeff;
+	double relaxation_overrel_coeff;
 	int relaxation_method;
 	int relaxation_error_method;
+	int multigrid_restrict_mode;
 	int multigrid_shape;
-	int restrict_mode;
 	int multigrid_n_grids;
 	int multigrid_n_cycles;
 	int multigrid_pre_smoothing;
@@ -320,7 +320,7 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "multigrid_pre_smoothing: " << sim.multigrid_pre_smoothing << "\n";
 	os << "multigrid_post_smoothing: " << sim.multigrid_post_smoothing << "\n";
 	os << "relaxation_error: " << sim.relaxation_error << "\n";
-	os << "overrelaxation coefficient: " << sim.overrelaxation_coeff << "\n";
+	os << "overrelaxation coefficient: " << sim.relaxation_overrel_coeff << "\n";
 	os << "relaxation_error_method: " << sim.relaxation_error_method << "\n";
 	os << "movelimit: " << sim.movelimit << "\n";
 	os << "steplimit: " << sim.steplimit << "\n";

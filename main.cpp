@@ -138,9 +138,6 @@ int main(int argc, char **argv)
 	double coeffm2;
 
 	bool do_I_check;
-	// TODO: REMOVE AFTER DEBUGGING
-	int co1 = 0, co2 = 0;
-	// END REMOVE
 
 	#ifndef H5_DEBUG
 		H5Eset_auto2 (H5E_DEFAULT, NULL, NULL);
@@ -350,12 +347,9 @@ int main(int argc, char **argv)
 					<< endl;
 
 					if(print_background(cycle, bgoutfile, bgfilename, tau, a, Hubble, Rbar)) return -1;
-
-					co1++;
 				}
 
 				tau_print += dtau_print;
-				COUT << tau_print << ", " << dtau_print << ", " << tau << ", " << dtau;
 			}
 
 			cycle++;
@@ -393,8 +387,6 @@ int main(int argc, char **argv)
 			bgoutfile.close();
 			cout << "\n Background evolution complete.\n";
 		}
-
-		COUT << co1 << endl;
 
 		return 0;
 	}
@@ -747,10 +739,12 @@ int main(int argc, char **argv)
 		}
 
 		// For when the full background evolution only starts at sim.z_switch_fR_background
-		// TODO: Remove this, most likely
+		// TODO: Remove this?
 		if(1./a - 1. < sim.z_switch_fR_background && sim.mg_flag == FLAG_FR && sim.lcdm_background)
 		{
-			COUT << "\n                              ----- Beginning full f(R) background evolution at z = " << 1./a - 1. << " -----\n";
+			COUT
+			<< "\n =================================== Beginning full f(R) background evolution at z = "
+			<< 1./a - 1. << " ===================================\n\n";
 
 			if(sim.fR_type == FR_TYPE_HU_SAWICKI)
 			{
@@ -1004,9 +998,6 @@ int main(int argc, char **argv)
 						}
 						else if(sim.relaxation_method == METHOD_MULTIGRID_U)
 						{
-							do
-							{
-								// TODO: Should we reset mg_err to zero?
 								temp1 = multigrid_u(mg_u, mg_diff_u, mg_deltaR, mg_eightpiG_deltaT, mg_rhs, mg_residual, mg_err, mg_engine, a, dx, Rbar, fbar, fRbar, sim);
 
 								if(temp1 > FR_WRONG)
@@ -1014,11 +1005,8 @@ int main(int argc, char **argv)
 									COUT << " multigrid_u returned FR_WRONG_RETURN. Check what's going on..." << endl;
 									cin.get();
 								}
-								else if(temp1 >= 1.)
-								{
-									COUT << " error/trunc_error = " << temp1 << endl;
-								}
-							} while(temp1 >= 1.);
+								
+								COUT << " error/trunc_error = " << temp1 << endl;
 						}
 						else if(sim.relaxation_method == METHOD_FMG)
 						{
@@ -1186,7 +1174,6 @@ int main(int argc, char **argv)
 		{
 			if(sim.mg_flag != FLAG_FR || sim.lcdm_background || numsteps_bg == 1)
 			{
-				co1++;
 				if(print_background(cycle, bgoutfile, bgfilename, tau, a, Hubble, Rbar, phi_hom, -T00_hom_rescaled_a3)) return -1;
 			}
 		}
@@ -1490,7 +1477,6 @@ int main(int argc, char **argv)
 							rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, dtau_bg, sim);
 							if(tau + (g + 1) * dtau_bg > tau_print)
 							{
-								co2++;
 								tau_print += dtau_print;
 								if(print_background(cycle, bgoutfile, bgfilename, tau, a, Hubble, Rbar, phi_hom, -T00_hom_rescaled_a3)) return -1;
 							}
@@ -1550,7 +1536,6 @@ int main(int argc, char **argv)
 							rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, dtau_bg, sim);
 							if(tau + (g + 1) * dtau_bg > tau_print)
 							{
-								co2++;
 								tau_print += dtau_print;
 								if(print_background(cycle, bgoutfile, bgfilename, tau, a, Hubble, Rbar, phi_hom, -T00_hom_rescaled_a3)) return -1;
 							}
@@ -1602,7 +1587,6 @@ int main(int argc, char **argv)
 						rungekutta_fR_trace(a, Hubble, Rbar, dot_Rbar, fourpiG, cosmo, dtau_bg, sim);
 						if(tau + (numsteps_bg/2 + g + 1) * dtau_bg > tau_print)
 						{
-							co2++;
 							tau_print += dtau_print;
 							if(print_background(cycle, bgoutfile, bgfilename, tau, a, Hubble, Rbar, phi_hom, -T00_hom_rescaled_a3)) return -1;
 						}
@@ -1816,7 +1800,6 @@ int main(int argc, char **argv)
 		parallel.sum(moveParts_time);
 
 		COUT
-		<< co1 << ", " << co2 << endl
 		<< endl << "BENCHMARK" << endl
 		<< "total execution time  : "<< hourMinSec(run_time) << endl
 		<< "total number of cycles: "<< cycle << endl

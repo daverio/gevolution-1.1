@@ -11,14 +11,16 @@
 //
 //////////////////////////
 
+using namespace std;
+
 #ifndef FR_TOOLS_HEADER
 #define FR_TOOLS_HEADER
 
 void hold(int n = 1)
 {
-	COUT << n << " - Press ENTER to continue..." << std::flush;
+	COUT << n << " - Press ENTER to continue..." << flush;
 	MPI_Barrier(MPI_COMM_WORLD);
-	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+	cin.ignore(numeric_limits<streamsize>::max(), '\n');
 }
 
 
@@ -69,7 +71,7 @@ Real f(const double R, const metadata & sim, int code)
 	if(sim.fR_type == FR_TYPE_R2)
 	{
 		output = sim.fR_params[0] * R * R;
-		if(!std::isnan(output))
+		if(!isnan(output))
 		{
 			return output;
 		}
@@ -83,9 +85,16 @@ Real f(const double R, const metadata & sim, int code)
 	}
 	else if(sim.fR_type == FR_TYPE_RN)
 	{
-		Rpow = pow(R, sim.fR_params[1]);
-		output = sim.fR_params[0] * Rpow;
-		if(!std::isnan(output))
+		double a = sim.fR_params[0], n = sim.fR_params[1];
+		if(R > 0.) Rpow = pow(R, n);
+		else
+		{
+			cout << " /!\\ Warning 3! Rpow is negative in f [FR_TYPE_RN]. R = " << R  << endl;
+			return FR_WRONG_RETURN;
+		}
+
+		output = a * Rpow;
+		if(!isnan(output))
 		{
 			return output;
 		}
@@ -99,14 +108,21 @@ Real f(const double R, const metadata & sim, int code)
 	}
 	else if(sim.fR_type == FR_TYPE_HU_SAWICKI)
 	{
-		double m2, c1, c2, n;
-		m2 = sim.fR_params[0];
-		c2 = sim.fR_params[1];
-		n  = sim.fR_params[2];
+		double
+		m2 = sim.fR_params[0],
+		c2 = sim.fR_params[1],
+		n  = sim.fR_params[2],
 		c1 = sim.fR_params[3];
-		Rpow = pow(R/m2, n);
+
+		if(R > 0.) Rpow = pow(R/m2, n);
+		else
+		{
+			cout << " /!\\ Warning 4! Rpow is negative in f [FR_TYPE_HU_SAWICKI]. R = " << R  << endl;
+			return FR_WRONG_RETURN;
+		}
+
 		output = - m2 * c1 * Rpow / (1. + c2 * Rpow);
-		if(!std::isnan(output))
+		if(!isnan(output))
 		{
 			return output;
 		}
@@ -120,18 +136,25 @@ Real f(const double R, const metadata & sim, int code)
 	}
 	else if(sim.fR_type == FR_TYPE_DELTA)
 	{
-		double b = sim.fR_params[0],
-					 delta = sim.fR_params[1];
-		Rpow = pow(R, delta);
+		double b = sim.fR_params[0], delta = sim.fR_params[1];
+
+		if(R > 0.) Rpow = delta > 0. ? pow(R, delta) : 1. / pow(R, -delta);
+		else
+		{
+			cout << " /!\\ Warning 5! R is negative in f [FR_TYPE_DELTA]. R = " << R  << endl;
+			return FR_WRONG_RETURN;
+		}
+
 		output = R * (b * Rpow - 1.);
-		if(!std::isnan(output))
+		if(!isnan(output))
 		{
 			return output;
 		}
 		else
 		{
-			cout << " f(R) Evaluated to NaN (code " << code << ").\n"
-			     << " R = " << R << ", R^delta = " << Rpow << ", f(R) = " << output << endl;
+			cout
+			<< " f(R) Evaluated to NaN (code " << code << ").\n"
+			<< " R = " << R << ", R^delta = " << Rpow << ", f(R) = " << output << endl;
 			cin.get();
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
@@ -153,77 +176,105 @@ Real fR(const double R, const metadata & sim, int code)
 
 	if(sim.fR_type == FR_TYPE_R2)
 	{
-		output = 2. * sim.fR_params[0] * R;
-		if(!std::isnan(output))
+		if(R > 0.) output = 2. * sim.fR_params[0] * R;
+		else
+		{
+			cout << " /!\\ Warning 6! R is negative in fR [FR_TYPE_R2]. R = " << R  << endl;
+			return FR_WRONG_RETURN;
+		}
+		if(!isnan(output))
 		{
 			return output;
 		}
 		else
 		{
-			cout << " f(R) Evaluated to NaN (code " << code << ").\n"
-			<< " R = " << R << ", f(R) = " << output << endl;
+			cout << " fR Evaluated to NaN (code " << code << ").\n"
+			<< " R = " << R << ", fR = " << output << endl;
 			cin.get();
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
 	}
 	else if(sim.fR_type == FR_TYPE_RN)
 	{
-		Rpow = pow(R, sim.fR_params[1] - 1.);
-		output = sim.fR_params[0] * sim.fR_params[1] * Rpow;
-		if(!std::isnan(output))
+		double a = sim.fR_params[0], n = sim.fR_params[1];
+		if(R > 0.) Rpow = n > 1. ? pow(R, n - 1.) : pow(R, 1. - n);
+		else
+		{
+			cout << " /!\\ Warning 7! R is negative in fR [FR_TYPE_RN]. R = " << R  << endl;
+			return FR_WRONG_RETURN;
+		}
+
+		output = a * n * Rpow;
+		if(!isnan(output))
 		{
 			return output;
 		}
 		else
 		{
-			cout << " f(R) Evaluated to NaN (code " << code << ").\n"
-			     << " R = " << R << ", R^(n-1) = " << Rpow << ", f(R) = " << output << endl;
+			cout << " fR Evaluated to NaN (code " << code << ").\n"
+			     << " R = " << R << ", R^(n-1) = " << Rpow << ", fR = " << output << endl;
 			cin.get();
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
 	}
 	else if(sim.fR_type == FR_TYPE_HU_SAWICKI)
 	{
-		double m2, c1, c2, n;
-		m2 = sim.fR_params[0];
-		c2 = sim.fR_params[1];
-		n  = sim.fR_params[2];
+		double
+		m2 = sim.fR_params[0],
+		c2 = sim.fR_params[1],
+		n  = sim.fR_params[2],
 		c1 = sim.fR_params[3];
+
 		if(n == 1)
 		{
-			output = -c1 / (1. + c2 * R / m2) / (1. + c2 * R / m2);
+			output = (1. + c2 * R / m2);
+			output = -c1 / output / output;
 		}
 		else
 		{
-			Rpow = pow(R/m2, n);
-			output = - c1 * n * pow(R/m2, n-1) / (1. + c2*Rpow) / (1. + c2*Rpow);
+			if(R > 0.) Rpow = pow(R/m2, n);
+			else
+			{
+				cout << " /!\\ Warning 8! R is negative in fR [FR_TYPE_HU_SAWICKI]. R = " << R  << endl;
+				return FR_WRONG_RETURN;
+			}
+			output = (1. + c2*Rpow);
+			output = (n >= 1.) ? - c1 * n * pow(R/m2, n-1.) / output / output
+												 : - c1 * n / pow(R/m2, 1.-n) / output / output;
 		}
-		if(!std::isnan(output))
+
+		if(!isnan(output))
 		{
 			return output;
 		}
 		else
 		{
-			cout << " f(R) Evaluated to NaN (code " << code << ").\n"
-			     << " R = " << R << ", (R/m2)^n = " << Rpow << ", f(R) = " << output << endl;
+			cout << " fR Evaluated to NaN (code " << code << ").\n"
+			     << " R = " << R << ", (R/m2)^n = " << Rpow << ", fR = " << output << endl;
 			cin.get();
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
 	}
 	else if(sim.fR_type == FR_TYPE_DELTA)
 	{
-		double b = sim.fR_params[0],
-		       delta = sim.fR_params[1];
-		Rpow = pow(R, delta);
+		double b = sim.fR_params[0], delta = sim.fR_params[1];
+
+		if(R > 0.) Rpow = delta > 0. ? pow(R, delta) : 1. / pow(R, -delta);
+		else
+		{
+			cout << " /!\\ Warning 9! R is negative in fR [FR_TYPE_DELTA]. R = " << R  << endl;
+			return FR_WRONG_RETURN;
+		}
+
 		output = b * (1. + delta) * Rpow - 1.;
-		if(!std::isnan(output))
+		if(!isnan(output))
 		{
 			return output;
 		}
 		else
 		{
-			cout << " f(R) Evaluated to NaN (code " << code << ").\n"
-			     << " R = " << R << ", R^delta = " << Rpow << ", f(R) = " << output << endl;
+			cout << " fR Evaluated to NaN (code " << code << ").\n"
+			     << " R = " << R << ", R^delta = " << Rpow << ", fR = " << output << endl;
 			cin.get();
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
@@ -240,50 +291,66 @@ Real fR(const double R, const metadata & sim, int code)
 /////////////////////////////////////////////
 Real fRR(const double R, const metadata & sim, int code)
 {
-	double output,
-				 Roverm2,
-				 Rpow;
+	double
+	output,
+	Roverm2,
+	Rpow;
 
 	if(sim.fR_type == FR_TYPE_R2)
 	{
 		output = 2. * sim.fR_params[0];
-		if(!std::isnan(output))
+		if(!isnan(output))
 		{
 			return output;
 		}
 		else
 		{
-			cout << " f(R) Evaluated to NaN (code " << code << ").\n"
-			<< " R = " << R << ", f(R) = " << output << endl;
+			cout << " fRR Evaluated to NaN (code " << code << ").\n"
+			<< " R = " << R << ", fRR = " << output << endl;
 			cin.get();
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
 	}
 	else if(sim.fR_type == FR_TYPE_RN)
 	{
-		Rpow = pow(R, sim.fR_params[1] - 2.);
-		output = sim.fR_params[0] * sim.fR_params[1] * (sim.fR_params[1] - 1.) * Rpow;
-		if(!std::isnan(output))
+		double a = sim.fR_params[0], n = sim.fR_params[1];
+
+		if(R > 0) Rpow = pow(R, n) / R / R;
+		else
+		{
+			cout << " /!\\ Warning 10! R is negative in fRR [FR_TYPE_RN]. R = " << R << endl;
+			return FR_WRONG_RETURN;
+		}
+
+		output = a * n * (n - 1.) * Rpow;
+		if(!isnan(output))
 		{
 			return output;
 		}
 		else
 		{
-			cout << " f(R) Evaluated to NaN (code " << code << ").\n"
-					 << " R = " << R << ", R^(n-2) = " << Rpow << ", f(R) = " << output << endl;
+			cout << " fRR Evaluated to NaN (code " << code << ").\n"
+					 << " R = " << R << ", R^(n-2) = " << Rpow << ", fRR = " << output << endl;
 			cin.get();
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
 	}
 	else if(sim.fR_type == FR_TYPE_HU_SAWICKI)
 	{
-		double m2, c1, c2, n;
-		m2 = sim.fR_params[0];
-		c2 = sim.fR_params[1];
-		n  = sim.fR_params[2];
+		double
+		m2 = sim.fR_params[0],
+		c2 = sim.fR_params[1],
+		n  = sim.fR_params[2],
 		c1 = sim.fR_params[3];
+
 		Roverm2 = R/m2;
-		Rpow = pow(Roverm2, n);
+		if(R > 0.) Rpow = pow(Roverm2, n);
+		else
+		{
+			cout << " /!\\ Warning 11! R is negative in fRR [FR_TYPE_HU_SAWICKI]. R = " << R  << endl;
+			return FR_WRONG_RETURN;
+		}
+
 		if(n == 1.)
 		{
 			output = 2. * c1 * c2 / ( m2 * (1. + c2*Roverm2) * (1. + c2*Roverm2) * (1. + c2*Roverm2) );
@@ -292,32 +359,38 @@ Real fRR(const double R, const metadata & sim, int code)
 		{
 			output = c1 * n * Rpow * (1. - n + c2*(1. + n)*Rpow ) / ( Roverm2 * Roverm2 * m2 * (1. + c2*Rpow) * (1. + c2*Rpow) * (1. + c2*Rpow) );
 		}
-		if(!std::isnan(output))
+		if(!isnan(output))
 		{
 			return output;
 		}
 		else
 		{
-			cout << " f(R) Evaluated to NaN (code " << code << ").\n"
-			     << " R = " << R << ", (R/m2)^n = " << Rpow << ", f(R) = " << output << endl;
+			cout << " fRR Evaluated to NaN (code " << code << ").\n"
+			     << " R = " << R << ", (R/m2)^n = " << Rpow << ", fRR = " << output << endl;
 			cin.get();
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
 	}
 	else if(sim.fR_type == FR_TYPE_DELTA)
 	{
-		double b = sim.fR_params[0],
-		       delta = sim.fR_params[1];
-		Rpow = pow(R, delta - 1.);
+		double b = sim.fR_params[0], delta = sim.fR_params[1];
+
+		if(R > 0.) Rpow = delta > 0. ? pow(R, delta) / R : 1. / R / pow(R, -delta);
+		else
+		{
+			cout << " /!\\ Warning 12! R is negative in fRR [FR_TYPE_DELTA]. R = " << R  << endl;
+			return FR_WRONG_RETURN;
+		}
+
 		output = b * delta * (delta + 1.) * Rpow;
-		if(!std::isnan(output))
+		if(!isnan(output))
 		{
 			return output;
 		}
 		else
 		{
-			cout << " f(R) Evaluated to NaN (code " << code << ").\n"
-			     << " R = " << R << ", R^(delta-1) = " << Rpow << ", f(R) = " << output << endl;
+			cout << " fRR Evaluated to NaN (code " << code << ").\n"
+			     << " R = " << R << ", R^(delta-1) = " << Rpow << ", fRR = " << output << endl;
 			cin.get();
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
@@ -344,29 +417,44 @@ Real fRRR(const double R, const metadata & sim, int code)
 	}
 	else if(sim.fR_type == FR_TYPE_RN)
 	{
-		Rpow = pow(R, sim.fR_params[1] - 3.);
-		output = sim.fR_params[0] * sim.fR_params[1] * (sim.fR_params[1] - 1.) * (sim.fR_params[1] - 2.) * Rpow;
-		if(!std::isnan(output))
+		double a = sim.fR_params[0], n = sim.fR_params[1];
+
+		if(R > 0.) Rpow = pow(R, n) / R / R / R;
+		else
+		{
+			cout << " /!\\ Warning 13! R is negative in fRR [FR_TYPE_RN]. R = " << R  << endl;
+			return FR_WRONG_RETURN;
+		}
+
+		output = a * n * (n - 1.) * (n - 2.) * Rpow;
+		if(!isnan(output))
 		{
 			return output;
 		}
 		else
 		{
-			cout << " f(R) Evaluated to NaN (code " << code << ").\n"
-			<< " R = " << R << ", R^(n-3) = " << Rpow << ", f(R) = " << output << endl;
+			cout << " fRRR Evaluated to NaN (code " << code << ").\n"
+			<< " R = " << R << ", R^(n-3) = " << Rpow << ", fRRR = " << output << endl;
 			cin.get();
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
 	}
 	else if(sim.fR_type == FR_TYPE_HU_SAWICKI)
 	{
-		double m2, c1, c2, n;
-		m2 = sim.fR_params[0];
-		c2 = sim.fR_params[1];
-		n  = sim.fR_params[2];
+		double
+		m2 = sim.fR_params[0],
+		c2 = sim.fR_params[1],
+		n  = sim.fR_params[2],
 		c1 = sim.fR_params[3];
+
 		Roverm2 = R/m2;
-		Rpow = pow(Roverm2, n);
+		if(R > 0.) Rpow = pow(Roverm2, n);
+		else
+		{
+			cout << " /!\\ Warning 14! R is negative in fRR [FR_TYPE_HU_SAWICKI]. R = " << R  << endl;
+			return FR_WRONG_RETURN;
+		}
+
 		if(n == 1)
 		{
 			output = -6. * c1 * c2 * c2 / ( m2 * m2 * (1. + c2 * Roverm2) * (1. + c2 * Roverm2) * (1. + c2 * Roverm2) * (1. + c2 * Roverm2) );
@@ -379,32 +467,39 @@ Real fRRR(const double R, const metadata & sim, int code)
 		{
 			output = c1 * n * Rpow * ( -2. + 3. * n - n * n + 4. * c2 * (n * n - 1.) * Rpow - c2 * c2 * (1. + n) * (2. + n) * Rpow * Rpow ) / (Roverm2 * Roverm2 * Roverm2 * m2 * m2 * (1. + c2 * Rpow) * (1. + c2 * Rpow) * (1. + c2 * Rpow) * (1. + c2 * Rpow));
 		}
-		if(!std::isnan(output))
+
+		if(!isnan(output))
 		{
 			return output;
 		}
 		else
 		{
-			cout << " f(R) Evaluated to NaN (code " << code << ").\n"
-			     << " R = " << R << ", (R/m2)^n = " << Rpow << ", f(R) = " << output << endl;
+			cout << " fRRR Evaluated to NaN (code " << code << ").\n"
+			     << " R = " << R << ", (R/m2)^n = " << Rpow << ", fRRR = " << output << endl;
 			cin.get();
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
 	}
 	else if(sim.fR_type == FR_TYPE_DELTA)
 	{
-		double b = sim.fR_params[0],
-		       delta = sim.fR_params[1];
-		Rpow = pow(R, delta - 2.);
+		double b = sim.fR_params[0], delta = sim.fR_params[1];
+
+		if(R > 0.) Rpow = delta > 0. ? pow(R, delta) / R / R : 1. / R / R / pow(R, -delta);
+		else
+		{
+			cout << " /!\\ Warning 15! R is negative in fRR [FR_TYPE_DELTA]. R = " << R  << endl;
+			return FR_WRONG_RETURN;
+		}
+
 		output = b * delta * (delta * delta - 1.) * Rpow;
-		if(!std::isnan(output))
+		if(!isnan(output))
 		{
 			return output;
 		}
 		else
 		{
-			cout << " f(R) Evaluated to NaN (code " << code << ").\n"
-			<< " R = " << R << ", R(delta-2) = " << Rpow << ", f(R) = " << output << endl;
+			cout << " fRRR Evaluated to NaN (code " << code << ").\n"
+			<< " R = " << R << ", R(delta-2) = " << Rpow << ", fRRR = " << output << endl;
 			cin.get();
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
@@ -434,7 +529,7 @@ void fR_details(const cosmology cosmo, metadata * sim, const double fourpiG)
 		<< "      c1 = " << sim->fR_params[3] << endl
 		<< "      c2 = " << sim->fR_params[1] << endl
 		<< "      n  = " << sim->fR_params[2] << endl
-		<< "so |fR0| ~ -n*c1/c2^2/(12/Omega_m - 9)^(n+1) = " << sim->fR_params[2] * sim->fR_params[3] / sim->fR_params[1]/sim->fR_params[1] / pow( 12. / cosmo.Omega_m - 9., sim->fR_params[2] + 1.) << " (should be << 1)\n";
+		<< "so |fR0| ~ -n*c1/c2^2/(12/Omega_m - 9)^(n+1) = " << sim->fR_params[2] * sim->fR_params[3] / sim->fR_params[1]/sim->fR_params[1] / pow(12. / cosmo.Omega_m - 9., sim->fR_params[2] + 1.) << " (should be << 1)\n";
 	}
 	else if(sim->fR_type == FR_TYPE_RN || sim->fR_type == FR_TYPE_R2)
 	{
@@ -442,7 +537,8 @@ void fR_details(const cosmology cosmo, metadata * sim, const double fourpiG)
 		<< " f(R) model:" << endl
 		<< " f(R) = R * (R / (b*8piG*rho0))^(n-1), with b = " << sim->fR_params[0] << endl
 		<< "                                            n = " << sim->fR_params[1] << endl;
-		sim->fR_params[0] = 1. / pow(2. * fourpiG * sim->fR_params[0], sim->fR_params[1] - 1.);
+		if(sim->fR_params[1] > 1.) sim->fR_params[0] = 1. / pow(2. * fourpiG * sim->fR_params[0], sim->fR_params[1] - 1.);
+		else sim->fR_params[0] = 0.5 / pow(2. * fourpiG * sim->fR_params[0], sim->fR_params[1]) / (fourpiG * sim->fR_params[0]);
 		COUT << " rescaled as: f(R) = a * R^n, with a = " << sim->fR_params[0] << endl;
 	}
 	else if(sim->fR_type == FR_TYPE_DELTA) //  TODO: Fix for delta < 0: fRR < 0, so everything blows up!
@@ -470,36 +566,50 @@ template <class FieldType>
 double check_field(Field<FieldType> & field, string field_name, long n3, string message = "") // TODO: correct lattice size
 {
   Site x(field.lattice());
-	std::ios oldState(nullptr);
-	oldState.copyfmt(std::cout);
+	ios oldState(nullptr);
+	oldState.copyfmt(cout);
 
-	int prec = 8, can_be_negative = 0;
-	double max = 0., min = 1.E+30, hom = 0., sum = 0., temp;
+	int prec = 8;
+	double max = -1.E+30, min = 1.E+30, absmin = 1.E+30, hom = 0., temp;
 
   for(x.first(); x.test(); x.next())
   {
     temp = field(x);
     hom += temp;
-		temp = fabs(temp);
-    sum += temp;
     if(temp >= max)
     {
       max = temp;
     }
-		else if(temp <= min)
+
+		if(temp <= min)
 		{
 			min = temp;
 		}
+
+		temp = fabs(temp);
+		if(temp <= absmin)
+		{
+			absmin = temp;
+		}
   }
   parallel.max(max);
-  parallel.sum(sum);
+  parallel.min(min);
+  parallel.min(absmin);
   parallel.sum(hom);
-  sum /= n3;
   hom /= n3;
 
-	COUT << scientific << setprecision(prec) << setw(prec + 4) << field_name
+	COUT << scientific << setprecision(prec) << setw(prec + 8) << field_name
 	<< "  Max = " << max
-	<< "  Min = " << min;
+	<< "  |Min| = " << absmin;
+
+	if(min < 0)
+	{
+		COUT << "  Min = " << min;
+	}
+	else
+	{
+		COUT << "  Min =  " << min;
+	}
 
 	if(hom < 0)
 	{
@@ -510,9 +620,9 @@ double check_field(Field<FieldType> & field, string field_name, long n3, string 
 		COUT << "  hom =  " << hom;
 	}
 
-	COUT << "  " << message << endl;
+	COUT << " (on " << n3 << " points). " << message << endl;
 
-	std::cout.copyfmt(oldState);
+	cout.copyfmt(oldState);
 
 	return max;
 }
@@ -525,11 +635,11 @@ template <class FieldType>
 double check_correl(Field<FieldType> & field1, Field<FieldType> & field2, string field_name, long n3)
 {
 	Site x(field1.lattice());
-	std::ios oldState(nullptr);
-	oldState.copyfmt(std::cout);
+	ios oldState(nullptr);
+	oldState.copyfmt(cout);
 
 	int prec = 16;
-	double max = 0., hom = 0., sum = 0., temp;
+	double max = -1.E+30, hom = 0., sum = 0., temp;
 
   for(x.first(); x.test(); x.next())
   {
@@ -558,7 +668,7 @@ double check_correl(Field<FieldType> & field1, Field<FieldType> & field2, string
 		COUT << "  hom =  " << hom << endl;
 	}
 
-	std::cout.copyfmt(oldState);
+	cout.copyfmt(oldState);
 
 	return max;
 }
@@ -572,11 +682,11 @@ template <class FieldType>
 double check_field(Field<FieldType> & field1, Field<FieldType> & field2, string field_name, long n3, double c1) // TODO: correct lattice size
 {
   Site x(field1.lattice());
-	std::ios oldState(nullptr);
-	oldState.copyfmt(std::cout);
+	ios oldState(nullptr);
+	oldState.copyfmt(cout);
 
 	int prec = 16;
-	double max = 0., hom = 0., sum = 0., temp;
+	double max = -1.E+30, hom = 0., sum = 0., temp;
 
   for(x.first(); x.test(); x.next())
   {
@@ -605,7 +715,7 @@ double check_field(Field<FieldType> & field1, Field<FieldType> & field2, string 
 		COUT << "  hom =  " << hom << endl;
 	}
 
-	std::cout.copyfmt(oldState);
+	cout.copyfmt(oldState);
 
 	return max;
 }
@@ -619,11 +729,11 @@ template <class FieldType>
 double check_field(Field<FieldType> & field1, Field<FieldType> & field2, Field<FieldType> & field3, string field_name, long n3, double c1, double c2) // TODO: correct lattice size
 {
   Site x(field1.lattice());
-	std::ios oldState(nullptr);
-	oldState.copyfmt(std::cout);
+	ios oldState(nullptr);
+	oldState.copyfmt(cout);
 
 	int prec = 16;
-	double max = 0., hom = 0., sum = 0., temp;
+	double max = -1.E+30, hom = 0., sum = 0., temp;
 
   for(x.first(); x.test(); x.next())
   {
@@ -652,7 +762,7 @@ double check_field(Field<FieldType> & field1, Field<FieldType> & field2, Field<F
 		COUT << "  hom =  " << hom << endl;
 	}
 
-	std::cout.copyfmt(oldState);
+	cout.copyfmt(oldState);
 
 	return max;
 }
@@ -666,8 +776,8 @@ template <class FieldType>
 void check_vector_field(Field<FieldType> & field, string field_name, long n3, string message = "") // TODO: correct lattice size
 {
   Site x(field.lattice());
-	std::ios oldState(nullptr);
-	oldState.copyfmt(std::cout);
+	ios oldState(nullptr);
+	oldState.copyfmt(cout);
 	int prec = 16;
   double max[3] = {0.,0.,0.}, hom[3] = {0.,0.,0.}, temp;
 
@@ -700,7 +810,7 @@ void check_vector_field(Field<FieldType> & field, string field_name, long n3, st
 		COUT << "  " << message << endl;
   }
 
-	std::cout.copyfmt(oldState);
+	cout.copyfmt(oldState);
 
 	return;
 }
@@ -764,7 +874,7 @@ double compute_max_fRR(Field<FieldType> &deltaR, double Rbar, const metadata & s
 
 	Site x(deltaR.lattice());
 	double temp,
-				 max = 0.;
+				 max = -1.E+30;
 
 	for(x.first(); x.test(); x.next())
 	{
@@ -774,7 +884,7 @@ double compute_max_fRR(Field<FieldType> &deltaR, double Rbar, const metadata & s
 
 	parallel.max(max);
 
-	if(!max || std::isnan(max))
+	if(!max || isnan(max))
 	{
 		cout << "Something went wrong in computing max_fRR. Closing...\n";
 		parallel.abortForce();
@@ -873,6 +983,27 @@ void add_fields(Field<FieldType> & field1, Field<FieldType> & field2, Field<Fiel
 	for(x.first(); x.test(); x.next())
 	{
 		result(x) = field1(x) + field2(x);
+	}
+	return;
+}
+
+/////////////////////////////////////////////
+// Adds a constant to scalar field:
+// TODO: Add comments here
+/////////////////////////////////////////////
+template <class FieldType>
+void add_fields(Field<FieldType> & field1, double c, Field<FieldType> & result)
+{
+	Site x(field1.lattice());
+
+	for(x.first(); x.test(); x.next())
+	{
+		result(x) = field1(x) + c;
+		if(result(x) <= 0.)
+		{
+			cout << " result(x) = " << field1(x) << " + " << c << " = " << result(x);
+			cin.get();
+		}
 	}
 	return;
 }
@@ -979,19 +1110,27 @@ double convert_deltaR_to_xi(Field<FieldType> & deltaR, Field<FieldType> & xi, do
 			xi(x) = 2. * sim.fR_params[0] * deltaR(x);
 		}
 	}
+	else if(sim.fR_type == FR_TYPE_RN)
+	{
+		double a = sim.fR_params[0], n = sim.fR_params[1], n_minus_1 = n - 1.;
+		for(x.first(); x.test(); x.next())
+		{
+			xi(x) = a * n * pow(Rbar + deltaR(x), n_minus_1) - fRbar;
+		}
+	}
 	else
 	{
 		for(x.first(); x.test(); x.next())
 		{
 			temp = fR(Rbar + deltaR(x), sim, 832);
+			//TODO REMOVE after debugging
 			if(temp > FR_WRONG)
 			{
-				//TODO REMOVE after debugging
-	      cout << parallel.rank() << " temp = FR_WRONG in convert_deltaR_to_xi" << endl;
-	      //END REMOVE
+	      cout << parallel.rank() << " 3 temp = FR_WRONG in convert_deltaR_to_xi -- xi, Rbar, temp = " << xi(x) << ", " << Rbar << ", " << temp << endl;
 				cin.get();
 				return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 			}
+			//END REMOVE
 			xi(x) =  temp - fRbar;
 		}
 	}
@@ -1016,18 +1155,36 @@ double convert_deltaR_to_u(
 	Site x(u.lattice());
 	double temp;
 
-	for(x.first(); x.test(); x.next())
+	if(sim.fR_type == FR_TYPE_R2)
 	{
-		temp = fR(Rbar + deltaR(x), sim, 833);
-		if(temp > FR_WRONG)
+		for(x.first(); x.test(); x.next())
 		{
-			//TODO REMOVE after debugging
-      cout << parallel.rank() << " temp = FR_WRONG in convert_deltaR_to_u" << endl;
-      //END REMOVE
-			cin.get();
-			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
+			u(x) = log(1. + deltaR(x)/Rbar);
 		}
-		u(x) = log(temp/fRbar);
+	}
+	else if(sim.fR_type == FR_TYPE_RN)
+	{
+		double n_minus_1 = sim.fR_params[1] - 1.;
+		for(x.first(); x.test(); x.next())
+		{
+			u(x) = n_minus_1 * log(1. + deltaR(x)/Rbar);
+		}
+	}
+	else
+	{
+		for(x.first(); x.test(); x.next())
+		{
+			temp = fR(Rbar + deltaR(x), sim, 833);
+			if(temp > FR_WRONG)
+			{
+				//TODO REMOVE after debugging
+				cout << parallel.rank() << " 4 temp = FR_WRONG in convert_deltaR_to_u -- u, Rbar, temp = " << u(x) << ", " << Rbar << ", " << temp << endl;
+				//END REMOVE
+				cin.get();
+				return FR_WRONG_RETURN; // Returns a huge number to throw some exception
+			}
+			u(x) = log(temp/fRbar);
+		}
 	}
 	return 1.;
 }
@@ -1061,7 +1218,7 @@ void convert_xi_to_u(Field<FieldType> & xi, Field<FieldType> & u, double const f
 
 	for(x.first(); x.test(); x.next())
 	{
-		u(x) = log(xi(x)/fRbar + 1.);
+		u(x) = log(1. + xi(x)/fRbar);
 	}
 	return;
 }
@@ -1081,7 +1238,6 @@ double convert_xi_to_deltaR(
 	const double fRbar,
 	const metadata & sim
 )
-
 {
   // Using Newton-Raphson Method
   Site x(xi.lattice());
@@ -1116,7 +1272,7 @@ double convert_xi_to_deltaR(
 				if(fRR_temp > FR_WRONG)
 				{
 					//TODO REMOVE after debugging
-		      cout << parallel.rank() << " fRR_temp = FR_WRONG in convert_xi_to_deltaR" << endl;
+		      cout << parallel.rank() << " 5 fRR_temp = FR_WRONG in convert_xi_to_deltaR -- xi, Rbar, R_temp = " << xi(x) << ", " << Rbar << ", " << R_temp << endl;
 		      //END REMOVE
 					cin.get();
 					return FR_WRONG_RETURN; // Returns a huge number to throw some exception
@@ -1136,7 +1292,12 @@ double convert_xi_to_deltaR(
 				if(R_temp > 10. * m2)
 				{
 					R_temp = -c1 * n / c2 / c2 / (xi(x) + fRbar);
-					R_temp = m2 * pow(R_temp, 1./(n+1.));
+					if(R_temp > 0.) R_temp = m2 * pow(R_temp, 1./(n+1.));
+					else
+					{
+						cout << " /!\\ Warning 16! R_temp is negative in convert_xi_to_deltaR [FR_TYPE_HU_SAWICKI]. R_temp = " << R_temp  << ", x = " << x << endl;
+						return FR_WRONG_RETURN;
+					}
 				}
 
 				count = 0;
@@ -1146,7 +1307,7 @@ double convert_xi_to_deltaR(
 					if(temp > FR_WRONG)
 					{
 						//TODO REMOVE after debugging
-						cout << parallel.rank() << " temp = FR_WRONG in convert_xi_to_deltaR" << endl;
+						cout << parallel.rank() << " 6 temp = FR_WRONG in convert_xi_to_deltaR -- xi, Rbar, temp = " << xi(x) << ", " << Rbar << ", " << temp << endl;
 			      //END REMOVE
 						cin.get();
 						return FR_WRONG_RETURN;
@@ -1157,7 +1318,7 @@ double convert_xi_to_deltaR(
 					if(fRR_temp > FR_WRONG)
 					{
 						//TODO REMOVE after debugging
-						cout << parallel.rank() << " fRR_temp = FR_WRONG in convert_xi_to_deltaR" << endl;
+						cout << parallel.rank() << " 7 fRR_temp = FR_WRONG in convert_xi_to_deltaR -- xi, Rbar, temp = " << xi(x) << ", " << Rbar << ", " << temp << endl;
 			      //END REMOVE
 						cin.get();
 						return FR_WRONG_RETURN;
@@ -1169,7 +1330,7 @@ double convert_xi_to_deltaR(
 						if(temp > FR_WRONG)
 						{
 							//TODO REMOVE after debugging
-							cout << parallel.rank() << " temp = FR_WRONG in convert_xi_to_deltaR" << endl;
+							cout << parallel.rank() << " 8 temp = FR_WRONG in convert_xi_to_deltaR -- xi, Rbar, temp = " << xi(x) << ", " << Rbar << ", " << temp << endl;
 				      //END REMOVE
 							cin.get();
 							return FR_WRONG_RETURN;
@@ -1194,7 +1355,7 @@ double convert_xi_to_deltaR(
 				if(fRR_temp > FR_WRONG)
 				{
 					//TODO REMOVE after debugging
-					cout << parallel.rank() << " fRR_temp = FR_WRONG in convert_xi_to_deltaR" << endl;
+					cout << parallel.rank() << " 9 fRR_temp = FR_WRONG in convert_xi_to_deltaR -- xi, Rbar, temp = " << xi(x) << ", " << Rbar << ", " << temp << endl;
 		      //END REMOVE
 					cin.get();
 					return FR_WRONG_RETURN;
@@ -1212,16 +1373,27 @@ double convert_xi_to_deltaR(
 	}
 	else if(sim.fR_type == FR_TYPE_RN)
 	{
+		double a = sim.fR_params[0], n = sim.fR_params[1], n_minus_1 = n - 1.;
+
 		for(x.first(); x.test(); x.next())
 		{
-			R_temp = pow(Rbar, sim.fR_params[1] - 1.) + xi(x)/sim.fR_params[0]/sim.fR_params[1];
-			R_temp = pow(R_temp, 1./(sim.fR_params[1] - 1.));
+			R_temp = (xi(x) + fRbar) / a / n;
+			if(R_temp > 0.)
+			{
+				if(n > 1.) R_temp = pow(R_temp, 1./n_minus_1);
+				else R_temp = 1. / pow(R_temp, -1./n_minus_1);
+			}
+			else
+			{
+				cout << " /!\\ Warning 17! R is negative in convert_xi_to_deltaR. R_temp = " << R_temp << ", x = " << x << endl;
+				return FR_WRONG_RETURN;
+			}
 
 			fRR_temp = fabs(fRR(R_temp, sim, 60));
 			if(fRR_temp > FR_WRONG)
 			{
 				//TODO REMOVE after debugging
-				cout << parallel.rank() << " fRR_temp = FR_WRONG in convert_xi_to_deltaR" << endl;
+				cout << parallel.rank() << " 10 fRR_temp = FR_WRONG in convert_xi_to_deltaR -- xi, Rbar, R_temp = " << xi(x) << ", " << Rbar << ", " << R_temp << endl;
 	      //END REMOVE
 				cin.get();
 				return FR_WRONG_RETURN;
@@ -1237,14 +1409,32 @@ double convert_xi_to_deltaR(
 		for(x.first(); x.test(); x.next())
 		{
 			// TODO: Expect big error propagation here, maybe try to find a more reliable conversion?
-			R_temp = xi(x) / b / (1. + delta) + pow(Rbar, delta);
-			R_temp = pow(R_temp, 1./delta);
+			if(delta > 0.)
+			{
+				R_temp = xi(x) / b / (1. + delta) + pow(Rbar, delta);
+				if(R_temp > 0.) R_temp = pow(R_temp, 1./delta);
+				else
+				{
+					cout << " /!\\ Warning 18! R_temp is negative in convert_xi_to_deltaR. R_temp = " << R_temp << ", x = " << x << endl;
+					return FR_WRONG_RETURN;
+				}
+			}
+			else
+			{
+				R_temp = xi(x) / b / (1. + delta) + 1. / pow(Rbar, -delta);
+				if(R_temp > 0.) R_temp = 1. / pow(R_temp, -1./delta);
+				else
+				{
+					cout << " /!\\ Warning 18! R_temp is negative in convert_xi_to_deltaR. R_temp = " << R_temp << ", x = " << x << endl;
+					return FR_WRONG_RETURN;
+				}
+			}
 
-			temp = fRR(R_temp, sim, 60);
+			temp = fRR(R_temp, sim, 61);
 			if(temp > FR_WRONG)
 			{
 				//TODO REMOVE after debugging
-				cout << parallel.rank() << " temp = FR_WRONG in convert_xi_to_deltaR" << endl;
+				cout << parallel.rank() << " 11 temp = FR_WRONG in convert_xi_to_deltaR -- xi, Rbar, R_temp = " << xi(x) << ", " << Rbar << ", " << R_temp << endl;
 	      //END REMOVE
 				cin.get();
 				return FR_WRONG_RETURN;
@@ -1258,13 +1448,13 @@ double convert_xi_to_deltaR(
 
 	parallel.max(max_fRR);
 
-	if(max_fRR and !std::isnan(max_fRR))
+	if(max_fRR and !isnan(max_fRR))
 	{
 		return max_fRR;
 	}
   else
   {
-    COUT << " Warning: returning fRRbar\n";
+    COUT << " Warning 19: returning fRRbar\n";
     return fRR(Rbar, sim, 65);
   }
 }
@@ -1313,7 +1503,7 @@ double convert_u_to_deltaR(
 				R1 = - (R_pow / exp(u(x)/2.) + 1.) / c2;
 				if(fabs(R_temp + eightpiG_deltaT(x) - Rbar) > fabs(R1 + eightpiG_deltaT(x) - Rbar)) R_temp = R1;
 				fRR_temp = fRR(R_temp, sim, 5913);
-				if(fRR_temp > FR_WRONG || std::isnan(fRR_temp) || !fRR_temp)
+				if(fRR_temp > FR_WRONG || isnan(fRR_temp) || !fRR_temp)
 				{
 					cout << x << endl;
 					cout << parallel.rank() << " has a problem" << endl;
@@ -1335,15 +1525,14 @@ double convert_u_to_deltaR(
 			for(x.first(); x.test(); x.next())
 			{
 				//TODO CHECK THIS!
-				u(x) = fRbar * (exp(u(x)) - 1.); // Convert xi -> u
 				// The initial guess for R is:
 				// 1) found from a large-R expansion of FR for R >> m2, or
 				// 2) equal to the new GR solution (Rbar - eightpiG_deltaT)
 				R_temp = Rbar - eightpiG_deltaT(x);
 				if(R_temp > 10. * m2)
 				{
-					R_temp = -c1 * n / c2 / c2 / (u(x) + fRbar);
-					R_temp = m2 * pow( R_temp, 1./(n+1.));
+					R_temp = -c1 * n / c2 / c2 / fRbar / exp(u(x));
+					R_temp = m2 * pow(R_temp, 1./(n+1.));
 				}
 
 				count = 0;
@@ -1353,7 +1542,7 @@ double convert_u_to_deltaR(
 					if(temp > FR_WRONG)
 					{
 						//TODO REMOVE after debugging
-						cout << parallel.rank() << " temp = FR_WRONG in convert_u_to_deltaR" << endl;
+						cout << parallel.rank() << " 12 temp = FR_WRONG in convert_u_to_deltaR -- x, u, Rbar, R_temp = " << x << ", " << u(x) << ", " << Rbar << ", " << R_temp << endl;
 			      //END REMOVE
 						cin.get();
 						return FR_WRONG_RETURN;
@@ -1366,7 +1555,7 @@ double convert_u_to_deltaR(
 					if(fRR_temp > FR_WRONG)
 					{
 						//TODO REMOVE after debugging
-						cout << parallel.rank() << " frr_temp = FR_WRONG in convert_u_to_deltaR 1" << endl;
+						cout << parallel.rank() << " 13 fRR_temp = FR_WRONG in convert_u_to_deltaR -- x, u, Rbar, R_temp = " << x << ", " << u(x) << ", " << Rbar << ", " << R_temp << endl;
 			      //END REMOVE
 						cin.get();
 						return FR_WRONG_RETURN;
@@ -1378,13 +1567,13 @@ double convert_u_to_deltaR(
 						if(temp > FR_WRONG)
 						{
 							//TODO REMOVE after debugging
-							cout << parallel.rank() << " temp = FR_WRONG in convert_u_to_deltaR" << endl;
+							cout << parallel.rank() << " 14 temp = FR_WRONG in convert_u_to_deltaR -- x, u, Rbar, R_temp = " << x << ", " << u(x) << ", " << Rbar << ", " << R_temp << endl;
 				      //END REMOVE
 							cin.get();
 							return FR_WRONG_RETURN;
 						}
 
-						R_temp += (u(x) - temp + fRbar) / fRR_temp;
+						R_temp += (fRbar * u(x) - temp) / fRR_temp;
 					}
 					else
 					{
@@ -1404,7 +1593,7 @@ double convert_u_to_deltaR(
 				if(temp > FR_WRONG)
 				{
 					//TODO REMOVE after debugging
-					cout << parallel.rank() << " temp = FR_WRONG in convert_u_to_deltaR" << endl;
+					cout << parallel.rank() << " 15 temp = FR_WRONG in convert_u_to_deltaR -- x, u, Rbar, R_temp = " << x << ", " << u(x) << ", " << Rbar << ", " << R_temp << endl;
 		      //END REMOVE
 					cin.get();
 					return FR_WRONG_RETURN;
@@ -1416,7 +1605,6 @@ double convert_u_to_deltaR(
 					max_fRR = fRR_temp;
 				}
 				deltaR(x) = R_temp - Rbar;
-				u(x) = log(u(x)/fRbar + 1.); // Convert back u -> xi
 			}
 		}
 	}
@@ -1427,17 +1615,22 @@ double convert_u_to_deltaR(
 	}
 	else if(sim.fR_type == FR_TYPE_RN)
 	{
+		double n = sim.fR_params[1];
 		for(x.first(); x.test(); x.next())
 		{
-			u(x) = fRbar * (exp(u(x)) - 1.); // Convert xi -> u
-			R_temp = pow(Rbar, sim.fR_params[1] - 1.) + u(x)/sim.fR_params[0]/sim.fR_params[1];
-			R_temp = pow(R_temp, 1./(sim.fR_params[1] - 1.));
+			R_temp = Rbar * exp(u(x)/(n-1.));
 
-			temp = fRR(R_temp, sim, 60);
+			if(R_temp > 0.) temp = fRR(R_temp, sim, 62);
+			else
+			{
+				cout << " /!\\ Warning 1! R_temp is negative in convert_u_to_deltaR. x, u, Rbar, R_temp = " << x << ", " << u(x) << ", " << Rbar << ", " << R_temp << endl;
+				return FR_WRONG_RETURN;
+			}
+
 			if(temp > FR_WRONG)
 			{
 				//TODO REMOVE after debugging
-	      cout << parallel.rank() << " temp = FR_WRONG in convert_u_to_deltaR" << endl;
+	      cout << parallel.rank() << " 1 temp = FR_WRONG in convert_u_to_deltaR -- x, u, Rbar, R_temp = " << x << ", " << u(x) << ", " << Rbar << ", " << R_temp << endl;
 	      //END REMOVE
 				cin.get();
 				return FR_WRONG_RETURN;
@@ -1446,7 +1639,6 @@ double convert_u_to_deltaR(
 			if(max_fRR < fRR_temp) max_fRR = fRR_temp;
 
 			deltaR(x) = R_temp - Rbar;
-			u(x) = log(u(x)/fRbar + 1.); // Convert back u -> xi
 		}
 	}
 	else if(sim.fR_type == FR_TYPE_DELTA) // For other f(R) models TODO check!!
@@ -1455,15 +1647,34 @@ double convert_u_to_deltaR(
 		for(x.first(); x.test(); x.next())
 		{
 			// TODO: Check if it's possible to find a more accurate way if this is not good enough
-			R_temp = exp(u(x)) * (b * (1. + delta) * pow(Rbar, delta) - 1.) + 1.;
-			R_temp /= b * (1. + delta);
-			R_temp = pow(R_temp, 1./delta);
+			if(delta > 0.)
+			{
+				R_temp = exp(u(x)) * (b * (1. + delta) * pow(Rbar, delta) - 1.) + 1.;
+				R_temp /= b * (1. + delta);
+				if(R_temp > 0.) R_temp = pow(R_temp, 1./delta);
+				else
+				{
+					cout << " /!\\ Warning 2! R_temp is negative in convert_u_to_deltaR. R_temp = " << R_temp << ", x = " << x << endl;
+					return FR_WRONG_RETURN;
+				}
+			}
+			else
+			{
+				R_temp = exp(u(x)) * (b * (1. + delta) / pow(Rbar, -delta) - 1.) + 1.;
+				R_temp /= b * (1. + delta);
+				if(R_temp > 0.) R_temp = 1. / pow(R_temp, -1./delta);
+				else
+				{
+					cout << " /!\\ Warning 2! R_temp is negative in convert_u_to_deltaR. R_temp = " << R_temp << ", x = " << x << endl;
+					return FR_WRONG_RETURN;
+				}
+			}
 
-			temp = fRR(R_temp, sim, 60);
+			temp = fRR(R_temp, sim, 63);
 			if(temp > FR_WRONG)
 			{
 				//TODO REMOVE after debugging
-				cout << parallel.rank() << " temp = FR_WRONG in convert_u_to_deltaR" << endl;
+				cout << parallel.rank() << " 2 temp = FR_WRONG in convert_u_to_deltaR -- x, u, Rbar, R_temp = " << x << ", " << u(x) << ", " << Rbar << ", " << R_temp << endl;
 	      //END REMOVE
 				cin.get();
 				return FR_WRONG_RETURN;
@@ -1476,7 +1687,7 @@ double convert_u_to_deltaR(
 	}
 
 	parallel.max(max_fRR);
-  if(max_fRR and !std::isnan(max_fRR))
+  if(max_fRR and !isnan(max_fRR))
 	{
 		return max_fRR;
 	}
@@ -1529,7 +1740,7 @@ template <class FieldType>
 void trim_field(Field<FieldType> & field)
 {
   SiteRedBlack3d x(field.lattice());
-  double max = 0.,
+  double max = -1.E+30,
          temp = 0.;
   for(x.first(); x.test(); x.next())
   {

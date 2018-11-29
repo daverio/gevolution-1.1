@@ -27,7 +27,7 @@
 #endif
 
 #ifndef PARAM_MAX_LENGTH
-#define PARAM_MAX_LENGTH 1024
+#define PARAM_MAX_LENGTH 128
 #endif
 
 #ifndef PARAM_MAX_LINESIZE
@@ -124,35 +124,43 @@
 #define HIB_SAVE_HDF5 0
 #define HIB_SAVE_GADGET2 1
 
-//Modified gravity types
+// Modified gravity
 #define FLAG_FR 1   // f(R)
 
-//f(R) models
 #define FR_TYPE_RN 1
 #define FR_TYPE_R2 2
 #define FR_TYPE_HU_SAWICKI 3
 #define FR_TYPE_DELTA 4
 
-// f(R) "SOMETHING WENT WRONG"
+#define FR_EPSILON_BACKGROUND_DEFAULT 0.1
+#define FR_EPSILON_FIELDS_DEFAULT 0.1
+#define FR_COUNT_MAX_DEFAULT 100
+#define FR_TARGET_PRECISION_DEFAULT 1.E-5
+
 #define FR_WRONG 1.E+30
 #define FR_WRONG_RETURN 2. * FR_WRONG
 
-// Relaxation methods
-#define METHOD_U 1
-#define METHOD_MULTIGRID_U 2
-#define METHOD_FMG 3
-
-// Restrict/prolong u or deltaR
-#define RESTRICT_U 1
-#define RESTRICT_DELTAR 2
-
-// Multigrid shapes
+// Multigrid
 #define MG_SHAPE_V 1
 #define MG_SHAPE_W 2
+#define PRE_SMOOTHING_DEFAULT 5
+#define POST_SMOOTHING_DEFAULT 5
 
-// Relaxation error methods
-#define RELAXATION_ERROR_METHOD_MAX 1 // Max error at each point cannot exceed relaxation_error
-#define RELAXATION_ERROR_METHOD_SUM 2 // sum of errors (divided by numpts3d) cannot exceed relaxation_error
+// Relaxation methods
+#define METHOD_RELAX 1
+#define METHOD_MULTIGRID 2
+#define METHOD_FMG 3
+
+#define RELAXATION_VAR_U 1
+#define RELAXATION_VAR_XI 2
+
+// Restrict/prolong u or deltaR
+#define RESTRICT_SCALARON 1
+#define RESTRICT_DELTAR 2
+
+
+// Relaxation error
+#define RELAXATION_ERROR_DEFAULT 1.E-5
 
 // color escape sequences for terminal highlighting (enable with -DCOLORTERMINAL)
 #ifdef COLORTERMINAL
@@ -222,8 +230,9 @@ struct metadata
 	double z_fin;
 	int lcdm_background;
 	double Cf;
-	int back_to_GR;
+	int perturbations_are_GR;
 	int check_fields;
+	int check_fields_precision;
 	int check_pause;
 	int hibernation_save_mode;
 	double fR_params[MAX_FR_PARAMS];
@@ -232,17 +241,18 @@ struct metadata
 	double fR_target_precision;
 	double fR_count_max;
 	double relaxation_error;
-	double relaxation_overrel_coeff;
+	double overrelaxation_coeff;
 	int relaxation_method;
-	int relaxation_error_method;
+	int relaxation_variable;
+	int red_black;
+	int pre_smoothing;
+	int post_smoothing;
+	int multigrid_or_not;
 	int multigrid_restrict_mode;
 	int multigrid_shape;
 	int multigrid_n_grids;
 	int multigrid_n_cycles;
-	int multigrid_pre_smoothing;
-	int multigrid_post_smoothing;
 	int multigrid_check_shape;
-	int multigrid_red_black;
 	double movelimit;
 	double steplimit;
 	double boxsize;
@@ -303,7 +313,7 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "background final redshift: " << sim.z_fin << "\n";
 	os << "lcdm_background: " << sim.lcdm_background << "\n";
 
-	os << "back_to_GR: " << sim.back_to_GR << "\n";
+	os << "perturbations_are_GR: " << sim.perturbations_are_GR << "\n";
 	os << "check_fields: " << sim.check_fields << "\n";
 	os << "check_pause: " << sim.check_pause << "\n";
 
@@ -317,11 +327,10 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "fR_epsilon_fields: " << sim.fR_epsilon_fields << "\n";
 	os << "fR_target_precision: " << sim.fR_target_precision << "\n";
 	os << "multigrid_shape: " << sim.multigrid_shape << "\n";
-	os << "multigrid_pre_smoothing: " << sim.multigrid_pre_smoothing << "\n";
-	os << "multigrid_post_smoothing: " << sim.multigrid_post_smoothing << "\n";
+	os << "pre_smoothing: " << sim.pre_smoothing << "\n";
+	os << "post_smoothing: " << sim.post_smoothing << "\n";
 	os << "relaxation_error: " << sim.relaxation_error << "\n";
-	os << "overrelaxation coefficient: " << sim.relaxation_overrel_coeff << "\n";
-	os << "relaxation_error_method: " << sim.relaxation_error_method << "\n";
+	os << "overrelaxation coefficient: " << sim.overrelaxation_coeff << "\n";
 	os << "movelimit: " << sim.movelimit << "\n";
 	os << "steplimit: " << sim.steplimit << "\n";
 	os << "boxsize: " << sim.boxsize << "\n";

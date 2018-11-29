@@ -61,7 +61,7 @@ using namespace std;
 
 void writeSnapshots(metadata & sim, cosmology & cosmo, const double fourpiG, gadget2_header & hdr, const double a, const int snapcount, string h5filename, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm, Field<Real> * phi, Field<Real> * deltaR, Field<Real> * eightpiG_deltaT, Field<Real> * xi, Field<Real> * laplace_xi, Field<Real> * zeta, Field<Real> * chi, Field<Real> * Bi, Field<Real> * source, Field<Real> * Sij, Field<Cplx> * scalarFT, Field<Cplx> * BiFT, Field<Cplx> * SijFT, PlanFFT<Cplx> * plan_phi, PlanFFT<Cplx> * plan_deltaR, PlanFFT<Cplx> * plan_eightpiG_deltaT, PlanFFT<Cplx> * plan_xi, PlanFFT<Cplx> * plan_laplace_xi, PlanFFT<Cplx> * plan_zeta, PlanFFT<Cplx> * plan_chi, PlanFFT<Cplx> * plan_Bi, PlanFFT<Cplx> * plan_source, PlanFFT<Cplx> * plan_Sij, Field<Real> * Bi_check = NULL, Field<Cplx> * BiFT_check = NULL, PlanFFT<Cplx> * plan_Bi_check = NULL)
 {
-	char filename[2*PARAM_MAX_LENGTH+24];
+	char filename[3*PARAM_MAX_LENGTH+40];
 	char buffer[64];
 	int i;
 	Site x(phi->lattice());
@@ -214,74 +214,116 @@ void writeSnapshots(metadata & sim, cosmology & cosmo, const double fourpiG, gad
 	}
 
 	if(sim.out_snapshot & MASK_PHI)
+	{
 #ifdef EXTERNAL_IO
 		phi->saveHDF5_server_write(NUMBER_OF_IO_FILES);
 #else
 		if(sim.downgrade_factor > 1)
+		{
 			phi->saveHDF5_coarseGrain3D(h5filename + filename + "_phi.h5", sim.downgrade_factor);
+		}
 		else
+		{
 			phi->saveHDF5(h5filename + filename + "_phi.h5");
+		}
 #endif
+	}
 
 	if(sim.out_snapshot & MASK_XI)
+	{
 #ifdef EXTERNAL_IO
-	xi->saveHDF5_server_write(NUMBER_OF_IO_FILES);
+		xi->saveHDF5_server_write(NUMBER_OF_IO_FILES);
 #else
-	if(sim.downgrade_factor > 1)
-		xi->saveHDF5_coarseGrain3D(h5filename + filename + "_xi.h5", sim.downgrade_factor);
-	else
-		xi->saveHDF5(h5filename + filename + "_xi.h5");
+		if(sim.downgrade_factor > 1)
+		{
+			xi->saveHDF5_coarseGrain3D(h5filename + filename + "_xi.h5", sim.downgrade_factor);
+		}
+		else
+		{
+			xi->saveHDF5(h5filename + filename + "_xi.h5");
+		}
 #endif
+	}
 
 	if(sim.out_snapshot & MASK_LAPLACE_XI)
+	{
 #ifdef EXTERNAL_IO
-	laplace_xi->saveHDF5_server_write(NUMBER_OF_IO_FILES);
+		laplace_xi->saveHDF5_server_write(NUMBER_OF_IO_FILES);
 #else
-	if(sim.downgrade_factor > 1)
-		laplace_xi->saveHDF5_coarseGrain3D(h5filename + filename + "_laplace_xi.h5", sim.downgrade_factor);
-else
-		laplace_xi->saveHDF5(h5filename + filename + "_laplace_xi.h5");
+		if(sim.downgrade_factor > 1)
+		{
+			laplace_xi->saveHDF5_coarseGrain3D(h5filename + filename + "_laplace_xi.h5", sim.downgrade_factor);
+		}
+		else
+		{
+			laplace_xi->saveHDF5(h5filename + filename + "_laplace_xi.h5");
+		}
 #endif
+	}
 
 	if(sim.out_snapshot & MASK_ZETA)
+	{
 #ifdef EXTERNAL_IO
-	zeta->saveHDF5_server_write(NUMBER_OF_IO_FILES);
+		zeta->saveHDF5_server_write(NUMBER_OF_IO_FILES);
 #else
-	if(sim.downgrade_factor > 1)
-		zeta->saveHDF5_coarseGrain3D(h5filename + filename + "_zeta.h5", sim.downgrade_factor);
-	else
-		zeta->saveHDF5(h5filename + filename + "_zeta.h5");
+		if(sim.downgrade_factor > 1)
+		{
+			zeta->saveHDF5_coarseGrain3D(h5filename + filename + "_zeta.h5", sim.downgrade_factor);
+		}
+		else
+		{
+			zeta->saveHDF5(h5filename + filename + "_zeta.h5");
+		}
 #endif
+	}
 
 	if(sim.out_snapshot & MASK_DELTAR)
+	{
 #ifdef EXTERNAL_IO
-	deltaR->saveHDF5_server_write(NUMBER_OF_IO_FILES);
+		deltaR->saveHDF5_server_write(NUMBER_OF_IO_FILES);
 #else
-	if(sim.downgrade_factor > 1)
-		deltaR->saveHDF5_coarseGrain3D(h5filename + filename + "_deltaR.h5", sim.downgrade_factor);
-	else
-		deltaR->saveHDF5(h5filename + filename + "_deltaR.h5");
+		if(sim.downgrade_factor > 1)
+		{
+			deltaR->saveHDF5_coarseGrain3D(h5filename + filename + "_deltaR.h5", sim.downgrade_factor);
+		}
+		else
+		{
+			deltaR->saveHDF5(h5filename + filename + "_deltaR.h5");
+		}
 #endif
+	}
 
 		if(sim.out_snapshot & MASK_DELTAT)
+		{
 	#ifdef EXTERNAL_IO
-		eightpiG_deltaT->saveHDF5_server_write(NUMBER_OF_IO_FILES);
+			eightpiG_deltaT->saveHDF5_server_write(NUMBER_OF_IO_FILES);
 	#else
-		if(sim.downgrade_factor > 1)
-			eightpiG_deltaT->saveHDF5_coarseGrain3D(h5filename + filename + "_eightpiG_deltaT.h5", sim.downgrade_factor);
-		else
-			eightpiG_deltaT->saveHDF5(h5filename + filename + "_eightpiG_deltaT.h5");
+			if(sim.downgrade_factor > 1)
+			{
+				eightpiG_deltaT->saveHDF5_coarseGrain3D(h5filename + filename + "_eightpiG_deltaT.h5", sim.downgrade_factor);
+			}
+			else
+			{
+				eightpiG_deltaT->saveHDF5(h5filename + filename + "_eightpiG_deltaT.h5");
+			}
 	#endif
+		}
 
 	if(sim.out_snapshot & MASK_CHI)
+	{
 #ifdef EXTERNAL_IO
 		chi->saveHDF5_server_write(NUMBER_OF_IO_FILES);
 #else
 		if(sim.downgrade_factor > 1)
+		{
 			chi->saveHDF5_coarseGrain3D(h5filename + filename + "_chi.h5", sim.downgrade_factor);
+		}
 		else
+		{
 			chi->saveHDF5(h5filename + filename + "_chi.h5");
+		}
 #endif
+	}
 
 	if(sim.out_snapshot & MASK_HIJ)
 	{
@@ -296,9 +338,13 @@ else
 		Sij->saveHDF5_server_write(NUMBER_OF_IO_FILES);
 #else
 		if(sim.downgrade_factor > 1)
+		{
 			Sij->saveHDF5_coarseGrain3D(h5filename + filename + "_hij.h5", sim.downgrade_factor);
+		}
 		else
+		{
 			Sij->saveHDF5(h5filename + filename + "_hij.h5");
+		}
 #endif
 	}
 
@@ -307,15 +353,24 @@ else
 		projection_init(Sij);
 		projection_Tij_project(pcls_cdm, Sij, a, phi);
 		if(sim.baryon_flag)
+		{
 			projection_Tij_project(pcls_b, Sij, a, phi);
+		}
 		for (i = 0; i < cosmo.num_ncdm; i++)
+		{
 			projection_Tij_project(pcls_ncdm+i, Sij, a, phi);
+		}
+
 		projection_Tij_comm(Sij);
 
 		if(sim.downgrade_factor > 1)
+		{
 			Sij->saveHDF5_coarseGrain3D(h5filename + filename + "_Tij.h5", sim.downgrade_factor);
+		}
 		else
+		{
 			Sij->saveHDF5(h5filename + filename + "_Tij.h5");
+		}
 	}
 
 	if(sim.out_snapshot & MASK_P)
@@ -323,14 +378,25 @@ else
 		projection_init(Bi);
 		projection_T0i_project(pcls_cdm, Bi, phi);
 		if(sim.baryon_flag)
+		{
 			projection_T0i_project(pcls_b, Bi, phi);
+		}
 		for (i = 0; i < cosmo.num_ncdm; i++)
+		{
 			projection_T0i_project(pcls_ncdm+i, Bi, phi);
+		}
+
 		projection_T0i_comm(Bi);
+
 		if(sim.downgrade_factor > 1)
+		{
 			Bi->saveHDF5_coarseGrain3D(h5filename + filename + "_p.h5", sim.downgrade_factor);
+		}
 		else
+		{
 			Bi->saveHDF5(h5filename + filename + "_p.h5");
+		}
+
 		if(sim.gr_flag > 0)
 		{
 			plan_Bi->execute(FFT_BACKWARD);
@@ -346,9 +412,14 @@ else
 			projection_init(Bi_check);
 			projection_T0i_project(pcls_cdm, Bi_check, phi);
 			if(sim.baryon_flag)
+			{
 				projection_T0i_project(pcls_b, Bi_check, phi);
+			}
 			for (i = 0; i < cosmo.num_ncdm; i++)
+			{
 				projection_T0i_project(pcls_ncdm+i, Bi_check, phi);
+			}
+
 			projection_T0i_comm(Bi_check);
 			plan_Bi_check->execute(FFT_FORWARD);
 			projectFTvector(*BiFT_check, *BiFT_check, fourpiG / (double) sim.numpts / (double) sim.numpts);
@@ -365,9 +436,13 @@ else
 		Bi_check->saveHDF5_server_write(NUMBER_OF_IO_FILES);
 #else
 		if(sim.downgrade_factor > 1)
+		{
 			Bi_check->saveHDF5_coarseGrain3D(h5filename + filename + "_B_check.h5", sim.downgrade_factor);
+		}
 		else
+		{
 			Bi_check->saveHDF5(h5filename + filename + "_B_check.h5");
+		}
 #endif
 	}
 #endif
@@ -396,7 +471,7 @@ else
 			hdr.mass[1] = (double) sim.tracer_factor[1] * C_RHO_CRIT * cosmo.Omega_b * sim.boxsize * sim.boxsize * sim.boxsize / sim.numpcl[1] / GADGET_MASS_CONVERSION;
 			pcls_b->saveGadget2(h5filename + filename + "_b", hdr, sim.tracer_factor[1]);
 		}
-		for (i = 0; i < cosmo.num_ncdm; i++)
+		for(i = 0; i < cosmo.num_ncdm; i++)
 		{
 			sprintf(buffer, "_ncdm%d", i);
 			hdr.npart[1] = (unsigned int) (sim.numpcl[i+1+sim.baryon_flag] / sim.tracer_factor[i+1+sim.baryon_flag]);
@@ -469,14 +544,51 @@ else
 //
 //////////////////////////
 
-void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const double a, const int pkcount, const int cycle, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm, Field<Real> * phi, Field<Real> * deltaR, Field<Real> * eightpiG_deltaT, Field<Real> * xi, Field<Real> * laplace_xi, Field<Real> * zeta, Field<Real> * chi, Field<Real> * Bi, Field<Real> * source, Field<Real> * Sij, Field<Cplx> * scalarFT, Field<Cplx> * BiFT, Field<Cplx> * SijFT, PlanFFT<Cplx> * plan_phi, PlanFFT<Cplx> * plan_deltaR, PlanFFT<Cplx> * plan_eightpiG_deltaT, PlanFFT<Cplx> * plan_xi, PlanFFT<Cplx> * plan_laplace_xi, PlanFFT<Cplx> * plan_zeta, PlanFFT<Cplx> * plan_phidot, PlanFFT<Cplx> * plan_lensing, PlanFFT<Cplx> * plan_chi, PlanFFT<Cplx> * plan_Bi, PlanFFT<Cplx> * plan_source, PlanFFT<Cplx> * plan_Sij, Field<Real> * Bi_check = NULL, Field<Cplx> * BiFT_check = NULL, PlanFFT<Cplx> * plan_Bi_check = NULL)
+void writeSpectra(
+	metadata & sim,
+	cosmology & cosmo,
+	const double fourpiG,
+	const double a,
+	const int pkcount,
+	const int cycle,
+	Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm,
+	Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b,
+	Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm,
+	Field<Real> * phi,
+	Field<Real> * deltaR,
+	Field<Real> * eightpiG_deltaT,
+	Field<Real> * xi,
+	Field<Real> * laplace_xi,
+	Field<Real> * zeta,
+	Field<Real> * chi,
+	Field<Real> * Bi,
+	Field<Real> * source,
+	Field<Real> * Sij,
+	Field<Cplx> * scalarFT,
+	Field<Cplx> * BiFT,
+	Field<Cplx> * SijFT,
+	PlanFFT<Cplx> * plan_phi,
+	PlanFFT<Cplx> * plan_deltaR,
+	PlanFFT<Cplx> * plan_eightpiG_deltaT,
+	PlanFFT<Cplx> * plan_xi,
+	PlanFFT<Cplx> * plan_laplace_xi,
+	PlanFFT<Cplx> * plan_zeta,
+	PlanFFT<Cplx> * plan_phidot,
+	PlanFFT<Cplx> * plan_lensing,
+	PlanFFT<Cplx> * plan_chi,
+	PlanFFT<Cplx> * plan_Bi,
+	PlanFFT<Cplx> * plan_source,
+	PlanFFT<Cplx> * plan_Sij,
+	Field<Real> * Bi_check = NULL,
+	Field<Cplx> * BiFT_check = NULL,
+	PlanFFT<Cplx> * plan_Bi_check = NULL)
 {
-	char filename[2*PARAM_MAX_LENGTH+24];
+	char filename[3*PARAM_MAX_LENGTH+40];
 	char buffer[64];
 	int i, j;
 	Site x(phi->lattice());
 	rKSite kFT(scalarFT->lattice());
-    long numpts3d = (long) sim.numpts * (long) sim.numpts * (long) sim.numpts;
+  long numpts3d = (long) sim.numpts * (long) sim.numpts * (long) sim.numpts;
 	Cplx tempk;
 	double Omega_ncdm;
 
@@ -504,7 +616,9 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 		plan_source->execute(FFT_FORWARD);
 
 		if(sim.out_pk & MASK_RBARE || sim.out_pk & MASK_DBARE || ((sim.out_pk & MASK_T00 || sim.out_pk & MASK_DELTA) && sim.gr_flag == 0))
+		{
 			extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR);
+		}
 
 		if(sim.out_pk & MASK_RBARE)
 		{

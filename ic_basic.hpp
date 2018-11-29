@@ -738,7 +738,7 @@ void generateCICKernel(Field<Real> & ker, const long numpcl = 0, float * pcldata
 	const long linesize = ker.lattice().sizeLocal(0);
 	Real renorm = linesize * linesize;
 	long i, oct, sx, sy, sz;
-	float wx, wy, wz, q1, q2, q3, q4, ww;
+	float wx, wy, wz, q1, ww;
 	Site x(ker.lattice());
 
 	for(x.first(); x.test(); x.next())
@@ -1093,7 +1093,6 @@ void generateDisplacementField(Field<Cplx> & potFT, const Real coeff, const gsl_
 	rKSite k(potFT.lattice());
 	int kx, ky, kz, i, j;
 	int kymin, kymax, kzmin, kzmax;
-	long jumpy, jumpz;
 	float r1, r2, k2, s;
 	float * sinc;
 	sitmo::prng_engine prng;
@@ -1400,7 +1399,6 @@ void initializeParticlePositions(const long numpart, const float * partdata, con
 {
 	long xtile, ytile, ztile, i;
 	Real x, lx, fx, x0, y, ly, fy, y0, z, lz, fz, z0;
-	Real dmax = 0.;
 	Site p(pcls.lattice());
 
 	part_simple part;
@@ -1635,7 +1633,7 @@ double applyMomentumDistribution(Particles<part_simple,part_simple_info,part_sim
 
 void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const double fourpiG, Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm, Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_b, Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm, double * maxvel, Field<Real> * phi, Field<Real> * chi, Field<Real> * Bi, Field<Real> * source, Field<Real> * Sij, Field<Cplx> * scalarFT, Field<Cplx> * BiFT, Field<Cplx> * SijFT, PlanFFT<Cplx> * plan_phi, PlanFFT<Cplx> * plan_chi, PlanFFT<Cplx> * plan_Bi, PlanFFT<Cplx> * plan_source, PlanFFT<Cplx> * plan_Sij)
 {
-	int i, j, p;
+	int i, p;
 	double a = 1. / (1. + sim.z_in);
 	float * pcldata = NULL;
 	gsl_spline * pkspline = NULL;

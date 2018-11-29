@@ -103,7 +103,6 @@ double bg_ncdm(const double a, const cosmology cosmo, const int p)
 
 double bg_ncdm(const double a, const cosmology cosmo)
 {
-	double w;
 	static double result = -1.0;
 	static double a_prev = -1.0;
 
@@ -113,7 +112,9 @@ double bg_ncdm(const double a, const cosmology cosmo)
 		a_prev = a;
 
 		for (int p = 0; p < cosmo.num_ncdm; p++)
+		{
 			result += bg_ncdm(a, cosmo, p);
+		}
 	}
 
 	return result;

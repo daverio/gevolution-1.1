@@ -176,7 +176,7 @@ void prepareFTsource_S00(Field<FieldType> & minus_a3_T00, // -a^3 * T00
 	double gradphi[3], gradxi[3];
   int i = 0;
 
-  if(sim.back_to_GR) // If back_to_GR
+  if(sim.perturbations_are_GR) // If perturbations_are_GR
   {
     for(x.first(); x.test(); x.next())
     {

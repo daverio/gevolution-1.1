@@ -300,7 +300,7 @@ void writeRestartSettings_fR(metadata & sim,
 		fprintf(outfile, "f(R) epsilon background     = %e\n", sim.fR_epsilon_bg);
 		fprintf(outfile, "f(R) epsilon fields         = %e\n", sim.fR_epsilon_fields);
 		fprintf(outfile, "f(R) target precision       = %e\n", sim.fR_target_precision);
-		fprintf(outfile, "back to GR                  = %d\n", sim.back_to_GR);
+		fprintf(outfile, "GR perturbations            = %d\n", sim.perturbations_are_GR);
 		fprintf(outfile, "check pause                 = %d\n", sim.check_pause);
 		fprintf(outfile, "background only             = %d\n", sim.background_only);
 		if(sim.background_only)
@@ -314,14 +314,15 @@ void writeRestartSettings_fR(metadata & sim,
 		fprintf(outfile, "check redshift              = %f\n", sim.z_check);
 
 		fprintf(outfile, "\n#==================== Multigrid and relaxation ====================#\n");
+		fprintf(outfile, "relaxation variable        = %d\n", sim.relaxation_variable);
 		fprintf(outfile, "relaxation method          = %d\n", sim.relaxation_method);
-		fprintf(outfile, "multigrid pre-smoothing    = %d\n", sim.multigrid_pre_smoothing);
-		fprintf(outfile, "multigrid post-smoothing   = %d\n", sim.multigrid_post_smoothing);
+		fprintf(outfile, "relaxation error           = %e\n", sim.relaxation_error);
+		fprintf(outfile, "red black                  = %d\n", sim.red_black);
+		fprintf(outfile, "overrelaxation coefficient = %e\n", sim.overrelaxation_coeff);
+		fprintf(outfile, "pre-smoothing              = %d\n", sim.pre_smoothing);
+		fprintf(outfile, "post-smoothing             = %d\n", sim.post_smoothing);
 		fprintf(outfile, "multigrid n-grids          = %d\n", sim.multigrid_n_grids);
 		fprintf(outfile, "multigrid n-cycles         = %d\n", sim.multigrid_n_cycles);
-		fprintf(outfile, "relaxation error           = %e\n", sim.relaxation_error);
-		fprintf(outfile, "overrelaxation coefficient = %e\n", sim.relaxation_overrel_coeff);
-		fprintf(outfile, "red black                  = %d\n", sim.multigrid_red_black);
 		fprintf(outfile, "check shape                = %d\n", sim.multigrid_check_shape);
 		if(sim.multigrid_shape == MG_SHAPE_V)
 		{
@@ -331,11 +332,8 @@ void writeRestartSettings_fR(metadata & sim,
 		{
 			fprintf(outfile, "multigrid shape            = W\n");
 		}
-		if(sim.multigrid_restrict_mode == RESTRICT_U) fprintf(outfile, "restrict mode              = u");
+		if(sim.multigrid_restrict_mode == RESTRICT_SCALARON) fprintf(outfile, "restrict mode              = scalaron");
 		else fprintf(outfile, "restrict mode              = deltaR");
-
-		if(sim.relaxation_error_method == RELAXATION_ERROR_METHOD_SUM) fprintf(outfile, "relaxation error method    = SUM\n");
-		else if(sim.relaxation_error_method == RELAXATION_ERROR_METHOD_MAX) fprintf(outfile, "relaxation error method    = MAX\n");
 
 		fprintf(outfile, "\n#==================== output ====================#\n");
 		fprintf(outfile, "output path        = %s\n", sim.output_path);
@@ -1320,7 +1318,7 @@ void hibernate_GR(metadata & sim,
 							 		const int restartcount = -1)
 {
 	string h5filename;
-	char buffer[5];
+	char buffer[12];
 	int i;
 	Site x(Bi.lattice());
 
@@ -1542,7 +1540,7 @@ void hibernate_fR(metadata & sim,
 							 		const int restartcount = -1)
 {
 	string h5filename;
-	char buffer[5];
+	char buffer[12];
 	int i;
 	Site x(Bi.lattice());
 

@@ -661,8 +661,8 @@ bool parseFieldSpecifiers(parameter * & params, const int numparam, const char *
 					pvalue |= MASK_DELTA;
 				else if(strcmp(item, "delta_N") == 0 || strcmp(item, "deltaN") == 0)
 					pvalue |= MASK_DBARE;
-				else if(strcmp(item, "lensing") == 0 || strcmp(item, "Lensing") == 0)
-					pvalue |= MASK_LENSING;
+				else if(strcmp(item, "phi_effective") == 0 || strcmp(item, "Phi_effective") == 0)
+					pvalue |= MASK_PHI_EFFECTIVE;
 
 				start = comma+1;
 				while(*start == ' ' || *start == '\t') start++;
@@ -704,8 +704,8 @@ bool parseFieldSpecifiers(parameter * & params, const int numparam, const char *
 				pvalue |= MASK_DELTA;
 			else if(strcmp(start, "delta_N") == 0 || strcmp(start, "deltaN") == 0)
 				pvalue |= MASK_DBARE;
-			else if(strcmp(start, "lensing") == 0 || strcmp(start, "Lensing") == 0)
-				pvalue |= MASK_LENSING;
+			else if(strcmp(start, "phi_effective") == 0 || strcmp(start, "Phi_effective") == 0)
+				pvalue |= MASK_PHI_EFFECTIVE;
 
 			params[i].used = true;
 			return true;
@@ -779,8 +779,8 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		sim.numpcl[i] = 0;
 	}
 	sim.vector_flag = VECTOR_PARABOLIC;
-	sim.gr_flag = 0;
-	sim.mg_flag = 0;
+	sim.relativistic_flag = 0;
+	sim.modified_gravity_flag = 0;
 	sim.out_pk = 0;
 	sim.out_snapshot = 0;
 	sim.out_check = 0;
@@ -941,7 +941,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		if(par_string[0] == 'N' || par_string[0] == 'n')
 		{
 			COUT << " gravity theory set to: " << COLORTEXT_CYAN << "Newtonian" << COLORTEXT_RESET << endl;
-			sim.gr_flag = 0;
+			sim.relativistic_flag = 0;
 			if(ic.pkfile[0] == '\0' && ic.tkfile[0] != '\0'
 			#ifdef ICGEN_PREVOLUTION
 				&& ic.generator != ICGEN_PREVOLUTION
@@ -954,14 +954,26 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		}
 		else if(par_string[0] == 'G' || par_string[0] == 'g')
 		{
-			COUT << " gravity theory set to: " << COLORTEXT_CYAN << "General Relativity" << COLORTEXT_RESET << endl;
-			sim.gr_flag = 1;
+			COUT << " Gravity theory set to: " << COLORTEXT_CYAN << "General Relativity" << COLORTEXT_RESET << endl;
+			sim.relativistic_flag = 1;
 		}
 		else if(par_string[0] == 'F' || par_string[0] == 'f')
 		{
-			COUT << " Gravity theory set to: " << COLORTEXT_CYAN << "f(R)" << COLORTEXT_RESET << endl;
-			sim.gr_flag = 1;
-			sim.mg_flag = FLAG_FR;
+			sim.modified_gravity_flag = FLAG_FR;
+
+			if(!parseParameter(params, numparam, "f(R) relativistic", sim.relativistic_flag))
+			{
+				COUT << " Gravity theory set to: " << COLORTEXT_CYAN << "relativistic f(R)" << COLORTEXT_RESET << endl;
+				sim.relativistic_flag = 1;
+			}
+			else if(!sim.relativistic_flag)
+			{
+				COUT << " Gravity theory set to: " << COLORTEXT_CYAN << "Newtonian f(R)" << COLORTEXT_RESET << endl;
+			}
+			else
+			{
+				COUT << " Gravity theory set to: " << COLORTEXT_CYAN << "relativistic f(R)" << COLORTEXT_RESET << endl;
+			}
 
 			if(!parseParameter(params, numparam, "lcdm background", sim.lcdm_background))
 			{
@@ -1130,13 +1142,13 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		else
 		{
 			COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": gravity theory unknown, using default (General Relativity)" << endl;
-			sim.gr_flag = 1;
+			sim.relativistic_flag = 1;
 		}
 	}
 	else
 	{
 		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": gravity theory not selected, using default (General Relativity)" << endl;
-		sim.gr_flag = 1;
+		sim.relativistic_flag = 1;
 	}
 
 	COUT
@@ -1150,8 +1162,8 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	if(!parseParameter(params, numparam, "generic file base", sim.basename_generic))
 	{
-		if(sim.mg_flag == FLAG_FR) strcpy(sim.basename_generic, "fR");
-		else if(sim.gr_flag) strcpy(sim.basename_generic, "lcdm");
+		if(sim.modified_gravity_flag == FLAG_FR) strcpy(sim.basename_generic, "fR");
+		else if(sim.relativistic_flag) strcpy(sim.basename_generic, "lcdm");
 		else strcpy(sim.basename_generic, "Newton");
 	}
 
@@ -1445,7 +1457,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			pptr[i] = ic.metricfile[i];
 		}
 
-		if(sim.mg_flag == FLAG_FR)
+		if(sim.modified_gravity_flag == FLAG_FR)
 		{
 			parseParameter(params, numparam, "dtau_old", ic.restart_dtau_old);
 			parseParameter(params, numparam, "dtau_old_2", ic.restart_dtau_old_2);
@@ -1650,7 +1662,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		COUT << " /!\\ Wrong multigrid_n_grids specified. Using default: " << sim.multigrid_n_grids << endl;
 	}
 
-	if(sim.mg_flag == FLAG_FR)
+	if(sim.modified_gravity_flag == FLAG_FR)
 	{
 		if(!parseParameter(params, numparam, "quasi-static", sim.quasi_static))
 		{
@@ -1961,7 +1973,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	if(!parseParameter(params, numparam, "switch linear chi", sim.z_switch_linearchi))
 	{
-		if(sim.gr_flag > 0)
+		if(sim.relativistic_flag > 0)
 		{
 			sim.z_switch_linearchi = 0.;
 		}
@@ -1978,7 +1990,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			}
 		}
 	}
-	else if(sim.gr_flag == 0 && sim.z_switch_linearchi <= 0.01)
+	else if(sim.relativistic_flag == 0 && sim.z_switch_linearchi <= 0.01)
 	{
 		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": with gravity theory = Newton the switch linear chi redshift must be larger than 0.01." << endl;
 		COUT << "              setting switch linear chi = 0.011" << endl;

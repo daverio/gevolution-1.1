@@ -296,7 +296,7 @@ void readIC_GR(metadata & sim,
 		maxvel[sim.baryon_flag+1+p] = pcls_ncdm[p].updateVel(update_q, 0., &phi, 1, &a);
 	}
 
-	if(sim.gr_flag > 0 && ic.metricfile[0][0] != '\0')
+	if(sim.relativistic_flag > 0 && ic.metricfile[0][0] != '\0')
 	{
 		filename.assign(ic.metricfile[0]);
 		phi->loadHDF5(filename);
@@ -316,7 +316,7 @@ void readIC_GR(metadata & sim,
 			(*scalarFT)(kFT) = Cplx(0.,0.);
 		}
 
-		solveModifiedPoissonFT(*scalarFT, *scalarFT, fourpiG / a, 3. * sim.gr_flag * (Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) + fourpiG * cosmo.Omega_m / a));
+		solveModifiedPoissonFT(*scalarFT, *scalarFT, fourpiG / a, 3. * sim.relativistic_flag * (Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) + fourpiG * cosmo.Omega_m / a));
 		plan_phi->execute(FFT_BACKWARD);
 	}
 
@@ -328,7 +328,7 @@ void readIC_GR(metadata & sim,
 			if(sim.vector_flag == VECTOR_PARABOLIC)
 		#endif
 		{
-			filename.assign(ic.metricfile[2*sim.gr_flag]);
+			filename.assign(ic.metricfile[2*sim.relativistic_flag]);
 			Bi->loadHDF5(filename);
 			for(x.first(); x.test(); x.next())
 			{
@@ -339,7 +339,7 @@ void readIC_GR(metadata & sim,
 			plan_Bi->execute(FFT_FORWARD);
 		}
 
-		if(sim.gr_flag > 0)
+		if(sim.relativistic_flag > 0)
 		{
 			filename.assign(ic.metricfile[1]);
 			chi->loadHDF5(filename);
@@ -812,7 +812,7 @@ void readIC_fR(metadata & sim,
 			(*scalarFT)(kFT) = Cplx(0.,0.);
 		}
 
-		solveModifiedPoissonFT(*scalarFT, *scalarFT, fourpiG / a, 3. * sim.gr_flag * (Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) + fourpiG * cosmo.Omega_m / a));
+		solveModifiedPoissonFT(*scalarFT, *scalarFT, fourpiG / a, 3. * sim.relativistic_flag * (Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) + fourpiG * cosmo.Omega_m / a));
 		plan_phi->execute(FFT_BACKWARD);
 	}
 
@@ -824,7 +824,7 @@ void readIC_fR(metadata & sim,
 			if(sim.vector_flag == VECTOR_PARABOLIC)
 		#endif
 		{
-			filename.assign(ic.metricfile[2*sim.gr_flag]);
+			filename.assign(ic.metricfile[2*sim.relativistic_flag]);
 			Bi->loadHDF5(filename);
 			for(x.first(); x.test(); x.next())
 			{
@@ -835,14 +835,14 @@ void readIC_fR(metadata & sim,
 			plan_Bi->execute(FFT_FORWARD);
 		}
 
-		if(sim.gr_flag > 0)
+		if(sim.relativistic_flag > 0)
 		{
 			filename.assign(ic.metricfile[1]);
 			chi->loadHDF5(filename);
 			chi->updateHalo();
 		}
 
-		if(sim.mg_flag == FLAG_FR)
+		if(sim.modified_gravity_flag == FLAG_FR)
 		{
 			int j=3;
 			filename.assign(ic.metricfile[j]);

@@ -153,7 +153,7 @@ void writeSnapshots(metadata & sim, cosmology & cosmo, const double fourpiG, gad
 	if(sim.out_snapshot & MASK_T00)
 	{
 		projection_init(source);
-		if(sim.gr_flag > 0)
+		if(sim.relativistic_flag > 0)
 		{
 			projection_T00_project(pcls_cdm, source, a, phi);
 			if(sim.baryon_flag)
@@ -182,7 +182,7 @@ void writeSnapshots(metadata & sim, cosmology & cosmo, const double fourpiG, gad
 
 	if(sim.out_snapshot & MASK_B)
 	{
-		if(sim.gr_flag == 0)
+		if(sim.relativistic_flag == 0)
 		{
 			plan_Bi->execute(FFT_BACKWARD);
 		}
@@ -206,7 +206,7 @@ void writeSnapshots(metadata & sim, cosmology & cosmo, const double fourpiG, gad
 			Bi->saveHDF5(h5filename + filename + "_B.h5");
 #endif
 
-		if(sim.gr_flag > 0)
+		if(sim.relativistic_flag > 0)
 		{
 			plan_Bi->execute(FFT_BACKWARD);
 			Bi->updateHalo();
@@ -397,7 +397,7 @@ void writeSnapshots(metadata & sim, cosmology & cosmo, const double fourpiG, gad
 			Bi->saveHDF5(h5filename + filename + "_p.h5");
 		}
 
-		if(sim.gr_flag > 0)
+		if(sim.relativistic_flag > 0)
 		{
 			plan_Bi->execute(FFT_BACKWARD);
 			Bi->updateHalo();
@@ -574,7 +574,7 @@ void writeSpectra(
 	PlanFFT<Cplx> * plan_laplace_xi,
 	PlanFFT<Cplx> * plan_zeta,
 	PlanFFT<Cplx> * plan_phidot,
-	PlanFFT<Cplx> * plan_lensing,
+	PlanFFT<Cplx> * plan_phi_effective,
 	PlanFFT<Cplx> * plan_chi,
 	PlanFFT<Cplx> * plan_Bi,
 	PlanFFT<Cplx> * plan_source,
@@ -604,7 +604,7 @@ void writeSpectra(
 	pscatter = (Real *) malloc(sim.numbins * sizeof(Real));
 	occupation = (int *) malloc(sim.numbins * sizeof(int));
 
-	if(sim.out_pk & MASK_RBARE || sim.out_pk & MASK_DBARE || sim.out_pk & MASK_POT || ((sim.out_pk & MASK_T00 || sim.out_pk & MASK_DELTA) && sim.gr_flag == 0))
+	if(sim.out_pk & MASK_RBARE || sim.out_pk & MASK_DBARE || sim.out_pk & MASK_POT || ((sim.out_pk & MASK_T00 || sim.out_pk & MASK_DELTA) && sim.relativistic_flag == 0))
 	{
 		projection_init(source);
 		scalarProjectionCIC_project(pcls_cdm, source);
@@ -615,7 +615,7 @@ void writeSpectra(
 		scalarProjectionCIC_comm(source);
 		plan_source->execute(FFT_FORWARD);
 
-		if(sim.out_pk & MASK_RBARE || sim.out_pk & MASK_DBARE || ((sim.out_pk & MASK_T00 || sim.out_pk & MASK_DELTA) && sim.gr_flag == 0))
+		if(sim.out_pk & MASK_RBARE || sim.out_pk & MASK_DBARE || ((sim.out_pk & MASK_T00 || sim.out_pk & MASK_DELTA) && sim.relativistic_flag == 0))
 		{
 			extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR);
 		}
@@ -632,13 +632,13 @@ void writeSpectra(
 			writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * cosmo.Omega_m * cosmo.Omega_m, filename, "power spectrum of delta_N", a, cycle);
 		}
 
-		if(sim.out_pk & MASK_T00 && sim.gr_flag == 0)
+		if(sim.out_pk & MASK_T00 && sim.relativistic_flag == 0)
 		{
 			sprintf(filename, "%s%s_%s%03d_T00.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 			writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * pow(a, 6.0), filename, "power spectrum of T00", a, cycle);
 		}
 
-		if(sim.out_pk & MASK_DELTA && sim.gr_flag == 0)
+		if(sim.out_pk & MASK_DELTA && sim.relativistic_flag == 0)
 		{
 			sprintf(filename, "%s%s_%s%03d_delta.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 			writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * cosmo.Omega_m * cosmo.Omega_m, filename, "power spectrum of delta", a, cycle);
@@ -652,7 +652,7 @@ void writeSpectra(
 			writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI, filename, "power spectrum of psi_N", a, cycle);
 		}
 
-		if((cosmo.num_ncdm > 0 || sim.baryon_flag) && (sim.out_pk & MASK_DBARE || (sim.out_pk & MASK_DELTA && sim.gr_flag == 0)))
+		if((cosmo.num_ncdm > 0 || sim.baryon_flag) && (sim.out_pk & MASK_DBARE || (sim.out_pk & MASK_DELTA && sim.relativistic_flag == 0)))
 		{
 			projection_init(source);
 			scalarProjectionCIC_project(pcls_cdm, source);
@@ -756,12 +756,12 @@ void writeSpectra(
 		writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI, filename, "power spectrum of laplace_xi", a, cycle);
 	}
 
-	if(sim.out_pk & MASK_LENSING)
+	if(sim.out_pk & MASK_PHI_EFFECTIVE)
 	{
-		plan_lensing->execute(FFT_FORWARD);
+		plan_phi_effective->execute(FFT_FORWARD);
 		extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, false, KTYPE_LINEAR);
-		sprintf(filename, "%s%s_%s%03d_lensing.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
-		writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI, filename, "power spectrum of lensing", a, cycle);
+		sprintf(filename, "%s%s_%s%03d_phi_effective.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
+		writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI, filename, "power spectrum of phi_effective", a, cycle);
 	}
 
 	if(sim.out_pk & MASK_ZETA)
@@ -815,7 +815,7 @@ void writeSpectra(
 		writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, 2. * M_PI * M_PI, filename, "power spectrum of hij", a, cycle);
 	}
 
-	if((sim.out_pk & MASK_T00 || sim.out_pk & MASK_DELTA) && sim.gr_flag > 0)
+	if((sim.out_pk & MASK_T00 || sim.out_pk & MASK_DELTA) && sim.relativistic_flag > 0)
 	{
 		projection_init(source);
 		projection_T00_project(pcls_cdm, source, a, phi);

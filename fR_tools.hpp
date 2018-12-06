@@ -1085,6 +1085,7 @@ void check_all_fields(
 	Field<FieldType> &deltaR,
 	Field<FieldType> &eightpiG_deltaT,
 	Field<FieldType> &zeta,
+  Field<FieldType> &phi_effective,
 	Field<FieldType> &Bi,
 	long n3,
   const metadata & sim)
@@ -1096,9 +1097,10 @@ void check_all_fields(
 	if(oc & MASK_DELTAR) check_field(deltaR, "deltaR", n3, sim);
 	if(oc & MASK_DELTAT) check_field(eightpiG_deltaT, "eightpiG_deltaT", n3, sim);
 	if(oc & MASK_B) check_vector_field(Bi, "Bi", n3, sim);
-  if(sim.mg_flag == FLAG_FR)
+  if(sim.modified_gravity_flag == FLAG_FR)
   {
     if(oc & MASK_XI) check_field(xi, "xi", n3, sim);
+    if(oc & MASK_PHI_EFFECTIVE) check_field(phi_effective, "phi_effective", n3, sim);
     if(oc & MASK_ZETA) check_field(zeta, "zeta", n3, sim);
     if(oc & (MASK_XI * MASK_CHI)) check_correl(xi, "xi", chi, "chi", n3, sim);
   }

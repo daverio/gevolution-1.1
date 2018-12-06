@@ -835,7 +835,7 @@ void writeRestartSettings_GR(metadata & sim,
 		}
 
 		fprintf(outfile, "\n");
-		if(sim.gr_flag > 0)
+		if(sim.relativistic_flag > 0)
 		{
 			fprintf(outfile, "metric file        = %s%s%s_phi.h5", sim.restart_path, sim.basename_restart, buffer);
 			fprintf(outfile, ", %s%s%s_chi.h5", sim.restart_path, sim.basename_restart, buffer);
@@ -933,7 +933,7 @@ void writeRestartSettings_GR(metadata & sim,
 			fprintf(outfile, "switch linear chi   = %lf\n", sim.z_switch_linearchi);
 		}
 
-		if(sim.gr_flag > 0)
+		if(sim.relativistic_flag > 0)
 		{
 			fprintf(outfile, "gravity theory      = GR\n");
 		}
@@ -1360,7 +1360,7 @@ void hibernate_GR(metadata & sim,
 			}
 		}
 
-		if(sim.gr_flag > 0)
+		if(sim.relativistic_flag > 0)
 		{
 			phi.saveHDF5_server_open(h5filename + "_phi");
 			chi.saveHDF5_server_open(h5filename + "_chi");
@@ -1422,7 +1422,7 @@ void hibernate_GR(metadata & sim,
 			}
 		}
 
-		if(sim.gr_flag > 0)
+		if(sim.relativistic_flag > 0)
 		{
 			phi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 			chi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
@@ -1482,7 +1482,7 @@ void hibernate_GR(metadata & sim,
 			}
 		}
 
-		if(sim.gr_flag > 0)
+		if(sim.relativistic_flag > 0)
 		{
 			phi.saveHDF5(h5filename + "_phi.h5");
 			chi.saveHDF5(h5filename + "_chi.h5");
@@ -1581,7 +1581,7 @@ void hibernate_fR(metadata & sim,
 		}
 	}
 
-	if(sim.gr_flag > 0)
+	if(sim.relativistic_flag > 0)
 	{
 		phi.saveHDF5_server_open(h5filename + "_phi");
 		chi.saveHDF5_server_open(h5filename + "_chi");
@@ -1598,7 +1598,7 @@ void hibernate_fR(metadata & sim,
 		}
 	#endif
 
-	if(sim.mg_flag == FLAG_FR)
+	if(sim.modified_gravity_flag == FLAG_FR)
 	{
 		xi.saveHDF5_server_open(h5filename + "_xi.h5");
 		xi_prev.saveHDF5_server_open(h5filename + "_xi_prev.h5");
@@ -1656,7 +1656,7 @@ void hibernate_fR(metadata & sim,
 		}
 	}
 
-	if(sim.gr_flag > 0)
+	if(sim.relativistic_flag > 0)
 	{
 		phi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 		chi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
@@ -1667,7 +1667,7 @@ void hibernate_fR(metadata & sim,
 	#endif
 	Bi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 
-	if(sim.mg_flag == FLAG_FR)
+	if(sim.modified_gravity_flag == FLAG_FR)
 	{
 		xi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 		xi_prev.saveHDF5_server_write(NUMBER_OF_IO_FILES);
@@ -1730,7 +1730,7 @@ void hibernate_fR(metadata & sim,
 		}
 	}
 
-	if(sim.gr_flag > 0)
+	if(sim.relativistic_flag > 0)
 	{
 		phi.saveHDF5(h5filename + "_phi.h5");
 		chi.saveHDF5(h5filename + "_chi.h5");
@@ -1747,7 +1747,7 @@ void hibernate_fR(metadata & sim,
 		}
 	#endif
 
-	if(sim.mg_flag == FLAG_FR)
+	if(sim.modified_gravity_flag == FLAG_FR)
 	{
 		xi.saveHDF5(h5filename + "_xi.h5");
 		xi_prev.saveHDF5(h5filename + "_xi_prev.h5");

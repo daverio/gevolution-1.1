@@ -42,26 +42,26 @@
 #define METRICFILE_LENGTH 20
 #endif
 
-#define MASK_PHI        1
-#define MASK_CHI        2
-#define MASK_POT        4
-#define MASK_B          8
-#define MASK_T00        16
-#define MASK_TIJ        32
-#define MASK_RBARE      64
-#define MASK_HIJ        128
-#define MASK_P          256
-#define MASK_GADGET     512
-#define MASK_PCLS       1024
-#define MASK_XSPEC      2048
-#define MASK_DELTA      4096
-#define MASK_DBARE      8192
-#define MASK_XI  		    16384
-#define MASK_ZETA       32768
-#define MASK_DELTAR	    65536
-#define MASK_DELTAT     131072
-#define MASK_LAPLACE_XI 262144
-#define MASK_LENSING    524288
+#define MASK_PHI        		1
+#define MASK_CHI        		2
+#define MASK_POT        		4
+#define MASK_B          		8
+#define MASK_T00        		16
+#define MASK_TIJ        		32
+#define MASK_RBARE      		64
+#define MASK_HIJ        		128
+#define MASK_P          		256
+#define MASK_GADGET     		512
+#define MASK_PCLS       		1024
+#define MASK_XSPEC      		2048
+#define MASK_DELTA      		4096
+#define MASK_DBARE      		8192
+#define MASK_XI  		    		16384
+#define MASK_ZETA       		32768
+#define MASK_DELTAR	    		65536
+#define MASK_DELTAT     		131072
+#define MASK_LAPLACE_XI 		262144
+#define MASK_PHI_EFFECTIVE  524288
 
 #define ICFLAG_CORRECT_DISPLACEMENT 1
 #define ICFLAG_KSPHERE              2
@@ -212,8 +212,8 @@ struct metadata
 	long numpcl[MAX_PCL_SPECIES];
 	int tracer_factor[MAX_PCL_SPECIES];
 	int baryon_flag;
-	int gr_flag;
-	int mg_flag;
+	int relativistic_flag;
+	int modified_gravity_flag;
 	int fR_type;
 	int vector_flag;
 	int radiation_flag;
@@ -296,8 +296,8 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	}
 	os << "\n";
 	os << "baryon_flag: " << sim.baryon_flag << "\n";
-	os << "gr_flag: " << sim.gr_flag << "\n";
-	os << "mg_flag: " << sim.mg_flag << "\n";
+	os << "relativistic_flag: " << sim.relativistic_flag << "\n";
+	os << "modified_gravity_flag: " << sim.modified_gravity_flag << "\n";
 	os << "fR_type: " << sim.fR_type << "\n";
 	os << "vector_flag: " << sim.vector_flag << "\n";
 	os << "radiation_flag: " << sim.radiation_flag << "\n";

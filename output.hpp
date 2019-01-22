@@ -1090,16 +1090,39 @@ bool print_background(
 }
 
 
+int output_background_data(
+	double tau,
+	double a,
+	double Hubble,
+	double dtau_old,
+	double Rbar,
+	double dot_Rbar,
+	cosmology cosmo,
+	double T00_hom,
+	double T00_hom_rescaled_a3,
+	double fbar,
+	double fRbar,
+	double fRRbar,
+	int modified_gravity_flag)
+{
+	COUT << "              tau = " << tau << endl;
+	COUT << "                z = " << (1./a) - 1. << endl;
+	COUT << "                H = " << Hubble << endl;
+	COUT << "         dtau_old = " << dtau_old << endl;
+	COUT << "             Rbar = " << Rbar << endl;
+	COUT << "         dot_Rbar = " << dot_Rbar << endl;
+	COUT << " background model = " << cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo) << endl;
+	COUT << " avg/rescaled T00 = " << T00_hom*a*a*a << " / " << T00_hom_rescaled_a3 << endl;
+	if(modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
+	{
+		COUT << "             fbar = " << fbar << endl;
+		COUT << "            fRbar = " << fRbar << endl;
+		COUT << "           fRRbar = " << fRRbar << endl;
+	}
+	COUT << endl;
 
-
-
-
-
-
-
-
-
-
+	return 1;
+}
 
 
 

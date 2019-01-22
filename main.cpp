@@ -132,6 +132,7 @@ int main(int argc, char **argv)
 	double dot_Rbar;
 	double fbar;
 	double fRbar;
+	double dot_fRbar;
 	double fRRbar;
 	double coeffm2;
 
@@ -141,7 +142,7 @@ int main(int argc, char **argv)
 		H5Eset_auto2 (H5E_DEFAULT, NULL, NULL);
 	#endif
 
-	for(i=1; i<argc; i++)
+	for(i=1; i<argc; ++i)
 	{
 		if(argv[i][0] != '-')
 		{
@@ -218,15 +219,15 @@ int main(int argc, char **argv)
 		//TODO check particleHorizon
 		tau = particleHorizon(a, fourpiG, cosmo);
 
-		if(sim.modified_gravity_flag == FLAG_FR) fR_details(cosmo, &sim, fourpiG);
-
 		bgfilename.reserve(2*PARAM_MAX_LENGTH + 24);
 		bgfilename.assign(sim.output_path);
 		bgfilename += sim.basename_generic;
 		bgfilename += "_background.dat";
 
-		if(sim.modified_gravity_flag == FLAG_FR)
+		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 		{
+			if(ic.generator != ICGEN_READ_FROM_DISK) fR_details(cosmo, &sim, fourpiG);
+
 			Rbar = R_initial_fR(a, fourpiG, cosmo);
 			fbar = f(Rbar, sim, 100);
 			fRbar = fR(Rbar, sim, 101);
@@ -242,8 +243,8 @@ int main(int argc, char **argv)
 				dtau = sim.steplimit / Hubble;
 			}
 
-			// If perturbations_are_GR or quasi-static, dtau for fields dictated by usual steplimit (background is still split in smaller timesteps)
-			if(!sim.perturbations_are_GR && !sim.quasi_static)
+			// If quasi-static, dtau for fields dictated by usual steplimit (background is still split in smaller timesteps)
+			if(!sim.quasi_static)
 			{
 				dtau_osci = sim.fR_epsilon_fields * sqrt(3.0 * fabs(fRRbar))/a;
 				if(dtau > dtau_osci)
@@ -269,7 +270,7 @@ int main(int argc, char **argv)
 		dtau_old = dtau_old_2 = dtau_print = 0.;
 		tau_print = tau;
 
-		if(sim.modified_gravity_flag == FLAG_FR && sim.BACKGROUND_NUMPTS > 0)
+		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR && sim.BACKGROUND_NUMPTS > 0)
 		{
 			dtau_print = tau * sqrt(sim.z_in + 1.) / sqrt(sim.z_fin + 1.) / sim.BACKGROUND_NUMPTS;
 		}
@@ -311,7 +312,7 @@ int main(int argc, char **argv)
 		{
 			while(a < 1./(1. + sim.z_fin))
 			{
-				if(sim.modified_gravity_flag == FLAG_FR)
+				if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 				{
 					dtau_old = dtau;
 					fbar = f(Rbar, sim, 300);
@@ -332,7 +333,7 @@ int main(int argc, char **argv)
 				}
 
 				// Write background data on file
-				if(sim.modified_gravity_flag != FLAG_FR || tau >= tau_print)
+				if(sim.modified_gravity_flag != MODIFIED_GRAVITY_FLAG_FR || tau >= tau_print)
 				{
 					if(parallel.rank() == 0)
 					{
@@ -365,7 +366,7 @@ int main(int argc, char **argv)
 					return -1;
 				}
 
-				if(sim.modified_gravity_flag == FLAG_FR)
+				if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 				{
 					cout
 					<< " FINAL STEP:\n"
@@ -435,11 +436,13 @@ int main(int argc, char **argv)
 		Field<Real> phi;
 		Field<Real> chi;
 		Field<Real> Bi;
+		Field<Real> Bi_old;
 		Field<Real> source;
 		Field<Real> Sij;
 		Field<Cplx> scalarFT;
 		Field<Cplx> SijFT;
 		Field<Cplx> BiFT;
+		Field<Cplx> Bi_oldFT;
 
 		//additional f(R) fields
 		Field<Real> xi;
@@ -449,9 +452,9 @@ int main(int argc, char **argv)
 		Field<Real> dot_deltaR;
 		Field<Real> deltaR_prev;
 		Field<Real> eightpiG_deltaT;
-		Field<Real> phidot;
+		Field<Real> phi_dot;
 		Field<Real> phi_effective;
-		Field<Real> xidot;
+		Field<Real> xi_dot;
 		Field<Real> laplace_xi;
 		Field<Real> rhs;
 		Field<Real> residual;
@@ -471,7 +474,7 @@ int main(int argc, char **argv)
 
 		PlanFFT<Cplx> plan_source;
 		PlanFFT<Cplx> plan_phi;
-		PlanFFT<Cplx> plan_phidot;
+		PlanFFT<Cplx> plan_phi_dot;
 		PlanFFT<Cplx> plan_phi_effective;
 		PlanFFT<Cplx> plan_chi;
 		PlanFFT<Cplx> plan_zeta;
@@ -481,6 +484,7 @@ int main(int argc, char **argv)
 		PlanFFT<Cplx> plan_xi;
 		PlanFFT<Cplx> plan_laplace_xi;
 		PlanFFT<Cplx> plan_Bi;
+		PlanFFT<Cplx> plan_Bi_old;
 		PlanFFT<Cplx> plan_Sij;
 
 		PlanFFT<Cplx> plan_debug_field; // TODO: Just for debugging
@@ -491,7 +495,7 @@ int main(int argc, char **argv)
 		PlanFFT<Cplx> plan_Bi_check;
 #endif
 
-		// TODO: For the moment, initialize and alloc everything. After debugging, only stuff that's needed
+		// TODO: For the moment, initialize and alloc everything. After debugging, only stuff that is needed
 		phi.initialize(lat,1);
 		chi.initialize(lat,1);
 		source.initialize(lat,1);
@@ -499,8 +503,8 @@ int main(int argc, char **argv)
 		xi.initialize(lat,1);
 		xi_prev.initialize(lat,1);
 		xi_prev.alloc();
-		xidot.initialize(lat,1);
-		xidot.alloc();
+		xi_dot.initialize(lat,1);
+		xi_dot.alloc();
 		laplace_xi.initialize(lat,1);
 		zeta.initialize(lat,1);
 		deltaR.initialize(lat,1);
@@ -517,11 +521,11 @@ int main(int argc, char **argv)
 		debug_field3.initialize(lat, 1);
 		deltaR_prev.initialize(lat,1);
 		eightpiG_deltaT.initialize(lat,1);
-		phidot.initialize(lat,1);
+		phi_dot.initialize(lat,1);
 		phi_effective.initialize(lat,1);
 		plan_source.initialize(&source, &scalarFT);
 		plan_phi.initialize(&phi, &scalarFT);
-		plan_phidot.initialize(&phidot, &scalarFT);
+		plan_phi_dot.initialize(&phi_dot, &scalarFT);
 		plan_phi_effective.initialize(&phi_effective, &scalarFT);
 		plan_chi.initialize(&chi, &scalarFT);
 		plan_xi.initialize(&xi, &scalarFT);
@@ -536,6 +540,8 @@ int main(int argc, char **argv)
 		Bi.initialize(lat,3);
 		BiFT.initialize(latFT,3);
 		plan_Bi.initialize(&Bi, &BiFT);
+		Bi_old.initialize(lat,3);
+		plan_Bi_old.initialize(&Bi_old, &BiFT);
 		Sij.initialize(lat,3,3,symmetric);
 		SijFT.initialize(latFT,3,3,symmetric);
 		plan_Sij.initialize(&Sij, &SijFT);
@@ -575,7 +581,7 @@ int main(int argc, char **argv)
 		numpts3d = (long) sim.numpts * (long) sim.numpts * (long) sim.numpts;
 		COUT << " numpts = " << sim.numpts << "   linesize = " << phi.lattice().size(1) << endl;
 
-		for(i=0; i<3; i++) // particles may never move farther than to the adjacent domain
+		for(i=0; i<3; ++i) // particles may never move farther than to the adjacent domain
 		{
 			if(lat.sizeLocal(i)-1 < sim.movelimit)
 			{
@@ -587,7 +593,7 @@ int main(int argc, char **argv)
 		tau_Lambda = -1.0;
 		numsteps_bg = 1;
 
-		if(sim.modified_gravity_flag == FLAG_FR && !sim.lcdm_background) // set timesteps for f(R) background evolution
+		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR && !sim.lcdm_background) // set timesteps for f(R) background evolution
 		{
 			dtau_bg = sim.fR_epsilon_bg * sqrt(3. * fRRbar) / a; // This would be the "ideal" timestep to evolve the f(R) background
 			if(dtau >= 2. * dtau_bg)// numsteps_bg must be even -- we split the background evolution in two steps of dtau/2 each
@@ -610,9 +616,9 @@ int main(int argc, char **argv)
 		}
 		else if(ic.generator == ICGEN_READ_FROM_DISK)
 		{
-			if(sim.modified_gravity_flag == FLAG_FR)
+			if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 			{
-				readIC_fR(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, Hubble, Rbar, dot_Rbar, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &xi, &xi_prev, &zeta, &deltaR, &deltaR_prev, &dot_deltaR, &eightpiG_deltaT, &phidot, &xidot, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount, settingsfile_bin);
+				readIC_fR(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, Hubble, Rbar, dot_Rbar, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &xi, &xi_prev, &zeta, &deltaR, &deltaR_prev, &dot_deltaR, &eightpiG_deltaT, &phi_dot, &xi_dot, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount, settingsfile_bin);
 
 				fbar = f(Rbar, sim, 400);
 				fRbar = fR(Rbar, sim, 401);
@@ -652,9 +658,9 @@ int main(int argc, char **argv)
 		numspecies = 1 + sim.baryon_flag + cosmo.num_ncdm;
 		parallel.max<double>(maxvel, numspecies);
 
-		if(sim.relativistic_flag > 0)
+		if(sim.relativistic_flag > 0 && !sim.newtonian_fR)
 		{
-			for(i=0; i<numspecies; i++)
+			for(i=0; i<numspecies; ++i)
 			{
 				maxvel[i] /= sqrt(maxvel[i] * maxvel[i] + 1.0);
 			}
@@ -672,7 +678,7 @@ int main(int argc, char **argv)
 		}
 #endif
 
-		for(i=0; i<6; i++)
+		for(i=0; i<6; ++i)
 		{
 			hdr.npart[i] = 0;
 			hdr.npartTotal[i] = 0;
@@ -686,7 +692,7 @@ int main(int argc, char **argv)
 		hdr.flag_sfr = 0;
 		hdr.flag_cooling = 0;
 		hdr.flag_feedback = 0;
-		for(i=0; i < 256 - 6 * 4 - 6 * 8 - 2 * 8 - 2 * 4 - 6 * 4 - 2 * 4 - 4 * 8; i++)
+		for(i=0; i < 256 - 6 * 4 - 6 * 8 - 2 * 8 - 2 * 4 - 6 * 4 - 2 * 4 - 4 * 8; ++i)
 		{
 			hdr.fill[i] = 0;
 		}
@@ -703,7 +709,7 @@ int main(int argc, char **argv)
 		if(sim.radiation_flag > 0)
 		{
 			initializeCLASSstructures(sim, ic, cosmo, class_background, class_perturbs, class_spectra);
-			if(sim.relativistic_flag > 0 && a < 1. / (sim.z_switch_linearchi + 1.) && (ic.generator == ICGEN_BASIC || (ic.generator == ICGEN_READ_FROM_DISK && cycle == 0)))
+			if(sim.relativistic_flag > 0 && !sim.newtonian_fR && a < 1. / (sim.z_switch_linearchi + 1.) && (ic.generator == ICGEN_BASIC || (ic.generator == ICGEN_READ_FROM_DISK && cycle == 0)))
 			{
 				prepareFTchiLinear(class_background, class_perturbs, class_spectra, scalarFT, sim, ic, cosmo, fourpiG, a);
 				plan_source.execute(FFT_BACKWARD);
@@ -724,22 +730,22 @@ int main(int argc, char **argv)
 
 			if(cycle % sim.CYCLE_INFO_INTERVAL == 0) // output some info
 			{
-				COUT << endl << "===================================  CYCLE " << cycle << "  ";
+				COUT << endl << "=========================================  CYCLE " << cycle << "  ";
 				if(cycle < 10)
 				{
-					COUT << "==================================" << endl;
+					COUT << "========================================" << endl;
 				}
 				else if(cycle < 100)
 				{
-					COUT << "=================================" << endl;
+					COUT << "=======================================" << endl;
 				}
 				else if(cycle < 1000)
 				{
-					COUT << "================================" << endl;
+					COUT << "======================================" << endl;
 				}
 				else if(cycle < 10000)
 				{
-					COUT << "===============================" << endl;
+					COUT << "=====================================" << endl;
 				}
 			}
 
@@ -766,7 +772,7 @@ int main(int argc, char **argv)
 					projection_T00_project(&pcls_b, &source, a, &phi);
 				}
 
-				for(i=0; i<cosmo.num_ncdm; i++)
+				for(i=0; i<cosmo.num_ncdm; ++i)
 				{
 					if(a >= 1. / (sim.z_switch_deltancdm[i] + 1.))
 					{
@@ -792,7 +798,7 @@ int main(int argc, char **argv)
 					scalarProjectionCIC_project(&pcls_b, &source);
 				}
 
-				for(i=0; i<cosmo.num_ncdm; i++)
+				for(i=0; i<cosmo.num_ncdm; ++i)
 				{
 					if(a >= 1. / (sim.z_switch_deltancdm[i] + 1.))
 					{
@@ -802,16 +808,18 @@ int main(int argc, char **argv)
 				projection_T00_comm(&source);
 			}
 
-			// Project T0i -- actually writes a^4 T0i in {Bi}
+			// Project T0i -- writes a^4 T0i in {Bi}
 			if(sim.vector_flag == VECTOR_ELLIPTIC)
 			{
+				copy_vector_field(Bi, Bi_old);
+
 				projection_init(&Bi);
 				projection_T0i_project(&pcls_cdm, &Bi, &phi);
 				if(sim.baryon_flag)
 				{
 					projection_T0i_project(&pcls_b, &Bi, &phi);
 				}
-				for(i=0; i<cosmo.num_ncdm; i++)
+				for(i=0; i<cosmo.num_ncdm; ++i)
 				{
 					if(a >= 1. / (sim.z_switch_Bncdm[i] + 1.))
 					{
@@ -830,7 +838,7 @@ int main(int argc, char **argv)
 			}
 			if(a >= 1. / (sim.z_switch_linearchi + 1.))
 			{
-				for(i=0; i<cosmo.num_ncdm; i++)
+				for(i=0; i<cosmo.num_ncdm; ++i)
 				{
 					projection_Tij_project(pcls_ncdm+i, &Sij, a, &phi);
 				}
@@ -844,58 +852,24 @@ int main(int argc, char **argv)
 
 			// Computes 8piG*deltaT = 8piG( (T00 + T11 + T22 + T33) - (-rho_backg + 3P_backg) ), to be stored in {eightpiG_deltaT}
 			// At the moment: {source} = -a^3*T00, {Sij} = a^3*Tij
-			computeTtrace(eightpiG_deltaT, source, Sij, a*a*a, -cosmo.Omega_m/a/a/a, fourpiG); // TODO: Should this include the explicit Lambda term?
-			if(sim.modified_gravity_flag != FLAG_FR) // in GR/Newton, deltaR tracks exactly eightpiG_deltaT
+			compute_eightpiG_deltaT(eightpiG_deltaT, source, Sij, a*a*a, -cosmo.Omega_m/a/a/a, fourpiG);
+
+			if(sim.modified_gravity_flag != MODIFIED_GRAVITY_FLAG_FR) // in GR/Newton, deltaR tracks exactly eightpiG_deltaT
 			{
 				copy_field(eightpiG_deltaT, deltaR, -1.);
 			}
 
-			T00_hom = 0.;
-			Tii_hom = 0.;
-			phi_hom = 0.;
-			for(x.first(); x.test(); x.next())
-			{
-				T00_hom += -source(x); // source = - a^3 * T00
-				Tii_hom += Sij(x,0,0) + Sij(x,1,1) + Sij(x,2,2); // Sij = a^3 Tij
-				phi_hom += phi(x);
-			}
-			parallel.sum<Real>(T00_hom);
-			parallel.sum<Real>(Tii_hom);
-			parallel.sum<Real>(phi_hom);
-			T00_hom /= (Real) numpts3d;
-			Tii_hom /= (Real) numpts3d;
-			phi_hom /= (Real) numpts3d;
-			T00_hom_rescaled_a3 = T00_hom / (1. + 3. * phi_hom);
-			T00_hom /= a*a*a; // T00_hom contained a^3 * <T00>, now contains the correct <T00>
-			Tii_hom /= a*a*a; // same for Tii
+			build_homogeneous_terms(source, phi, Sij, T00_hom, Tii_hom, phi_hom, T00_hom_rescaled_a3, a*a*a, numpts3d);
 
-			if(cycle % sim.CYCLE_INFO_INTERVAL == 0) // output some info
+			if(cycle % sim.CYCLE_INFO_INTERVAL == 0)
 			{
-				COUT << "              tau = " << tau << endl;
-				COUT << "                z = " << (1./a) - 1. << endl;
-				COUT << "                H = " << Hubble << endl;
-				COUT << "         dtau_old = " << dtau_old << endl;
-				COUT << "             Rbar = " << Rbar << endl;
-				COUT << "         dot_Rbar = " << dot_Rbar << endl;
-				COUT << " background model = " << cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo) << endl;
-				COUT << " avg/rescaled T00 = " << T00_hom*a*a*a << " / " << T00_hom_rescaled_a3 << endl;
-				if(sim.modified_gravity_flag == FLAG_FR)
-				{
-					COUT << "             fbar = " << fbar << endl;
-					COUT << "            fRbar = " << fRbar << endl;
-					COUT << "           fRRbar = " << fRRbar << endl;
-				}
-				COUT << endl;
+				output_background_data(tau, a, Hubble, dtau_old, Rbar, dot_Rbar, cosmo, T00_hom, T00_hom_rescaled_a3, fbar, fRbar, fRRbar, sim.modified_gravity_flag);
 			}
 
 			//=========================================== EVOLVE deltaR, zeta, xi ===========================================//
-			if(sim.modified_gravity_flag == FLAG_FR)
+			if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 			{
-				if(sim.perturbations_are_GR) // If perturbations_are_GR, assign deltaR = eightpiG_deltaT, zeta = 0, xi = 0 at all times
-				{
-					copy_field(eightpiG_deltaT, deltaR, -1.);
-				}
-				else if(sim.fR_type == FR_TYPE_R2) // First let's work out the R + R^2 case
+				if(sim.fR_type == FR_TYPE_R2) // First let's work out the R + R^2 case
 				{
 					coeffm2 = a * a / 6. / sim.fR_params[0];
 					if(sim.quasi_static)
@@ -949,29 +923,21 @@ int main(int argc, char **argv)
 				else if(sim.quasi_static) // Generic f(R) model (not R + R^2), quasi-static
 				{
 					// TODO: Do we need something different for the first timestep?
-
 					copy_field(xi, xi_prev); // Copy old value of xi on xi_prev
-
-					if(sim.relaxation_variable == RELAXATION_VAR_U)
-					{
-						convert_xi_to_u(xi, xi, fRbar); // Convert back xi -> u
-					}
 
 					// Initial conditions for the relaxation solver
 					prepare_initial_conditions_trace_equation(deltaR, eightpiG_deltaT, xi, laplace_xi, rhs, a, dx, Rbar, fRbar, sim);
 					// Relaxation solver
-					relaxation(mg_xi, mg_laplace_xi, mg_deltaR, mg_eightpiG_deltaT, mg_rhs, mg_residual, mg_err, mg_engine, a, dx, numpts3d, Rbar, fbar, fRbar, sim);
+					if(relaxation(mg_xi, mg_laplace_xi, mg_deltaR, mg_eightpiG_deltaT, mg_rhs, mg_residual, mg_err, mg_engine, a, dx, numpts3d, Rbar, fbar, fRbar, sim) == 0)
+					{
+						convert_xi_to_deltaR(deltaR, xi, Rbar, fRbar, sim);
+					}
 
 					add_fields(deltaR, eightpiG_deltaT, zeta); // Build zeta from deltaR and eightpiG_deltaT
 
-					if(sim.relaxation_variable == RELAXATION_VAR_U)
-					{
-						convert_u_to_xi(xi, xi, fRbar); // Convert back u -> xi
-					}
-
 					sim.multigrid_check_shape = 0; // Just check the first time (at most)
 				}
-				else // Generic f(R) model (not R + R^2), NOT quasi-static
+				else // Generic f(R) model (not R + R^2), NOT quasi-static (leapfrog)
 				{
 					if(cycle < 2) // Initial conditions are deltaR = - eightpiG_deltaT
 					{
@@ -979,42 +945,41 @@ int main(int argc, char **argv)
 						copy_field(xi, xi_prev);
 						copy_field(eightpiG_deltaT, deltaR, -1.);
 						convert_deltaR_to_xi(deltaR, xi, Rbar, fRbar, sim);
-						if(cycle == 1) // Builds xidot_{1/2} from xi_1 and xi_0
+						if(cycle == 1) // Builds xi_dot_{1/2} from xi_1 and xi_0
 						{
-							add_fields(xi, 1./dtau_old, xi_prev, -1./dtau_old, xidot);
+							add_fields(xi, 1./dtau_old, xi_prev, -1./dtau_old, xi_dot);
 						}
 					}
-					else // Else builds xi_i from xi_{i-1} and xidot_{i-1/2}, for i >= 2
+					else // Else builds xi_i from xi_{i-1} and xi_dot_{i-1/2}, for i >= 2
 					{
-						add_fields(xi, 1., xidot, dtau_old, xi);
+						add_fields(xi, 1., xi_dot, dtau_old, xi);
 					}
-
 					// Compute deltaR from a given xi
-					convert_xi_to_deltaR(eightpiG_deltaT, deltaR, xi, Rbar, fRbar, sim);
+					convert_xi_to_deltaR(deltaR, xi, Rbar, fRbar, sim);
 					// Build zeta from deltaR and eightpiG_deltaT
 					add_fields(deltaR, eightpiG_deltaT, zeta);
 
-					if(cycle) // Update xidot
+					if(cycle) // Update xi_dot
 					{
 						xi.updateHalo(); // TODO: Avoid updating the halo twice (see later)
-						leapfrog_dotxi(xi, zeta, xidot, xidot, Hubble, a*a, dtau_old, dtau, dx*dx);
+						leapfrog_dot_xi(xi, zeta, xi_dot, xi_dot, Hubble, a*a, dtau_old, dtau, dx*dx);
 					}
 				}
-
 				// TODO: Avoid updating the halo twice (see later)
 				// Build laplacian of xi
 				build_laplacian(xi, laplace_xi, dx);
 			}
 
 			//=========================================== EVOLVE phi ===========================================//
-			if(sim.relativistic_flag > 0)
+			// GR and relativistic f(R)
+			if(sim.relativistic_flag && !sim.newtonian_fR)
 			{
 				if(cycle)
 				{
-					if(sim.modified_gravity_flag == FLAG_FR && !sim.perturbations_are_GR)
+					if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 					{
 						// Write source term for the 00 equation in {source}
-						prepareFTsource_S00<Real>(source, phi, chi, xi, xi_prev, deltaR, source, cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo), dx*dx, dtau_old, Hubble, a, fourpiG / a, Rbar, fbar, fRbar, sim);
+						prepareFTsource_S00_fR_rel<Real>(source, phi, chi, xi, xi_prev, deltaR, source, cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo), dx*dx, dtau_old, Hubble, a, fourpiG / a, Rbar, fbar, fRbar, sim);
 					}
 					else
 					{
@@ -1033,11 +998,11 @@ int main(int argc, char **argv)
 #endif
 
 					// phi update (k-space)
-					if(sim.modified_gravity_flag == FLAG_FR && !sim.perturbations_are_GR)
+					if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 					{
-						solveModifiedPoissonFT(scalarFT, scalarFT, 1. / (dx * dx), sim.quasi_static ? 3. * Hubble / dtau_old : 3. * Hubble / dtau_old);
+						solveModifiedPoissonFT(scalarFT, scalarFT, 1. / (dx * dx), 3. * Hubble / dtau_old);
 					}
-					else  // GR
+					else  // GR perturbations
 					{
 						solveModifiedPoissonFT(scalarFT, scalarFT, 1. / (dx * dx), 3. * Hconf(a, fourpiG, cosmo) / dtau_old);
 					}
@@ -1045,19 +1010,18 @@ int main(int argc, char **argv)
 #ifdef BENCHMARK
 					ref2_time= MPI_Wtime();
 #endif
-					// go back to position space: {scalarFT} --> {phidot}
-					plan_phidot.execute(FFT_BACKWARD);
-					flip_fields(phi, phidot); // Now {phi} contains phi_new, {phidot} contains phi_old
-					add_fields(phi, 1./dtau_old, phidot, -1./dtau_old, phidot); // Computes phidot = (phi_new - phi_old)/dtau
+					// go back to position space: {scalarFT} --> {phi_dot}
+					plan_phi_dot.execute(FFT_BACKWARD);
 
 #ifdef BENCHMARK
 					fft_time += MPI_Wtime() - ref2_time;
 					fft_count++;
 #endif
+					flip_fields(phi, phi_dot); // Now {phi} contains phi_new, {phi_dot} contains 	phi_old
+					add_fields(phi, 1./dtau_old, phi_dot, -1./dtau_old, phi_dot); // Computes phi_dot = (phi_new - phi_old)/dtau
 				}
-				// Finished evolving deltaR, xi, phi in GR or f(R)
 			}
-			else // Newtonian Evolution
+			else // Newton or Newtonian f(R)
 			{
 #ifdef BENCHMARK
 				ref2_time = MPI_Wtime();
@@ -1073,28 +1037,26 @@ int main(int argc, char **argv)
 #ifdef BENCHMARK
 				ref2_time= MPI_Wtime();
 #endif
+				plan_phi_dot.execute(FFT_BACKWARD);	 // go back to position space
 
-				plan_phidot.execute(FFT_BACKWARD);	 // go back to position space
-				flip_fields(phi, phidot); // Now {phi} contains phi_new, {phidot} contains phi_old
-				add_fields(phi, 1./dtau_old, phidot, -1./dtau_old, phidot); // Computes phidot = (phi_new - phi_old)/dtau
+				if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR) // Newtonian f(R)
+				{
+					add_fields(phi_dot, 1., xi, 0.5, phi_dot);
+				}
 
 #ifdef BENCHMARK
 				fft_time += MPI_Wtime() - ref2_time;
 				fft_count++;
 #endif
+				flip_fields(phi, phi_dot); // Now {phi} contains phi_new, {phi_dot} contains 	phi_old
+				add_fields(phi, 1./dtau_old, phi_dot, -1./dtau_old, phi_dot); // Computes phi_dot = (phi_new - phi_old)/dtau
 			}
 
+			phi_dot.updateHalo();
 			phi.updateHalo();  // communicate halo values
-			phidot.updateHalo();
-
-			if(sim.modified_gravity_flag == FLAG_FR && sim.perturbations_are_GR)
-			{
-				convert_deltaR_to_xi(deltaR, xi, Rbar, fRbar, sim);
-				build_laplacian(xi, laplace_xi, dx);
-			}
 
 			// Background timesteps in f(R)
-			if(sim.modified_gravity_flag == FLAG_FR && !sim.lcdm_background) // set timesteps for f(R) background evolution
+			if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR && !sim.lcdm_background) // set timesteps for f(R) background evolution
 			{
 				dtau_bg = sim.fR_epsilon_bg * sqrt(3. * fRRbar) / a; // This would be the "ideal" timestep to evolve the f(R) background
 				if(dtau >= 2. * dtau_bg)// numsteps_bg must be even -- we split the background evolution in two steps of dtau/2 each
@@ -1110,10 +1072,10 @@ int main(int argc, char **argv)
 				dtau_bg = dtau;
 			}
 
-			// record background data in Newton, GR or LCDM -- see later for f(R)
+			// record background data in Newton, GR or f(R) with lcdm_background -- see later for full f(R)
 			if(kFT.setCoord(0, 0, 0))
 			{
-				if(sim.modified_gravity_flag != FLAG_FR || sim.lcdm_background || numsteps_bg == 1)
+				if(sim.modified_gravity_flag != MODIFIED_GRAVITY_FLAG_FR || sim.lcdm_background || numsteps_bg == 1)
 				{
 					if(print_background(cycle, bgoutfile, bgfilename, tau, a, Hubble, Rbar, phi_hom, -T00_hom_rescaled_a3)) return -1;
 				}
@@ -1155,7 +1117,7 @@ int main(int argc, char **argv)
 			fft_count++;
 #endif
 
-			if(sim.modified_gravity_flag == FLAG_FR && cycle && !sim.perturbations_are_GR) // TODO: check if it should be done only after the 0th time step or not
+			if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR) // TODO: check if it should be done only after the 0th time step or not
 			{
 				add_fields(chi, xi, chi);
 			}
@@ -1163,11 +1125,14 @@ int main(int argc, char **argv)
 			chi.updateHalo();  // communicate halo values
 
 
-			// Build phi_effective, equal to phi + xi/2 TODO Keep only if necessary
-			add_fields(phi, 1., xi, -0.5, phi_effective);
-
 			if(sim.vector_flag == VECTOR_ELLIPTIC) // solve B using elliptic constraint; TODO: check for f(R) -- should be the same
 			{
+				if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR && !sim.newtonian_fR)
+				{
+					build_laplacian(phi, phi_effective, dx);
+					add_fR_source_S0i(Bi_old, phi, phi_effective, chi, xi, xi_dot, Bi, dot_fRbar, dx, fourpiG);
+				}
+
 #ifdef BENCHMARK
 				ref2_time = MPI_Wtime();
 #endif
@@ -1207,6 +1172,9 @@ int main(int argc, char **argv)
 			ref_time = MPI_Wtime();
 #endif
 
+			// Build phi_effective, equal to phi - xi/2 TODO Keep only if necessary
+			add_fields(phi, 1., xi, -0.5, phi_effective);
+
 			if(do_I_check) check_all_fields(phi, xi, chi, deltaR, eightpiG_deltaT, zeta, phi_effective, Bi, numpts3d, sim);
 
 			// snapshot output
@@ -1234,9 +1202,9 @@ int main(int argc, char **argv)
 				COUT << COLORTEXT_CYAN << " writing power spectra" << COLORTEXT_RESET << " at z = " << ((1./a) - 1.) <<  " (cycle " << cycle << "), tau/boxsize = " << tau << endl;
 
 #ifdef CHECK_B
-				writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_phidot, &plan_phi_effective, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, &Bi_check, &BiFT_check, &plan_Bi_check);
+				writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_phi_dot, &plan_phi_effective, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, &Bi_check, &BiFT_check, &plan_Bi_check);
 #else
-				writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_phidot, &plan_phi_effective, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
+				writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_phi_dot, &plan_phi_effective, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
 #endif
 				pkcount++;
 			}
@@ -1249,7 +1217,7 @@ int main(int argc, char **argv)
 
 			// For when the full background evolution only starts at sim.z_switch_fR_background
 			// TODO: Remove this?
-			if(1./a - 1. < sim.z_switch_fR_background && sim.modified_gravity_flag == FLAG_FR && sim.lcdm_background)
+			if(1./a - 1. < sim.z_switch_fR_background && sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR && sim.lcdm_background)
 			{
 				COUT << endl;
 				COUT << " =================================== ";
@@ -1266,7 +1234,7 @@ int main(int argc, char **argv)
 
 			// compute number of step subdivisions for particle updates
 			numsteps = 1;
-			for(i=0; i<cosmo.num_ncdm; i++)
+			for(i=0; i<cosmo.num_ncdm; ++i)
 			{
 				if(dtau * maxvel[i+1+sim.baryon_flag] > dx * sim.movelimit)
 				{
@@ -1288,7 +1256,7 @@ int main(int argc, char **argv)
 				numsteps++;
 			}
 
-			for(i=0; i<cosmo.num_ncdm; i++)
+			for(i=0; i<cosmo.num_ncdm; ++i)
 			{
 				if(numsteps / numsteps_ncdm[i] <= 1)
 				{
@@ -1308,7 +1276,7 @@ int main(int argc, char **argv)
 					COUT << "           baryon max |v| = " << maxvel[1] << " (Courant factor = " << maxvel[1] * dtau / dx << ")\n";
 				}
 
-				if(sim.modified_gravity_flag == FLAG_FR)
+				if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 				{
 					COUT << "           Hubble * dtau = " <<  Hubble * dtau << endl
 					<< "                      dx = " << dx << endl;
@@ -1323,7 +1291,7 @@ int main(int argc, char **argv)
 					COUT << "           time step / Hubble time = " << Hconf(a, fourpiG, cosmo) * dtau;
 				}
 
-				for(i=0; i<cosmo.num_ncdm; i++)
+				for(i=0; i<cosmo.num_ncdm; ++i)
 				{
 					if(i == 0)
 					{
@@ -1345,6 +1313,7 @@ int main(int argc, char **argv)
 #endif
 				f_params[0] = a;
 				f_params[1] = a * a * sim.numpts;
+
 				if(j == 0)
 				{
 					if(sim.relativistic_flag > 0)
@@ -1369,9 +1338,9 @@ int main(int argc, char **argv)
 #endif
 				}
 
-				for(i=0; i<cosmo.num_ncdm; i++)
+				for(i=0; i<cosmo.num_ncdm; ++i)
 				{
-					if(j % (numsteps / numsteps_ncdm[i]) == 0)
+					if(j % (numsteps / numsteps_ncdm[i]) == 0 || sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 					{
 						if(sim.relativistic_flag > 0)
 						{
@@ -1393,7 +1362,7 @@ int main(int argc, char **argv)
 				ref2_time = MPI_Wtime();
 #endif
 
-				for(i=0; i<cosmo.num_ncdm; i++) // move particles
+				for(i=0; i<cosmo.num_ncdm; ++i) // move particles
 				{
 					if(numsteps > 1 && ((numsteps_ncdm[i] == 1 && j == numsteps / 2) || (numsteps_ncdm[i] == numsteps / 2 && j % 2 > 0)))
 					{
@@ -1416,7 +1385,7 @@ int main(int argc, char **argv)
 				// Background Evolution (first half of a time-step)
 				if(numsteps == 1)
 				{
-					if(sim.modified_gravity_flag != FLAG_FR || sim.lcdm_background) // GR or Newtonian evolution
+					if(sim.modified_gravity_flag != MODIFIED_GRAVITY_FLAG_FR || sim.lcdm_background) // GR or Newtonian evolution
 					{
 						rungekutta4bg(a, fourpiG, cosmo, 0.5 * dtau);
 						Hubble = Hconf(a, fourpiG, cosmo);
@@ -1475,7 +1444,7 @@ int main(int argc, char **argv)
 				// Background evolution (first half of a time-step)
 				if(numsteps != 1) //  TODO: Doesn't this do the same as if numsteps == 1?
 				{
-					if(sim.modified_gravity_flag != FLAG_FR || sim.lcdm_background) // GR or Newtonian evolution
+					if(sim.modified_gravity_flag != MODIFIED_GRAVITY_FLAG_FR || sim.lcdm_background) // GR or Newtonian evolution
 					{
 						rungekutta4bg(a, fourpiG, cosmo, 0.5 * dtau);
 						Hubble = Hconf(a, fourpiG, cosmo);
@@ -1505,7 +1474,7 @@ int main(int argc, char **argv)
 
 				f_params[0] = a;
 				f_params[1] = a * a * sim.numpts;
-				for(i=0; i<cosmo.num_ncdm; i++)
+				for(i=0; i<cosmo.num_ncdm; ++i)
 				{
 					if(numsteps_ncdm[i] == numsteps) // Move particles
 					{
@@ -1526,7 +1495,7 @@ int main(int argc, char **argv)
 				}
 
 				// Background evolution (second half of a time-step)
-				if(sim.modified_gravity_flag != FLAG_FR || sim.lcdm_background) // GR or Newtonian evolution
+				if(sim.modified_gravity_flag != MODIFIED_GRAVITY_FLAG_FR || sim.lcdm_background) // GR or Newtonian evolution
 				{
 					rungekutta4bg(a, fourpiG, cosmo, 0.5 * dtau);
 					Hubble = Hconf(a, fourpiG, cosmo);
@@ -1555,17 +1524,21 @@ int main(int argc, char **argv)
 			}
 
 			// Build background quantities after evolving background
-			if(sim.modified_gravity_flag == FLAG_FR)
+			if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 			{
 				fbar = f(Rbar, sim, 700);
+
+				dot_fRbar = - fRbar / dtau;
 				fRbar = fR(Rbar, sim, 701);
+				dot_fRbar += fRbar / dtau;
 				fRRbar = fRR(Rbar, sim, 702);
 			}
 
 			parallel.max<double>(maxvel, numspecies);
-			if(sim.relativistic_flag > 0)
+
+			if(sim.relativistic_flag > 0 && !sim.newtonian_fR)
 			{
-				for(i=0; i<numspecies; i++)
+				for(i=0; i<numspecies; ++i)
 				{
 					maxvel[i] /= sqrt(maxvel[i] * maxvel[i] + 1.0);
 				}
@@ -1579,7 +1552,7 @@ int main(int argc, char **argv)
 				COUT << "matter-dark energy equality at z=" << ((1./a) - 1.) << endl;
 			}
 
-			if(sim.modified_gravity_flag == FLAG_FR) // TODO: set new dtau in f(R) gravity -- must be done before hibernations!
+			if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR) // TODO: set new dtau in f(R) gravity -- must be done before hibernations!
 			{
 				dtau_old_2 = dtau_old;
 				dtau_old = dtau;
@@ -1592,7 +1565,7 @@ int main(int argc, char **argv)
 				{
 					dtau = sim.steplimit / Hubble;
 				}
-				if(!sim.perturbations_are_GR && !sim.quasi_static)
+				if(!sim.quasi_static)
 				{
 					max_fRR = compute_max_fRR(deltaR, Rbar, sim);
 					dtau_osci = sim.fR_epsilon_fields * sqrt(3. * max_fRR) / a;
@@ -1605,6 +1578,7 @@ int main(int argc, char **argv)
 				if(sim.Cf * dx < sim.steplimit / Hconf(a, fourpiG, cosmo)) dtau = sim.Cf * dx;
 				else dtau = sim.steplimit / Hconf(a, fourpiG, cosmo);
 			}
+
 
 			if(sim.wallclocklimit > 0. && a <= 1.)   // check for wallclock time limit
 			{
@@ -1623,9 +1597,9 @@ int main(int argc, char **argv)
 					if(sim.vector_flag == VECTOR_ELLIPTIC)
 					{
 						plan_Bi_check.execute(FFT_BACKWARD);
-						if(sim.modified_gravity_flag == FLAG_FR)
+						if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 						{
-							hibernate_fR(sim, ic, cosmo, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, dot_deltaR, eightpiG_deltaT, phidot, xidot, a, tau, dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, Hubble, Rbar, dot_Rbar, cycle);
+							hibernate_fR(sim, ic, cosmo, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, dot_deltaR, eightpiG_deltaT, phi_dot, xi_dot, a, tau, dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, Hubble, Rbar, dot_Rbar, cycle);
 						}
 						else
 						{
@@ -1635,9 +1609,9 @@ int main(int argc, char **argv)
 					else
 					{
 #endif
-						if(sim.modified_gravity_flag == FLAG_FR)
+						if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 						{
-							hibernate_fR(sim, ic, cosmo, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, dot_deltaR, eightpiG_deltaT, phidot, xidot, a, tau, dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, Hubble, Rbar,	dot_Rbar, cycle);
+							hibernate_fR(sim, ic, cosmo, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, dot_deltaR, eightpiG_deltaT, phi_dot, xi_dot, a, tau, dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, Hubble, Rbar,	dot_Rbar, cycle);
 						}
 						else
 						{
@@ -1661,9 +1635,9 @@ int main(int argc, char **argv)
 				if(sim.vector_flag == VECTOR_ELLIPTIC)
 				{
 					plan_Bi_check.execute(FFT_BACKWARD);
-					if(sim.modified_gravity_flag == FLAG_FR)
+					if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 					{
-						hibernate_fR(sim, ic, cosmo, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, dot_deltaR, eightpiG_deltaT, phidot, xidot, a, tau, dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, Hubble, Rbar, dot_Rbar, cycle, restartcount);
+						hibernate_fR(sim, ic, cosmo, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, dot_deltaR, eightpiG_deltaT, phi_dot, xi_dot, a, tau, dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, Hubble, Rbar, dot_Rbar, cycle, restartcount);
 					}
 					else
 					{
@@ -1673,9 +1647,9 @@ int main(int argc, char **argv)
 				else
 				{
 #endif
-					if(sim.modified_gravity_flag == FLAG_FR)
+					if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 					{
-						hibernate_fR(sim, ic, cosmo, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, dot_deltaR, eightpiG_deltaT, phidot, xidot, a, tau, dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, Hubble, Rbar, dot_Rbar, cycle, restartcount);
+						hibernate_fR(sim, ic, cosmo, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_prev, zeta, deltaR, deltaR_prev, dot_deltaR, eightpiG_deltaT, phi_dot, xi_dot, a, tau, dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, Hubble, Rbar, dot_Rbar, cycle, restartcount);
 					}
 					else
 					{
@@ -1695,41 +1669,33 @@ int main(int argc, char **argv)
 #endif
 		}
 
-		COUT
-		<< endl
-		<< "===================================  CYCLE " << cycle << "  ";
+		COUT << endl << "======================================  END - CYCLE " << cycle << "  ";
 		if(cycle < 10)
 		{
-			COUT << "==================================" << endl;
+			COUT << "=====================================" << endl;
 		}
 		else if(cycle < 100)
 		{
-			COUT << "=================================" << endl;
+			COUT << "====================================" << endl;
 		}
 		else if(cycle < 1000)
 		{
-			COUT << "================================" << endl;
+			COUT << "===================================" << endl;
 		}
 		else if(cycle < 10000)
 		{
-			COUT << "===============================" << endl;
+			COUT << "==================================" << endl;
 		}
 
-		// COUT << "              tau = " << tau << endl;
-		COUT << "                z = " << (1./a) - 1. << endl;
-		COUT << "                H = " << Hubble << endl;
-		// COUT << "         dtau_old = " << dtau_old << endl;
-		COUT << "             Rbar = " << Rbar << endl;
-		// COUT << "         dot_Rbar = " << dot_Rbar << endl;
-		COUT << "             fbar = " << fbar << endl;
-		COUT << "            fRbar = " << fRbar << endl;
-		COUT << "           fRRbar = " << fRRbar << endl;
-		// COUT << " background model = " << cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo) << endl;
-		COUT << " avg/rescaled T00 = " << T00_hom*a*a*a << " / " << T00_hom_rescaled_a3 << endl;
-		COUT << endl;
+		if(cycle % sim.CYCLE_INFO_INTERVAL != 0)
+		{
+			output_background_data(tau, a, Hubble, dtau_old, Rbar, dot_Rbar, cosmo, T00_hom, T00_hom_rescaled_a3, fbar, fRbar, fRRbar, sim.modified_gravity_flag);
+			COUT << endl;
+			check_all_fields(phi, xi, chi, deltaR, eightpiG_deltaT, zeta, phi_effective, Bi, numpts3d, sim);
+		}
 
-		check_all_fields(phi, xi, chi, deltaR, eightpiG_deltaT, zeta, phi_effective, Bi, numpts3d, sim);
 		bgoutfile.close();
+
 		COUT << COLORTEXT_GREEN << " simulation complete." << COLORTEXT_RESET << endl;
 
 #ifdef BENCHMARK

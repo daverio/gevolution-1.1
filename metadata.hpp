@@ -56,11 +56,11 @@
 #define MASK_XSPEC      		2048
 #define MASK_DELTA      		4096
 #define MASK_DBARE      		8192
-#define MASK_XI  		    		16384
+#define MASK_XI   		   	  16384
 #define MASK_ZETA       		32768
 #define MASK_DELTAR	    		65536
 #define MASK_DELTAT     		131072
-#define MASK_LAPLACE_XI 		262144
+#define MASK_LAPLACE_XI  	  262144
 #define MASK_PHI_EFFECTIVE  524288
 
 #define ICFLAG_CORRECT_DISPLACEMENT 1
@@ -125,7 +125,7 @@
 #define HIB_SAVE_GADGET2 1
 
 // Modified gravity
-#define FLAG_FR 1   // f(R)
+#define MODIFIED_GRAVITY_FLAG_FR 1   // f(R)
 
 #define FR_TYPE_RN 1
 #define FR_TYPE_R2 2
@@ -151,11 +151,8 @@
 #define METHOD_MULTIGRID 2
 #define METHOD_FMG 3
 
-#define RELAXATION_VAR_U 1
-#define RELAXATION_VAR_XI 2
-
 // Restrict/prolong u or deltaR
-#define RESTRICT_SCALARON 1
+#define RESTRICT_XI 1
 #define RESTRICT_DELTAR 2
 
 
@@ -230,7 +227,6 @@ struct metadata
 	double z_fin;
 	int lcdm_background;
 	double Cf;
-	int perturbations_are_GR;
 	int check_fields;
 	int check_fields_precision;
 	int check_pause;
@@ -240,10 +236,10 @@ struct metadata
 	double fR_epsilon_fields;
 	double fR_target_precision;
 	double fR_count_max;
+	int newtonian_fR;
 	double relaxation_error;
 	double overrelaxation_coeff;
 	int relaxation_method;
-	int relaxation_variable;
 	int red_black;
 	int pre_smoothing;
 	int post_smoothing;
@@ -312,14 +308,11 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "background_only: " << sim.background_only << "\n";
 	os << "background final redshift: " << sim.z_fin << "\n";
 	os << "lcdm_background: " << sim.lcdm_background << "\n";
-
-	os << "perturbations_are_GR: " << sim.perturbations_are_GR << "\n";
 	os << "check_fields: " << sim.check_fields << "\n";
 	os << "check_pause: " << sim.check_pause << "\n";
-
 	os << "Cf: " << sim.Cf << "\n";
-
 	os << "fR_params: " << sim.fR_params[0];
+
 	for(int i=1; i<MAX_FR_PARAMS; i++) os << " , " << sim.fR_params[i];
 	os << "\n";
 
@@ -338,24 +331,17 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "z_in: " << sim.z_in << "\n";
 	os << "z_check: " << sim.z_check << "\n";
 	os << "z_snapshot: " << sim.z_snapshot[0];
-	for(int i=1; i<MAX_OUTPUTS; i++)
-	{
-		os << " , " << sim.z_snapshot[i];
-	}
-	os << "\n";
 
+	for(int i=1; i<MAX_OUTPUTS; i++) os << " , " << sim.z_snapshot[i];
+	os << "\n";
 	os << "z_pk: " << sim.z_pk[0];
-	for(int i=1; i<MAX_OUTPUTS; i++)
-	{
-		os << " , " << sim.z_pk[i];
-	}
-	os << "\n";
 
+	for(int i=1; i<MAX_OUTPUTS; i++) os << " , " << sim.z_pk[i];
+	os << "\n";
+	
 	os << "z_restart: " << sim.z_restart[0];
-	for(int i=1; i<MAX_OUTPUTS; i++)
-	{
-		os << " , " << sim.z_restart[i];
-	}
+
+	for(int i=1; i<MAX_OUTPUTS; i++) os << " , " << sim.z_restart[i];
 	os << "\n";
 
 	os << "z_switch_fR_background: " << sim.z_switch_fR_background << "\n";

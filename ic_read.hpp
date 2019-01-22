@@ -531,7 +531,7 @@ void readIC_fR(metadata & sim,
 							 Field<Real> * dot_deltaR,
 							 Field<Real> * eightpiG_deltaT,
 							 Field<Real> * phidot,
-							 Field<Real> * xidot,
+							 Field<Real> * xi_dot,
 							 Field<Real> * source,
 							 Field<Real> * Sij,
 							 Field<Cplx> * scalarFT,
@@ -842,7 +842,7 @@ void readIC_fR(metadata & sim,
 			chi->updateHalo();
 		}
 
-		if(sim.modified_gravity_flag == FLAG_FR)
+		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 		{
 			int j=3;
 			filename.assign(ic.metricfile[j]);
@@ -886,8 +886,8 @@ void readIC_fR(metadata & sim,
 			j++;
 
 			filename.assign(ic.metricfile[j]);
-			xidot->loadHDF5(filename);
-			xidot->updateHalo();
+			xi_dot->loadHDF5(filename);
+			xi_dot->updateHalo();
 			j++;
 		}
 

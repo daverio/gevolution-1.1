@@ -670,7 +670,7 @@ bool parseFieldSpecifiers(parameter * & params, const int numparam, const char *
 
 			if(strcmp(start, "Phi") == 0 || strcmp(start, "phi") == 0)
 				pvalue |= MASK_PHI;
-			else if( (strcmp(start, "xi") == 0 || strcmp(start, "Xi") == 0) )
+			else if( (strcmp(start, "xi") == 0 || strcmp(start, "xi") == 0) )
 				pvalue |= MASK_XI;
 			else if( (strcmp(start, "zeta") == 0 || strcmp(start, "Zeta") == 0) )
 				pvalue |= MASK_ZETA;
@@ -797,6 +797,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	sim.fR_type = 0;
 	for(i=0; i<MAX_FR_PARAMS; i++) sim.fR_params[i] = 0;
 	sim.num_fR_params = MAX_FR_PARAMS;
+	sim.newtonian_fR = 0;
 
 	// parse cosmological parameters
 	if(!parseParameter(params, numparam, "h", cosmo.h))
@@ -838,6 +839,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		cosmo.T_ncdm[i] = P_T_NCDM;
 		cosmo.deg_ncdm[i] = 1.0;
 	}
+
 	parseParameter(params, numparam, "T_ncdm", cosmo.T_ncdm, i);
 	i = MAX_PCL_SPECIES-2;
 	parseParameter(params, numparam, "deg_ncdm", cosmo.deg_ncdm, i);
@@ -943,9 +945,9 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			COUT << " gravity theory set to: " << COLORTEXT_CYAN << "Newtonian" << COLORTEXT_RESET << endl;
 			sim.relativistic_flag = 0;
 			if(ic.pkfile[0] == '\0' && ic.tkfile[0] != '\0'
-			#ifdef ICGEN_PREVOLUTION
+#ifdef ICGEN_PREVOLUTION
 				&& ic.generator != ICGEN_PREVOLUTION
-			#endif
+#endif
 				)
 			{
 				COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": gauge transformation to N-body gauge can only be performed for the positions; the transformation for" << endl;
@@ -959,14 +961,17 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		}
 		else if(par_string[0] == 'F' || par_string[0] == 'f')
 		{
-			sim.modified_gravity_flag = FLAG_FR;
+			sim.modified_gravity_flag = MODIFIED_GRAVITY_FLAG_FR;
 
-			if(!parseParameter(params, numparam, "f(R) relativistic", sim.relativistic_flag))
+			// TODO: Needed to use updateVel and moveParticles correctly - Check this!
+			sim.relativistic_flag = 1;
+
+			if(!parseParameter(params, numparam, "Newtonian f(R)", sim.newtonian_fR))
 			{
 				COUT << " Gravity theory set to: " << COLORTEXT_CYAN << "relativistic f(R)" << COLORTEXT_RESET << endl;
-				sim.relativistic_flag = 1;
+				sim.newtonian_fR = 0;
 			}
-			else if(!sim.relativistic_flag)
+			else if(sim.newtonian_fR)
 			{
 				COUT << " Gravity theory set to: " << COLORTEXT_CYAN << "Newtonian f(R)" << COLORTEXT_RESET << endl;
 			}
@@ -989,14 +994,13 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 				{
 					sim.z_switch_fR_background = -100.;
 				}
+
 				if(sim.z_switch_fR_background > 0. && sim.z_switch_fR_background < sim.z_in)
 				{
 					COUT << " Full f(R) background expansion will start after z = " << sim.z_switch_fR_background << endl;
 					sim.lcdm_background = 1;
 				}
 			}
-
-
 
 			//TODO: read f(R) params and type
 			if(!parseParameter(params, numparam, "f(R) parameters", sim.fR_params, sim.num_fR_params))
@@ -1011,7 +1015,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 				{
 					if(sim.fR_params[0] <= 0.)
 					{
-						COUT << " The coefficient a of f(R) = a * R^n is <= 0. This leads to a tachyonic instability for the scalaron. Closing...\n";
+						COUT << " The coefficient a of f(R) = a * R^n is <= 0. This leads to a tachyonic instability for the xi. Closing...\n";
 						parallel.abortForce();
 					}
 					else if(sim.fR_params[1] < 0.)
@@ -1162,26 +1166,39 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	if(!parseParameter(params, numparam, "generic file base", sim.basename_generic))
 	{
-		if(sim.modified_gravity_flag == FLAG_FR) strcpy(sim.basename_generic, "fR");
-		else if(sim.relativistic_flag) strcpy(sim.basename_generic, "lcdm");
-		else strcpy(sim.basename_generic, "Newton");
+		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
+		{
+			if(sim.newtonian_fR)
+			{
+				strcpy(sim.basename_generic, "fR_Newtonian");
+			}
+			else
+			{
+				strcpy(sim.basename_generic, "fR");
+			}
+		}
+		else if(sim.relativistic_flag)
+		{
+			strcpy(sim.basename_generic, "lcdm");
+		}
+		else
+		{
+			strcpy(sim.basename_generic, "Newton");
+		}
 	}
 
 	if(!parseParameter(params, numparam, "output path", sim.output_path))
 	{
 		sim.output_path[0] = '\0';
 	}
-
 	if(!parseParameter(params, numparam, "hibernation path", sim.restart_path))
 	{
 		strcpy(sim.restart_path, sim.output_path);
 	}
-
 	if(!parseParameter(params, numparam, "hibernation file base", sim.basename_restart))
 	{
 		strcpy(sim.basename_restart, "restart");
 	}
-
 	if(!parseParameter(params, numparam, "BACKGROUND_NUMPTS", sim.BACKGROUND_NUMPTS))
 	{
 		sim.BACKGROUND_NUMPTS = -1;
@@ -1192,7 +1209,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	{
 		sim.background_only = 0;
 	}
-
 	if(sim.background_only)
 	{
 		if(!parseParameter(params, numparam, "background final redshift", sim.z_fin))
@@ -1206,7 +1222,10 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 		for(i=0; i<numparam; i++)
 		{
-			if(params[i].used) usedparams++;
+			if(params[i].used)
+			{
+				usedparams++;
+			}
 		}
 
 		return usedparams;
@@ -1223,24 +1242,24 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		{
 			ic.generator = ICGEN_READ_FROM_DISK;
 		}
-		#ifdef ICGEN_PREVOLUTION
+#ifdef ICGEN_PREVOLUTION
 		else if(par_string[0] == 'P' || par_string[0] == 'p')
 		{
 			ic.generator = ICGEN_PREVOLUTION;
 		}
-		#endif
-		#ifdef ICGEN_SONG
+#endif
+#ifdef ICGEN_SONG
 		else if(par_string[0] == 'S' || par_string[0] == 's')
 		{
 			ic.generator = ICGEN_SONG;
 		}
-		#endif
-		#ifdef ICGEN_FALCONIC
+#endif
+#ifdef ICGEN_FALCONIC
 		else if(par_string[0] == 'F' || par_string[0] == 'f')
 		{
 			ic.generator = ICGEN_FALCONIC;
 		}
-		#endif
+#endif
 		else
 		{
 			COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": IC generator not recognized!" << endl;
@@ -1279,23 +1298,23 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		strcpy(ic.pclfile[i], ic.pclfile[i-1]);
 	}
 
-	#ifdef ICGEN_FALCONIC
+#ifdef ICGEN_FALCONIC
 		if((!parseParameter(params, numparam, "mPk file", ic.pkfile) && !parseParameter(params, numparam, "Tk file", ic.tkfile) && ic.generator != ICGEN_READ_FROM_DISK && ic.generator != ICGEN_FALCONIC)
-	#else
+#else
 		if((!parseParameter(params, numparam, "mPk file", ic.pkfile) && !parseParameter(params, numparam, "Tk file", ic.tkfile) && ic.generator != ICGEN_READ_FROM_DISK)
-	#endif
-	#ifdef ICGEN_PREVOLUTION
+#endif
+#ifdef ICGEN_PREVOLUTION
 	  || ic.generator == ICGEN_PREVOLUTION)
-	#else
+#else
 		)
-	#endif
+#endif
 	{
-		#ifdef HAVE_CLASS
+#ifdef HAVE_CLASS
 			COUT << " initial transfer functions will be computed by calling CLASS" << endl;
-		#else
+#else
 			COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": no power spectrum file nor transfer function file specified!" << endl;
 			parallel.abortForce();
-		#endif
+#endif
 	}
 
 	if(parseParameter(params, numparam, "correct displacement", par_string))
@@ -1404,33 +1423,33 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			sim.radiation_flag = 0;
 			COUT << " radiation treatment set to: " << COLORTEXT_CYAN << "ignore" << COLORTEXT_RESET << endl;
 		}
-		#ifdef HAVE_CLASS
-			else if(par_string[0] == 'c' || par_string[0] == 'C')
+#ifdef HAVE_CLASS
+		else if(par_string[0] == 'c' || par_string[0] == 'C')
+		{
+			sim.radiation_flag = 1;
+			COUT << " radiation treatment set to: " << COLORTEXT_CYAN << "CLASS" << COLORTEXT_RESET << endl;
+			if((ic.pkfile[0] != '\0' || ic.tkfile[0] != '\0')
+#ifdef ICGEN_PREVOLUTION
+				&& ic.generator != ICGEN_PREVOLUTION
+#endif
+			)
 			{
-				sim.radiation_flag = 1;
-				COUT << " radiation treatment set to: " << COLORTEXT_CYAN << "CLASS" << COLORTEXT_RESET << endl;
-				if((ic.pkfile[0] != '\0' || ic.tkfile[0] != '\0')
-				#ifdef ICGEN_PREVOLUTION
-					&& ic.generator != ICGEN_PREVOLUTION
-				#endif
-				)
-				{
-					COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": using radiation treatment = CLASS and providing initial power spectra / transfer functions independently" << endl;
-					COUT << "              is dangerous! In order to ensure consistency, it is recommended to call CLASS directly." << endl;
-				}
+				COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": using radiation treatment = CLASS and providing initial power spectra / transfer functions independently" << endl;
+				COUT << "              is dangerous! In order to ensure consistency, it is recommended to call CLASS directly." << endl;
 			}
-			else
-			{
-				COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": radiation treatment not supported!" << endl;
-				parallel.abortForce();
-			}
-		#else
-			else
-			{
-				sim.radiation_flag = 0;
-				COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": CLASS is not available, setting radiation treatment = ignore" << endl;
-			}
-		#endif
+		}
+		else
+		{
+			COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": radiation treatment not supported!" << endl;
+			parallel.abortForce();
+		}
+#else
+		else
+		{
+			sim.radiation_flag = 0;
+			COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": CLASS is not available, setting radiation treatment = ignore" << endl;
+#endif
+		}
 	}
 	else
 	{
@@ -1457,7 +1476,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			pptr[i] = ic.metricfile[i];
 		}
 
-		if(sim.modified_gravity_flag == FLAG_FR)
+		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 		{
 			parseParameter(params, numparam, "dtau_old", ic.restart_dtau_old);
 			parseParameter(params, numparam, "dtau_old_2", ic.restart_dtau_old_2);
@@ -1480,7 +1499,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			}
 		}
 	}
-	#ifdef ICGEN_PREVOLUTION
+#ifdef ICGEN_PREVOLUTION
 		else if(ic.generator == ICGEN_PREVOLUTION)
 		{
 			if(!parseParameter(params, numparam, "prevolution redshift", ic.z_ic))
@@ -1491,39 +1510,39 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 			parseParameter(params, numparam, "prevolution Courant factor", ic.Cf);
 		}
-	#endif
+#endif
 
 	if(!parseParameter(params, numparam, "A_s", ic.A_s) && (
-	#ifdef ICGEN_FALCONIC
+#ifdef ICGEN_FALCONIC
 		ic.generator == ICGEN_FALCONIC ||
-	#endif
-	#ifdef ICGEN_PREVOLUTION
+#endif
+#ifdef ICGEN_PREVOLUTION
 		ic.generator == ICGEN_PREVOLUTION ||
-	#endif
+#endif
 		sim.radiation_flag > 0 || (ic.pkfile[0] == '\0' && ic.generator != ICGEN_READ_FROM_DISK)))
 	{
 		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": power spectrum normalization not specified, using default value (2.215e-9)" << endl;
 	}
 
 	if(!parseParameter(params, numparam, "n_s", ic.n_s) && (
-	#ifdef ICGEN_FALCONIC
+#ifdef ICGEN_FALCONIC
 		ic.generator == ICGEN_FALCONIC ||
-	#endif
-	#ifdef ICGEN_PREVOLUTION
+#endif
+#ifdef ICGEN_PREVOLUTION
 		ic.generator == ICGEN_PREVOLUTION ||
-	#endif
+#endif
 		sim.radiation_flag > 0 || (ic.pkfile[0] == '\0' && ic.generator != ICGEN_READ_FROM_DISK)))
 	{
 		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": scalar spectral index not specified, using default value (0.9619)" << endl;
 	}
 
 	if(!parseParameter(params, numparam, "k_pivot", ic.k_pivot) && (
-	#ifdef ICGEN_FALCONIC
+#ifdef ICGEN_FALCONIC
 		ic.generator == ICGEN_FALCONIC ||
-	#endif
-	#ifdef ICGEN_PREVOLUTION
+#endif
+#ifdef ICGEN_PREVOLUTION
 		ic.generator == ICGEN_PREVOLUTION ||
-	#endif
+#endif
 		sim.radiation_flag > 0 || (ic.pkfile[0] == '\0' && ic.generator != ICGEN_READ_FROM_DISK)))
 	{
 		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": pivot scale not specified, using default value (0.05 / Mpc)" << endl;
@@ -1596,13 +1615,13 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	{
 		ic.z_relax = sim.z_in;
 	}
-	#ifdef ICGEN_PREVOLUTION
+#ifdef ICGEN_PREVOLUTION
 		else if(ic.generator == ICGEN_PREVOLUTION && ic.z_relax < sim.z_in)
 		{
 			COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": relaxation redshift cannot be below initial redshift for IC generator = prevolution; reset to initial redshift!" << endl;
 			ic.z_relax = sim.z_in;
 		}
-	#endif
+#endif
 
 	if(ic.z_ic < sim.z_in && ic.generator != ICGEN_READ_FROM_DISK)
 	{
@@ -1662,7 +1681,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		COUT << " /!\\ Wrong multigrid_n_grids specified. Using default: " << sim.multigrid_n_grids << endl;
 	}
 
-	if(sim.modified_gravity_flag == FLAG_FR)
+	if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 	{
 		if(!parseParameter(params, numparam, "quasi-static", sim.quasi_static))
 		{
@@ -1670,232 +1689,188 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		}
 		else if(sim.quasi_static)
 		{
-			COUT << " Quasi-static mode active (modified Newtonian).\n";
+			COUT << " Quasi-static mode active.\n";
 		}
 
-		if(!parseParameter(params, numparam, "GR perturbations", sim.perturbations_are_GR))
+		if(!parseParameter(params, numparam, "f(R) epsilon fields", sim.fR_epsilon_fields))
 		{
-			sim.perturbations_are_GR = 0;
+			sim.fR_epsilon_fields = FR_EPSILON_FIELDS_DEFAULT;
+			COUT << " /!\\ f(R) epsilon fields not specified. Using default: " << sim.fR_epsilon_fields << endl;
+		}
+		else if(sim.fR_epsilon_fields <= 0.)
+		{
+			sim.fR_epsilon_fields = FR_EPSILON_FIELDS_DEFAULT;
+			COUT << " /!\\ Wrong f(R) epsilon fields specified. Using default: " << sim.fR_epsilon_fields << endl;
 		}
 
-		if(sim.perturbations_are_GR)
+		if(!parseParameter(params, numparam, "f(R) target precision", sim.fR_target_precision))
 		{
-			COUT << " GR perturbations mode active. f(R) will only affect the background evolution!\n";
-			if(sim.quasi_static)
-			{
-				sim.quasi_static = 0;
-				COUT << "/!\\ Warning: Quasi-static mode also selected. This option is overridden by back-to-GR.\n";
-			}
+			sim.fR_target_precision = FR_TARGET_PRECISION_DEFAULT;
+			COUT << " /!\\ f(R) target precision not specified. Using default: " << sim.fR_target_precision << endl;
 		}
-		else
+
+		if(sim.fR_target_precision <= 0.)
 		{
-			if(!parseParameter(params, numparam, "f(R) epsilon fields", sim.fR_epsilon_fields))
+			sim.fR_target_precision = FR_TARGET_PRECISION_DEFAULT;
+			COUT << " /!\\ Wrong f(R) target precision specified. Using default: " << sim.fR_target_precision << endl;
+		}
+
+		// TODO: Find a way to remove fR_count_max
+		if(!parseParameter(params, numparam, "f(R) count max", sim.fR_count_max))
+		{
+			sim.fR_count_max = FR_COUNT_MAX_DEFAULT;
+			COUT << "/!\\ f(R) count max not specified. Using default: " << sim.fR_count_max << endl;
+		}
+		else if(sim.fR_count_max < 1)
+		{
+			sim.fR_count_max = FR_COUNT_MAX_DEFAULT;
+			COUT << "/!\\ Wrong f(R) count max specified. Using default: " << sim.fR_count_max << endl;
+		}
+
+		if(sim.fR_type != FR_TYPE_R2)
+		{
+			if(parseParameter(params, numparam, "relaxation method", sim.relaxation_method))
 			{
-				sim.fR_epsilon_fields = FR_EPSILON_FIELDS_DEFAULT;
-				COUT << " /!\\ f(R) epsilon fields not specified. Using default: " << sim.fR_epsilon_fields << endl;
-			}
-			else if(sim.fR_epsilon_fields <= 0.)
-			{
-				sim.fR_epsilon_fields = FR_EPSILON_FIELDS_DEFAULT;
-				COUT << " /!\\ Wrong f(R) epsilon fields specified. Using default: " << sim.fR_epsilon_fields << endl;
-			}
-
-			if(!parseParameter(params, numparam, "f(R) target precision", sim.fR_target_precision))
-			{
-				sim.fR_target_precision = FR_TARGET_PRECISION_DEFAULT;
-				COUT << " /!\\ f(R) target precision not specified. Using default: " << sim.fR_target_precision << endl;
-			}
-
-			if(sim.fR_target_precision <= 0.)
-			{
-				sim.fR_target_precision = FR_TARGET_PRECISION_DEFAULT;
-				COUT << " /!\\ Wrong f(R) target precision specified. Using default: " << sim.fR_target_precision << endl;
-			}
-
-			// TODO: Find a way to remove fR_count_max
-			if(!parseParameter(params, numparam, "f(R) count max", sim.fR_count_max))
-			{
-				sim.fR_count_max = FR_COUNT_MAX_DEFAULT;
-				COUT << "/!\\ f(R) count max not specified. Using default: " << sim.fR_count_max << endl;
-			}
-			else if(sim.fR_count_max < 1)
-			{
-				sim.fR_count_max = FR_COUNT_MAX_DEFAULT;
-				COUT << "/!\\ Wrong f(R) count max specified. Using default: " << sim.fR_count_max << endl;
-			}
-
-
-
-
-
-
-
-			if(sim.fR_type != FR_TYPE_R2)
-			{
-				if(!parseParameter(params, numparam, "relaxation variable", par_string))
+				sim.multigrid_or_not = 1;
+				if(sim.relaxation_method == METHOD_FMG)
 				{
-					sim.relaxation_variable = RELAXATION_VAR_XI;
-					COUT << " /!\\ Relaxation variable not specified. Using default: xi." << endl;
+					COUT << " Relaxation: multigrid FMG mode" << endl;
 				}
-				else if(par_string[0] == 'U' || par_string[0] == 'u')
+				else if(sim.relaxation_method == METHOD_RELAX)
 				{
-					sim.relaxation_variable = RELAXATION_VAR_U;
-					COUT << " Relaxation variable: u." << endl;
+					sim.multigrid_or_not = 0;
+					COUT << " Relaxation: single layer (no multigrid)" << endl;
 				}
-				else if(par_string[0] == 'X' || par_string[0] == 'x')
+				else if(sim.relaxation_method == METHOD_MULTIGRID)
 				{
-					sim.relaxation_variable = RELAXATION_VAR_XI;
-					COUT << " Relaxation variable: xi." << endl;
-				}
-				else
-				{
-					sim.relaxation_variable = RELAXATION_VAR_XI;
-					COUT << " /!\\ Wrong relaxation variable specified. Using default: xi." << endl;
-				}
-
-				if(parseParameter(params, numparam, "relaxation method", sim.relaxation_method))
-				{
-					sim.multigrid_or_not = 1;
-					if(sim.relaxation_method == METHOD_FMG)
+					COUT << " Relaxation: multigrid" << endl;
+					if(!parseParameter(params, numparam, "multigrid shape", par_string))
 					{
-						COUT << " Relaxation: multigrid FMG mode" << endl;
+						sim.multigrid_shape = MG_SHAPE_V;
+						COUT << " /!\\ Multigrid shape not specified: Using default: V" << endl;
 					}
-					else if(sim.relaxation_method == METHOD_RELAX)
+					else if(par_string[0] == 'V' || par_string[0] == 'v')
 					{
-						sim.multigrid_or_not = 0;
-						COUT << " Relaxation: single layer (no multigrid)" << endl;
+						sim.multigrid_shape = MG_SHAPE_V;
+						COUT << " Multigrid shape = V" << endl;
 					}
-					else if(sim.relaxation_method == METHOD_MULTIGRID)
+					else if(par_string[0] == 'W' || par_string[0] == 'w')
 					{
-						COUT << " Relaxation: multigrid" << endl;
-						if(!parseParameter(params, numparam, "multigrid shape", par_string))
-						{
-							sim.multigrid_shape = MG_SHAPE_V;
-							COUT << " /!\\ Multigrid shape not specified: Using default: V" << endl;
-						}
-						else if(par_string[0] == 'V' || par_string[0] == 'v')
-						{
-							sim.multigrid_shape = MG_SHAPE_V;
-							COUT << " Multigrid shape = V" << endl;
-						}
-						else if(par_string[0] == 'W' || par_string[0] == 'w')
-						{
-							sim.multigrid_shape = MG_SHAPE_W;
-							COUT << " Multigrid shape = W" << endl;
-						}
-						else
-						{
-							sim.multigrid_shape = MG_SHAPE_V;
-							COUT << " /!\\ Multigrid shape not recognised. Using default: V" << endl;
-						}
+						sim.multigrid_shape = MG_SHAPE_W;
+						COUT << " Multigrid shape = W" << endl;
 					}
 					else
 					{
-						sim.relaxation_method = METHOD_RELAX;
-						COUT << " /!\\ Wrong relaxation method specified. Using default: single layer (no multigrid)" << endl;
+						sim.multigrid_shape = MG_SHAPE_V;
+						COUT << " /!\\ Multigrid shape not recognised. Using default: V" << endl;
 					}
 				}
 				else
 				{
 					sim.relaxation_method = METHOD_RELAX;
-					COUT << " /!\\ Relaxation method not specified. Using default: single layer (no multigrid)" << endl;
+					COUT << " /!\\ Wrong relaxation method specified. Using default: single layer (no multigrid)" << endl;
+				}
+			}
+			else
+			{
+				sim.relaxation_method = METHOD_RELAX;
+				COUT << " /!\\ Relaxation method not specified. Using default: single layer (no multigrid)" << endl;
+			}
+
+			if(!parseParameter(params, numparam, "red black", sim.red_black))
+			{
+				sim.red_black = 0;
+				COUT << " Using simple sequential sweep of sites." << endl;
+			}
+			else if(sim.red_black)
+			{
+				COUT << " Using red-black sweep scheme." << endl;
+			}
+			else
+			{
+				sim.red_black = 0; // TODO: This is most probably redundant. Just making sure that it's really zero :)
+				COUT << " Using simple sequential sweep of sites." << endl;
+			}
+
+			if(!parseParameter(params, numparam, "relaxation error", sim.relaxation_error))
+			{
+				sim.relaxation_error = RELAXATION_ERROR_DEFAULT;
+				COUT << "/!\\ Relaxation error not specified. Using default: " << sim.relaxation_error << endl;
+			}
+			else if(sim.relaxation_error <= 0.)
+			{
+				sim.relaxation_error = RELAXATION_ERROR_DEFAULT;
+				COUT << "/!\\ Wrong relaxation error specified. Using default: " << sim.relaxation_error << endl;
+			}
+
+			if(!parseParameter(params, numparam, "overrelaxation coefficient", sim.overrelaxation_coeff))
+			{
+				sim.overrelaxation_coeff = 1.;
+				COUT << " No overrelaxation coefficient set. Using default value = " << sim.overrelaxation_coeff << endl;
+			}
+			else if(sim.overrelaxation_coeff >= 2. || sim.overrelaxation_coeff <= 0.)
+			{
+				sim.overrelaxation_coeff = 1.;
+				COUT << " Wrong value for overrelaxation coefficient. Using default value = " << sim.overrelaxation_coeff << endl;
+			}
+
+			if(sim.multigrid_or_not)
+			{
+				if(!parseParameter(params, numparam, "pre-smoothing", sim.pre_smoothing))
+				{
+					sim.pre_smoothing = PRE_SMOOTHING_DEFAULT;
+					COUT << "/!\\ Pre-smoothing not specified. Using default: " << sim.pre_smoothing << endl;
+				}
+				else if(sim.pre_smoothing < 1)
+				{
+					sim.pre_smoothing = PRE_SMOOTHING_DEFAULT;
+					COUT << "/!\\ Wrong pre-smoothing specified. Using default: " << sim.pre_smoothing << endl;
 				}
 
-				if(!parseParameter(params, numparam, "red black", sim.red_black))
+				if(!parseParameter(params, numparam, "post-smoothing", sim.post_smoothing))
 				{
-					sim.red_black = 0;
-					COUT << " Using simple sequential sweep of sites." << endl;
+					sim.post_smoothing = POST_SMOOTHING_DEFAULT;
+					COUT << "/!\\ Post-smoothing not specified. Using default: " << sim.post_smoothing << endl;
 				}
-				else if(sim.red_black)
+				else if(sim.post_smoothing < 1)
 				{
-					COUT << " Using red-black sweep scheme." << endl;
+					sim.post_smoothing = POST_SMOOTHING_DEFAULT;
+					COUT << "/!\\ Wrong post-smoothing specified. Using default: " << sim.post_smoothing << endl;
+				}
+
+				if(!parseParameter(params, numparam, "multigrid n-cycles", sim.multigrid_n_cycles))
+				{
+					sim.multigrid_n_cycles = 1;
+					COUT << " /!\\ Multigrid n_cycles not specified. Using default: " << sim.multigrid_n_cycles << endl;
+				}
+				else if(sim.multigrid_n_cycles < 1)
+				{
+					sim.multigrid_n_cycles = 1;
+					COUT << " /!\\ Wrong multigrid n_cycles specifiied. Using default: " << sim.multigrid_n_cycles << endl;
+				}
+
+				if(!parseParameter(params, numparam, "restrict mode", par_string))
+				{
+					sim.multigrid_restrict_mode = RESTRICT_DELTAR;
+					COUT << " /!\\ Restrict mode not specified. Using default: deltaR." << endl;
+				}
+				else if(par_string[0] == 's' || par_string[0] == 'S')
+				{
+					sim.multigrid_restrict_mode = RESTRICT_XI;
+				}
+				else if(par_string[0] == 'r' || par_string[0] == 'R' || par_string[0] == 'd' || par_string[0] == 'D')
+				{
+					sim.multigrid_restrict_mode = RESTRICT_DELTAR;
 				}
 				else
 				{
-					sim.red_black = 0; // TODO: This is most probably redundant. Just making sure that it's really zero :)
-					COUT << " Using simple sequential sweep of sites." << endl;
+					sim.multigrid_restrict_mode = RESTRICT_DELTAR;
+					COUT << " /!\\ Wrong restrict mode specified. Using default: deltaR." << endl;
 				}
 
-				if(!parseParameter(params, numparam, "relaxation error", sim.relaxation_error))
+				if(!parseParameter(params, numparam, "check shape", sim.multigrid_check_shape))
 				{
-					sim.relaxation_error = RELAXATION_ERROR_DEFAULT;
-					COUT << "/!\\ Relaxation error not specified. Using default: " << sim.relaxation_error << endl;
-				}
-				else if(sim.relaxation_error <= 0.)
-				{
-					sim.relaxation_error = RELAXATION_ERROR_DEFAULT;
-					COUT << "/!\\ Wrong relaxation error specified. Using default: " << sim.relaxation_error << endl;
-				}
-
-				if(!parseParameter(params, numparam, "overrelaxation coefficient", sim.overrelaxation_coeff))
-				{
-					sim.overrelaxation_coeff = 1.;
-					COUT << " No overrelaxation coefficient set. Using default value = " << sim.overrelaxation_coeff << endl;
-				}
-				else if(sim.overrelaxation_coeff >= 2. || sim.overrelaxation_coeff <= 0.)
-				{
-					sim.overrelaxation_coeff = 1.;
-					COUT << " Wrong value for overrelaxation coefficient. Using default value = " << sim.overrelaxation_coeff << endl;
-				}
-
-				if(sim.multigrid_or_not)
-				{
-					if(!parseParameter(params, numparam, "pre-smoothing", sim.pre_smoothing))
-					{
-						sim.pre_smoothing = PRE_SMOOTHING_DEFAULT;
-						COUT << "/!\\ Pre-smoothing not specified. Using default: " << sim.pre_smoothing << endl;
-					}
-					else if(sim.pre_smoothing < 1)
-					{
-						sim.pre_smoothing = PRE_SMOOTHING_DEFAULT;
-						COUT << "/!\\ Wrong pre-smoothing specified. Using default: " << sim.pre_smoothing << endl;
-					}
-
-					if(!parseParameter(params, numparam, "post-smoothing", sim.post_smoothing))
-					{
-						sim.post_smoothing = POST_SMOOTHING_DEFAULT;
-						COUT << "/!\\ Post-smoothing not specified. Using default: " << sim.post_smoothing << endl;
-					}
-					else if(sim.post_smoothing < 1)
-					{
-						sim.post_smoothing = POST_SMOOTHING_DEFAULT;
-						COUT << "/!\\ Wrong post-smoothing specified. Using default: " << sim.post_smoothing << endl;
-					}
-
-					if(!parseParameter(params, numparam, "multigrid n-cycles", sim.multigrid_n_cycles))
-					{
-						sim.multigrid_n_cycles = 1;
-						COUT << " /!\\ Multigrid n_cycles not specified. Using default: " << sim.multigrid_n_cycles << endl;
-					}
-					else if(sim.multigrid_n_cycles < 1)
-					{
-						sim.multigrid_n_cycles = 1;
-						COUT << " /!\\ Wrong multigrid n_cycles specifiied. Using default: " << sim.multigrid_n_cycles << endl;
-					}
-
-					if(!parseParameter(params, numparam, "restrict mode", par_string))
-					{
-						sim.multigrid_restrict_mode = RESTRICT_DELTAR;
-						COUT << " /!\\ Restrict mode not specified. Using default: deltaR." << endl;
-					}
-					else if(par_string[0] == 's' || par_string[0] == 'S')
-					{
-						sim.multigrid_restrict_mode = RESTRICT_SCALARON;
-					}
-					else if(par_string[0] == 'r' || par_string[0] == 'R' || par_string[0] == 'd' || par_string[0] == 'D')
-					{
-						sim.multigrid_restrict_mode = RESTRICT_DELTAR;
-					}
-					else
-					{
-						sim.multigrid_restrict_mode = RESTRICT_DELTAR;
-						COUT << " /!\\ Wrong restrict mode specified. Using default: deltaR." << endl;
-					}
-
-					if(!parseParameter(params, numparam, "check shape", sim.multigrid_check_shape))
-					{
-						sim.multigrid_check_shape = 0;
-					}
+					sim.multigrid_check_shape = 0;
 				}
 			}
 		}
@@ -2012,7 +1987,10 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	for(i=0; i<numparam; i++)
 	{
-		if(params[i].used) usedparams++;
+		if(params[i].used)
+		{
+			usedparams++;
+		}
 	}
 
 	return usedparams;

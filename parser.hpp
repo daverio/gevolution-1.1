@@ -625,87 +625,53 @@ bool parseFieldSpecifiers(parameter * & params, const int numparam, const char *
 					if(item[pos-1] != ' ' && item[pos-1] != '\t') break;
 				}
 				item[pos] = '\0';
-				if(strcmp(item, "Phi") == 0 || strcmp(item, "phi") == 0)
-					pvalue |= MASK_PHI;
-				else if( (strcmp(item, "xi") == 0 || strcmp(item, "Xi") == 0) )
-					pvalue |= MASK_XI;
-				else if( (strcmp(item, "zeta") == 0 || strcmp(item, "Zeta") == 0) )
-					pvalue |= MASK_ZETA;
-				else if( (strcmp(item, "deltaR") == 0 || strcmp(item, "DeltaR") == 0 || strcmp(item, "delta_R") == 0 || strcmp(item, "Delta_R") == 0) )
-					pvalue |= MASK_DELTAR;
-				else if( (strcmp(item, "deltaT") == 0 || strcmp(item, "DeltaT") == 0 || strcmp(item, "delta_T") == 0 || strcmp(item, "Delta_T") == 0) )
-					pvalue |= MASK_DELTAT;
-				else if(strcmp(item, "Chi") == 0 || strcmp(item, "chi") == 0)
-					pvalue |= MASK_CHI;
-				else if(strcmp(item, "Pot") == 0 || strcmp(item, "pot") == 0 || strcmp(item, "Psi_N") == 0 || strcmp(item, "psi_N") == 0 || strcmp(item, "PsiN") == 0 || strcmp(item, "psiN") == 0)
-					pvalue |= MASK_POT;
-				else if(strcmp(item, "B") == 0 || strcmp(item, "Bi") == 0)
-					pvalue |= MASK_B;
-				else if(strcmp(item, "P") == 0 || strcmp(item, "p") == 0 || strcmp(item, "v") == 0)
-					pvalue |= MASK_P;
-				else if(strcmp(item, "T00") == 0 || strcmp(item, "rho") == 0)
-					pvalue |= MASK_T00;
-				else if(strcmp(item, "Tij") == 0)
-					pvalue |= MASK_TIJ;
-				else if(strcmp(item, "rho_N") == 0 || strcmp(item, "rhoN") == 0)
-					pvalue |= MASK_RBARE;
-				else if(strcmp(item, "hij") == 0 || strcmp(item, "GW") == 0)
-					pvalue |= MASK_HIJ;
-				else if(strcmp(item, "Gadget") == 0 || strcmp(item, "Gadget2") == 0 || strcmp(item, "gadget") == 0 || strcmp(item, "gadget2") == 0)
-					pvalue |= MASK_GADGET;
-				else if(strcmp(item, "Particles") == 0 || strcmp(item, "particles") == 0 || strcmp(item, "pcls") == 0 || strcmp(item, "part") == 0)
-					pvalue |= MASK_PCLS;
-				else if(strcmp(item, "cross") == 0 || strcmp(item, "X-spectra") == 0 || strcmp(item, "x-spectra") == 0)
-					pvalue |= MASK_XSPEC;
-				else if(strcmp(item, "delta") == 0 || strcmp(item, "Ds") == 0 || strcmp(item, "D_s") == 0)
-					pvalue |= MASK_DELTA;
-				else if(strcmp(item, "delta_N") == 0 || strcmp(item, "deltaN") == 0)
-					pvalue |= MASK_DBARE;
-				else if(strcmp(item, "phi_effective") == 0 || strcmp(item, "Phi_effective") == 0)
-					pvalue |= MASK_PHI_EFFECTIVE;
+				if(strcmp(item, "Phi") == 0 || strcmp(item, "phi") == 0) pvalue |= MASK_PHI;
+				else if( (strcmp(item, "xi") == 0 || strcmp(item, "Xi") == 0) ) pvalue |= MASK_XI;
+				else if( (strcmp(item, "zeta") == 0 || strcmp(item, "Zeta") == 0) ) pvalue |= MASK_ZETA;
+				else if( (strcmp(item, "deltaR") == 0 || strcmp(item, "DeltaR") == 0 || strcmp(item, "delta_R") == 0 || strcmp(item, "Delta_R") == 0) ) pvalue |= MASK_DELTAR;
+				else if( (strcmp(item, "deltaT") == 0 || strcmp(item, "DeltaT") == 0 || strcmp(item, "delta_T") == 0 || strcmp(item, "Delta_T") == 0) ) pvalue |= MASK_DELTAT;
+				else if(strcmp(item, "Chi") == 0 || strcmp(item, "chi") == 0) pvalue |= MASK_CHI;
+				else if(strcmp(item, "Pot") == 0 || strcmp(item, "pot") == 0 || strcmp(item, "Psi_N") == 0 || strcmp(item, "psi_N") == 0 || strcmp(item, "PsiN") == 0 || strcmp(item, "psiN") == 0) pvalue |= MASK_POT;
+				else if(strcmp(item, "B") == 0 || strcmp(item, "Bi") == 0) pvalue |= MASK_B;
+				else if(strcmp(item, "P") == 0 || strcmp(item, "p") == 0 || strcmp(item, "v") == 0) pvalue |= MASK_P;
+				else if(strcmp(item, "T00") == 0 || strcmp(item, "rho") == 0) pvalue |= MASK_T00;
+				else if(strcmp(item, "Tij") == 0) pvalue |= MASK_TIJ;
+				else if(strcmp(item, "rho_N") == 0 || strcmp(item, "rhoN") == 0) pvalue |= MASK_RBARE;
+				else if(strcmp(item, "hij") == 0 || strcmp(item, "GW") == 0) pvalue |= MASK_HIJ;
+				else if(strcmp(item, "Gadget") == 0 || strcmp(item, "Gadget2") == 0 || strcmp(item, "gadget") == 0 || strcmp(item, "gadget2") == 0) pvalue |= MASK_GADGET;
+				else if(strcmp(item, "Particles") == 0 || strcmp(item, "particles") == 0 || strcmp(item, "pcls") == 0 || strcmp(item, "part") == 0) pvalue |= MASK_PCLS;
+				else if(strcmp(item, "cross") == 0 || strcmp(item, "X-spectra") == 0 || strcmp(item, "x-spectra") == 0) pvalue |= MASK_XSPEC;
+				else if(strcmp(item, "delta") == 0 || strcmp(item, "Ds") == 0 || strcmp(item, "D_s") == 0) pvalue |= MASK_DELTA;
+				else if(strcmp(item, "delta_N") == 0 || strcmp(item, "deltaN") == 0) pvalue |= MASK_DBARE;
+				else if(strcmp(item, "laplace_xi") == 0 || strcmp(item, "laplace xi") == 0) pvalue |= MASK_LAPLACE_XI;
+				else if(strcmp(item, "phi_effective") == 0 || strcmp(item, "Phi_effective") == 0) pvalue |= MASK_PHI_EFFECTIVE;
+				else if(strcmp(item, "phi_ddot") == 0 || strcmp(item, "Phi_ddot") == 0) pvalue |= MASK_PHI_DDOT;
 
 				start = comma+1;
 				while(*start == ' ' || *start == '\t') start++;
 			}
 
-			if(strcmp(start, "Phi") == 0 || strcmp(start, "phi") == 0)
-				pvalue |= MASK_PHI;
-			else if( (strcmp(start, "xi") == 0 || strcmp(start, "xi") == 0) )
-				pvalue |= MASK_XI;
-			else if( (strcmp(start, "zeta") == 0 || strcmp(start, "Zeta") == 0) )
-				pvalue |= MASK_ZETA;
-			else if( (strcmp(start, "deltaR") == 0 || strcmp(start, "DeltaR") == 0 || strcmp(start, "delta_R") == 0 || strcmp(start, "Delta_R") == 0) )
-				pvalue |= MASK_DELTAR;
-			else if( (strcmp(start, "deltaT") == 0 || strcmp(start, "DeltaT") == 0 || strcmp(start, "delta_T") == 0 || strcmp(start, "Delta_T") == 0) )
-				pvalue |= MASK_DELTAT;
-			else if(strcmp(start, "Chi") == 0 || strcmp(start, "chi") == 0)
-				pvalue |= MASK_CHI;
-			else if(strcmp(start, "Pot") == 0 || strcmp(start, "pot") == 0 || strcmp(start, "Psi_N") == 0 || strcmp(start, "psi_N") == 0 || strcmp(start, "PsiN") == 0 || strcmp(start, "psiN") == 0)
-				pvalue |= MASK_POT;
-			else if(strcmp(start, "B") == 0 || strcmp(start, "Bi") == 0)
-				pvalue |= MASK_B;
-			else if(strcmp(start, "P") == 0 || strcmp(start, "p") == 0 || strcmp(start, "v") == 0)
-				pvalue |= MASK_P;
-			else if(strcmp(start, "T00") == 0 || strcmp(start, "rho") == 0)
-				pvalue |= MASK_T00;
-			else if(strcmp(start, "Tij") == 0)
-				pvalue |= MASK_TIJ;
-			else if(strcmp(start, "rho_N") == 0 || strcmp(start, "rhoN") == 0)
-				pvalue |= MASK_RBARE;
-			else if(strcmp(start, "hij") == 0 || strcmp(start, "GW") == 0)
-				pvalue |= MASK_HIJ;
-			else if(strcmp(start, "Gadget") == 0 || strcmp(start, "Gadget2") == 0 || strcmp(start, "gadget") == 0 || strcmp(start, "gadget2") == 0)
-				pvalue |= MASK_GADGET;
-			else if(strcmp(start, "Particles") == 0 || strcmp(start, "particles") == 0 || strcmp(start, "pcls") == 0 || strcmp(start, "part") == 0)
-				pvalue |= MASK_PCLS;
-			else if(strcmp(start, "cross") == 0 || strcmp(start, "X-spectra") == 0 || strcmp(start, "x-spectra") == 0)
-				pvalue |= MASK_XSPEC;
-			else if(strcmp(start, "delta") == 0 || strcmp(start, "Ds") == 0 || strcmp(start, "D_s") == 0)
-				pvalue |= MASK_DELTA;
-			else if(strcmp(start, "delta_N") == 0 || strcmp(start, "deltaN") == 0)
-				pvalue |= MASK_DBARE;
-			else if(strcmp(start, "phi_effective") == 0 || strcmp(start, "Phi_effective") == 0)
-				pvalue |= MASK_PHI_EFFECTIVE;
+			if(strcmp(start, "Phi") == 0 || strcmp(start, "phi") == 0) pvalue |= MASK_PHI;
+			else if( (strcmp(start, "xi") == 0 || strcmp(start, "xi") == 0) ) pvalue |= MASK_XI;
+			else if( (strcmp(start, "zeta") == 0 || strcmp(start, "Zeta") == 0) ) pvalue |= MASK_ZETA;
+			else if( (strcmp(start, "deltaR") == 0 || strcmp(start, "DeltaR") == 0 || strcmp(start, "delta_R") == 0 || strcmp(start, "Delta_R") == 0) ) pvalue |= MASK_DELTAR;
+			else if( (strcmp(start, "deltaT") == 0 || strcmp(start, "DeltaT") == 0 || strcmp(start, "delta_T") == 0 || strcmp(start, "Delta_T") == 0) ) pvalue |= MASK_DELTAT;
+			else if(strcmp(start, "Chi") == 0 || strcmp(start, "chi") == 0) pvalue |= MASK_CHI;
+			else if(strcmp(start, "Pot") == 0 || strcmp(start, "pot") == 0 || strcmp(start, "Psi_N") == 0 || strcmp(start, "psi_N") == 0 || strcmp(start, "PsiN") == 0 || strcmp(start, "psiN") == 0) pvalue |= MASK_POT;
+			else if(strcmp(start, "B") == 0 || strcmp(start, "Bi") == 0) pvalue |= MASK_B;
+			else if(strcmp(start, "P") == 0 || strcmp(start, "p") == 0 || strcmp(start, "v") == 0) pvalue |= MASK_P;
+			else if(strcmp(start, "T00") == 0 || strcmp(start, "rho") == 0) pvalue |= MASK_T00;
+			else if(strcmp(start, "Tij") == 0) pvalue |= MASK_TIJ;
+			else if(strcmp(start, "rho_N") == 0 || strcmp(start, "rhoN") == 0) pvalue |= MASK_RBARE;
+			else if(strcmp(start, "hij") == 0 || strcmp(start, "GW") == 0) pvalue |= MASK_HIJ;
+			else if(strcmp(start, "Gadget") == 0 || strcmp(start, "Gadget2") == 0 || strcmp(start, "gadget") == 0 || strcmp(start, "gadget2") == 0) pvalue |= MASK_GADGET;
+			else if(strcmp(start, "Particles") == 0 || strcmp(start, "particles") == 0 || strcmp(start, "pcls") == 0 || strcmp(start, "part") == 0) pvalue |= MASK_PCLS;
+			else if(strcmp(start, "cross") == 0 || strcmp(start, "X-spectra") == 0 || strcmp(start, "x-spectra") == 0) pvalue |= MASK_XSPEC;
+			else if(strcmp(start, "delta") == 0 || strcmp(start, "Ds") == 0 || strcmp(start, "D_s") == 0) pvalue |= MASK_DELTA;
+			else if(strcmp(start, "delta_N") == 0 || strcmp(start, "deltaN") == 0) pvalue |= MASK_DBARE;
+			else if(strcmp(start, "laplace_xi") == 0 || strcmp(start, "laplace xi") == 0) pvalue |= MASK_LAPLACE_XI;
+			else if(strcmp(start, "phi_effective") == 0 || strcmp(start, "Phi_effective") == 0) pvalue |= MASK_PHI_EFFECTIVE;
+			else if(strcmp(start, "phi_ddot") == 0 || strcmp(start, "Phi_ddot") == 0) pvalue |= MASK_PHI_DDOT;
 
 			params[i].used = true;
 			return true;
@@ -794,10 +760,9 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	sim.boxsize = -1.;
 	sim.wallclocklimit = -1.;
 	sim.z_in = 0.;
-	sim.fR_type = 0;
+	sim.fR_model = 0;
 	for(i=0; i<MAX_FR_PARAMS; i++) sim.fR_params[i] = 0;
 	sim.num_fR_params = MAX_FR_PARAMS;
-	sim.newtonian_fR = 0;
 
 	// parse cosmological parameters
 	if(!parseParameter(params, numparam, "h", cosmo.h))
@@ -963,59 +928,25 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		{
 			sim.modified_gravity_flag = MODIFIED_GRAVITY_FLAG_FR;
 
-			// TODO: Needed to use updateVel and moveParticles correctly - Check this!
-			sim.relativistic_flag = 1;
-
-			if(!parseParameter(params, numparam, "Newtonian f(R)", sim.newtonian_fR))
-			{
-				COUT << " Gravity theory set to: " << COLORTEXT_CYAN << "relativistic f(R)" << COLORTEXT_RESET << endl;
-				sim.newtonian_fR = 0;
-			}
-			else if(sim.newtonian_fR)
-			{
-				COUT << " Gravity theory set to: " << COLORTEXT_CYAN << "Newtonian f(R)" << COLORTEXT_RESET << endl;
-			}
-			else
-			{
-				COUT << " Gravity theory set to: " << COLORTEXT_CYAN << "relativistic f(R)" << COLORTEXT_RESET << endl;
-			}
-
 			if(!parseParameter(params, numparam, "lcdm background", sim.lcdm_background))
 			{
 				sim.lcdm_background = 0;
 			}
-			if(sim.lcdm_background)
-			{
-				COUT << " Background is LCDM.\n";
-			}
-			else // Only switch between LCDM and f(R) background if sim.lcdm_background is not flagged
-			{
-				if(!parseParameter(params, numparam, "switch to f(R) redshift", sim.z_switch_fR_background))
-				{
-					sim.z_switch_fR_background = -100.;
-				}
 
-				if(sim.z_switch_fR_background > 0. && sim.z_switch_fR_background < sim.z_in)
-				{
-					COUT << " Full f(R) background expansion will start after z = " << sim.z_switch_fR_background << endl;
-					sim.lcdm_background = 1;
-				}
-			}
-
-			//TODO: read f(R) params and type
+			//TODO: read f(R) params and model
 			if(!parseParameter(params, numparam, "f(R) parameters", sim.fR_params, sim.num_fR_params))
 			{
 				COUT << " /!\\ No f(R) parameters specified. Closing..." << endl;
 				parallel.abortForce();
 			}
 
-			if(parseParameter(params, numparam, "f(R) type", par_string))
+			if(parseParameter(params, numparam, "f(R) model", par_string))
 			{
 				if(par_string[0] == 'R' || par_string[0] == 'r')
 				{
 					if(sim.fR_params[0] <= 0.)
 					{
-						COUT << " The coefficient a of f(R) = a * R^n is <= 0. This leads to a tachyonic instability for the xi. Closing...\n";
+						COUT << " The coefficient a of f(R) = a * R^n is <= 0. This leads to a tachyonic instability for the scalaron. Closing...\n";
 						parallel.abortForce();
 					}
 					else if(sim.fR_params[1] < 0.)
@@ -1035,11 +966,11 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 					}
 					else if(sim.fR_params[1] == 2. || sim.fR_params[1] == 2)
 					{
-						sim.fR_type = FR_TYPE_R2;
+						sim.fR_model = FR_MODEL_R2;
 					}
 					else
 					{
-						sim.fR_type = FR_TYPE_RN;
+						sim.fR_model = FR_MODEL_RN;
 					}
 				}
 				else if(par_string[0] == 'H' || par_string[0] == 'h')
@@ -1053,12 +984,17 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 					{
 						COUT << " The parameter m2 of Hu-Sawicki model should be strictly positive. Closing...\n";
 						parallel.abortForce();
-						// TODO: Check that parameter n of Hu-Sawicki is >= 1
+					}
+					else if(sim.fR_params[2] < 1.)
+					{
+						COUT << " The parameter n of Hu-Sawicki model should be >= 1. Closing...\n";
+						parallel.abortForce();
 					}
 
-					sim.fR_type = FR_TYPE_HU_SAWICKI;
+					sim.fR_model = FR_MODEL_HU_SAWICKI;
 					if(sim.lcdm_background)
 					{
+						cosmo.Omega_Lambda = 1. - cosmo.Omega_m - cosmo.Omega_rad;
 						COUT << " Hu-Sawicki Model selected, but LCDM background, so Omega_Lambda = 1 - Omega_m - Omega_r" << endl;
 					}
 					else
@@ -1069,37 +1005,32 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 				}
 				else if(par_string[0] == 'D' || par_string[0] == 'd')
 				{
-					if(sim.num_fR_params < 2)
-					{
-						COUT << " Not enough parameters for Hu-Sawicki model! Closing...\n";
-						parallel.abortForce();
-					}
-					else if(sim.fR_params[0] <= 0)
-					{
-						COUT << " The parameter a of a * (R/a)^(1+delta) model must be positive. Closing...\n";
-						parallel.abortForce();
-					}
-					else if(sim.fR_params[1] == 0. || sim.fR_params[1] == 0)
-					{
-						COUT << " The parameter delta of a * (R/a)^(1+delta) model must be non-zero. Closing...\n";
-						parallel.abortForce();
-					}
-					else if(fabs(sim.fR_params[1]) >= 1.)
-					{
-						COUT << " The parameter delta of a * (R/a)^(1+delta) model should be between -1 and 1. Closing...\n";
-						parallel.abortForce();
-					}
+					// if(sim.num_fR_params < 2)
+					// {
+					// 	COUT << " Not enough parameters for R^(1+delta) model! Closing...\n";
+					// 	parallel.abortForce();
+					// }
+					// else if(sim.fR_params[0] <= 0)
+					// {
+					// 	COUT << " The parameter a of R * (R/a)^delta model must be positive. Closing...\n";
+					// 	parallel.abortForce();
+					// }
+					// else if(sim.fR_params[1] <= 0 || sim.fR_params[1] > 1.)
+					// {
+					// 	COUT << " The parameter delta of R * (R/a)^delta model should be 0 < a <= 1. The case a = 0 is simply GR. Closing...\n";
+					// 	parallel.abortForce();
+					// }
 
-					sim.fR_type = FR_TYPE_DELTA;
+					sim.fR_model = FR_MODEL_DELTA;
 				}
 				else
 				{
-					COUT << " /!\\ f(R) type not recognised. Closing..." << endl;
+					COUT << " /!\\ f(R) model not recognised. Closing..." << endl;
 					parallel.abortForce();
 				}
 
 				// Added parser for Omega_Lambda in f(R) gravity -- Lambda will typically be zero, but can be nonzero
-				if(sim.fR_type != FR_TYPE_HU_SAWICKI && !sim.lcdm_background)
+				if(sim.fR_model != FR_MODEL_HU_SAWICKI && !sim.lcdm_background)
 				{
 					COUT << " Using f(R) with" << COLORTEXT_YELLOW << " EXPLICIT " << COLORTEXT_RESET << "Lambda term, Omega_Lambda = ";
 
@@ -1129,7 +1060,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			}
 			else
 			{
-				COUT << " /!\\ No f(R) type specified. Closing..." << endl;
+				COUT << " /!\\ No f(R) model specified. Closing..." << endl;
 				parallel.abortForce();
 			}
 
@@ -1164,29 +1095,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	parseParameter(params, numparam, "time step limit", sim.steplimit);
 
-	if(!parseParameter(params, numparam, "generic file base", sim.basename_generic))
-	{
-		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
-		{
-			if(sim.newtonian_fR)
-			{
-				strcpy(sim.basename_generic, "fR_Newtonian");
-			}
-			else
-			{
-				strcpy(sim.basename_generic, "fR");
-			}
-		}
-		else if(sim.relativistic_flag)
-		{
-			strcpy(sim.basename_generic, "lcdm");
-		}
-		else
-		{
-			strcpy(sim.basename_generic, "Newton");
-		}
-	}
-
 	if(!parseParameter(params, numparam, "output path", sim.output_path))
 	{
 		sim.output_path[0] = '\0';
@@ -1209,6 +1117,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	{
 		sim.background_only = 0;
 	}
+
 	if(sim.background_only)
 	{
 		if(!parseParameter(params, numparam, "background final redshift", sim.z_fin))
@@ -1220,18 +1129,82 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		<< " Background only mode. Initial redshift = " << sim.z_in << endl
 		<< "                         Final redshift = " << sim.z_fin << endl;
 
-		for(i=0; i<numparam; i++)
-		{
-			if(params[i].used)
-			{
-				usedparams++;
-			}
-		}
-
-		return usedparams;
+		COUT << " ===================== UNUSED PARAMETERS =====================" << endl;
 	}
 
 	// FULL EVOLUTION
+	if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
+	{
+		if(!parseParameter(params, numparam, "Newtonian f(R)", sim.relativistic_flag))
+		{
+			COUT << " Gravity theory set to: " << COLORTEXT_CYAN << "relativistic f(R)" << COLORTEXT_RESET << endl;
+			sim.relativistic_flag = 1;
+		}
+		else if(sim.relativistic_flag)
+		{
+			sim.relativistic_flag = 0;
+			COUT << " Gravity theory set to: " << COLORTEXT_CYAN << "Newtonian f(R)" << COLORTEXT_RESET << endl;
+		}
+		else
+		{
+			sim.relativistic_flag = 1;
+			COUT << " Gravity theory set to: " << COLORTEXT_CYAN << "relativistic f(R)" << COLORTEXT_RESET << endl;
+		}
+
+		if(sim.relativistic_flag)
+		{
+			if(!parseParameter(params, numparam, "xi_Hubble", sim.xi_Hubble))
+			{
+				sim.xi_Hubble = 0;
+			}
+			else if(sim.xi_Hubble)
+			{
+				COUT << " xi_Hubble mode active." << endl;
+			}
+		}
+
+		if(sim.lcdm_background)
+		{
+			COUT << " Background is LCDM.\n";
+		}
+		else // Only switch between LCDM and f(R) background if sim.lcdm_background is not flagged
+		{
+			if(!parseParameter(params, numparam, "switch to f(R) redshift", sim.z_switch_fR_background))
+			{
+				sim.z_switch_fR_background = -100.;
+			}
+
+			if(sim.z_switch_fR_background > 0. && sim.z_switch_fR_background < sim.z_in)
+			{
+				COUT << " Full f(R) background expansion will start after z = " << sim.z_switch_fR_background << endl;
+				sim.lcdm_background = 1;
+			}
+		}
+	}
+
+	if(!parseParameter(params, numparam, "generic file base", sim.basename_generic))
+	{
+		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
+		{
+			if(sim.relativistic_flag)
+			{
+				strcpy(sim.basename_generic, "fR");
+			}
+			else
+			{
+				strcpy(sim.basename_generic, "fR_Newtonian");
+			}
+		}
+		else if(sim.relativistic_flag)
+		{
+			strcpy(sim.basename_generic, "lcdm");
+		}
+		else
+		{
+			strcpy(sim.basename_generic, "Newton");
+		}
+	}
+
 	if(parseParameter(params, numparam, "IC generator", par_string))
 	{
 		if(par_string[0] == 'B' || par_string[0] == 'b')
@@ -1692,6 +1665,15 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			COUT << " Quasi-static mode active.\n";
 		}
 
+		if(!parseParameter(params, numparam, "GR curvature", sim.gr_curvature))
+		{
+			sim.gr_curvature = 0;
+		}
+		else if(sim.gr_curvature)
+		{
+			COUT << " Curvature is as in GR: deltaR = 8piG_deltaT.\n";
+		}
+
 		if(!parseParameter(params, numparam, "f(R) epsilon fields", sim.fR_epsilon_fields))
 		{
 			sim.fR_epsilon_fields = FR_EPSILON_FIELDS_DEFAULT;
@@ -1727,7 +1709,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			COUT << "/!\\ Wrong f(R) count max specified. Using default: " << sim.fR_count_max << endl;
 		}
 
-		if(sim.fR_type != FR_TYPE_R2)
+		if(sim.fR_model != FR_MODEL_R2)
 		{
 			if(parseParameter(params, numparam, "relaxation method", sim.relaxation_method))
 			{
@@ -1746,22 +1728,22 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 					COUT << " Relaxation: multigrid" << endl;
 					if(!parseParameter(params, numparam, "multigrid shape", par_string))
 					{
-						sim.multigrid_shape = MG_SHAPE_V;
+						sim.multigrid_shape = MULTIGRID_SHAPE_V;
 						COUT << " /!\\ Multigrid shape not specified: Using default: V" << endl;
 					}
 					else if(par_string[0] == 'V' || par_string[0] == 'v')
 					{
-						sim.multigrid_shape = MG_SHAPE_V;
+						sim.multigrid_shape = MULTIGRID_SHAPE_V;
 						COUT << " Multigrid shape = V" << endl;
 					}
 					else if(par_string[0] == 'W' || par_string[0] == 'w')
 					{
-						sim.multigrid_shape = MG_SHAPE_W;
+						sim.multigrid_shape = MULTIGRID_SHAPE_W;
 						COUT << " Multigrid shape = W" << endl;
 					}
 					else
 					{
-						sim.multigrid_shape = MG_SHAPE_V;
+						sim.multigrid_shape = MULTIGRID_SHAPE_V;
 						COUT << " /!\\ Multigrid shape not recognised. Using default: V" << endl;
 					}
 				}
@@ -1857,10 +1839,12 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 				else if(par_string[0] == 's' || par_string[0] == 'S')
 				{
 					sim.multigrid_restrict_mode = RESTRICT_XI;
+					COUT << " Restriction variable: xi." << endl;
 				}
 				else if(par_string[0] == 'r' || par_string[0] == 'R' || par_string[0] == 'd' || par_string[0] == 'D')
 				{
 					sim.multigrid_restrict_mode = RESTRICT_DELTAR;
+					COUT << " Restriction variable: deltaR." << endl;
 				}
 				else
 				{
@@ -1983,6 +1967,11 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	for(; i<MAX_PCL_SPECIES-2; i++)
 	{
 		sim.z_switch_Bncdm[i] = sim.z_switch_Bncdm[i-1];
+	}
+
+	if(sim.background_only)
+	{
+		COUT << " =================== END UNUSED PARAMETERS ===================" << endl;
 	}
 
 	for(i=0; i<numparam; i++)

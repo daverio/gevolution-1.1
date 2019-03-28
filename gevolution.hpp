@@ -41,10 +41,11 @@ double build_homogeneous_terms(
 	double & Tii_hom,
 	double & phi_hom,
 	double & T00_hom_rescaled_a3,
-	double a3,
+	double a,
 	long numpts3d
 )
 {
+	double a3 = a*a*a;
 	Site x(phi.lattice());
 
 	T00_hom = 0.;
@@ -243,13 +244,6 @@ void prepareFTsource_S00_fR_rel(
 		}
 		laplace -= 6. * xi(x);
 
-		// F(R) terms -- METHOD 1 TODO: Optimize this, e.g. combining with the previous terms
-		// source(x) -= fourpiG_over_a * (negative_a3_T00(x) - negative_a3_T00_hom) * fR;
-		// source(x) += 0.5 * laplace * (1. - 2. * phi(x) - fR);
-		// source(x) -= 1.5 * Hubble * (xi(x) - xi_old(x)) / dtau; //TODO: Do we want to keep this in the Quasi-static limit?
-		// source(x) -= threeH2 * xi(x) / 2.;
-		// source(x) += 0.25 * a2 * (Rbar * xi(x) + fR * deltaR(x) + fbar - f(Rbar + deltaR(x), sim, 110));
-
 		// F(R) terms -- METHOD 2 TODO: Optimize this, e.g. combining with the previous terms
 		source(x) -= fourpiG_over_a * (negative_a3_T00(x) - negative_a3_T00_hom) * fR / 2.;
 		source(x) -= 1.5 * Hubble * (xi(x) - xi_old(x)) / dtau; //TODO: Do we want to keep this in the Quasi-static limit?
@@ -293,41 +287,39 @@ void prepareFTsource_S00_fR_Newtonian(
 	const double fbar,
 	const double fRbar,
 	const metadata & sim)
-{
-	Site x(phi.lattice());
-  Site xn(phi.lattice());
-  Site xp(phi.lattice());
-	double laplace = 0.;
-  double a2 = a*a;
-  double threeH2 = 3. * Hubble * Hubble;
-	double gradphi[3], gradxi[3];
-  int i=0;
-
-	double fR;
-	for(x.first(); x.test(); x.next())
 	{
-		fR = xi(x) + fRbar;
+		Site x(phi.lattice());
+	  Site xn(phi.lattice());
+	  Site xp(phi.lattice());
+		double laplace = 0.;
+	  double a2 = a*a;
+	  double threeH2 = 3. * Hubble * Hubble;
+		double gradphi[3], gradxi[3];
+	  int i=0;
 
-		source(x) =  negative_a3_T00(x) - negative_a3_T00_hom;// 4piG * (-a^3*T00 + a^3*Tbar00) / a = -4piG * a^2 * dT00
-
-		laplace = 0.;
-		for(i=0; i<3; ++i)
+		double fR;
+		for(x.first(); x.test(); x.next())
 		{
-			xn = x+i;
-			xp = x-i;
-			laplace += xi(xn) + xi(xp);
-			// gradphi[i] = phi(xn) - phi(xp);
-			// gradphi[i] *= gradphi[i];
-			// gradxi[i] = xi(xn) - xi(xp);
-			// gradxi[i] *= gradxi[i];
+			fR = xi(x) + fRbar;
+
+			source(x) = fourpiG_over_a * (negative_a3_T00(x) - negative_a3_T00_hom);// 4piG * (-a^3*T00 + a^3*Tbar00) / a = -4piG * a^2 * dT00
+
+			laplace = 0.;
+			for(i=0; i<3; ++i)
+			{
+				xn = x+i;
+				xp = x-i;
+				laplace += xi(xn) + xi(xp);
+			}
+			laplace -= 6. * xi(x);
+			// Rescaling with dx^2 (Needed! To be done before adding gradient squared)
+			source(x) *= dx2;
+			// F(R) terms
+			source(x) += 0.5 * laplace;
 		}
-		laplace -= 6. * xi(x);
-		source(x) += 0.5 * laplace / fourpiG_over_a / dx2;
+
+	  return;
 	}
-
-  return;
-}
-
 
 
 /////////////////////////////////////////////////
@@ -363,14 +355,6 @@ void add_fR_source_S0i(
 		}
 	}
 	S0i.updateHalo();
-
-	// Shift the field on the lattice site -- TODO: Needed? Where is T0i (the other part of the source) located for instance?
-	copy_vector_field(S0i, Bi);
-	Bi.updateHalo();
-	for(x.first(); x.test(); x.next())
-	{
-		S0i(x,i) = (Bi(x,i) + Bi(x-i,i)) / 2.;
-	}
 
 	return;
 }
@@ -440,21 +424,39 @@ void compute_eightpiG_deltaT(
 	Field<FieldType> & eightpiG_deltaT,
 	Field<FieldType> & negative_a3_t00,
 	Field<FieldType> & a3_tij,
-	const double a3,
-	const double Trace_hom,
-	const double fourpiG
+	double a,
+	double a3_Trace_hom,
+	double fourpiG,
+	const metadata & sim
 )
 {
-  double eightpiG = 2. * fourpiG;
+  double
+		eightpiG = 2. * fourpiG,
+	 	a3 = a*a*a;
+
 	Site x(eightpiG_deltaT.lattice());
 
-	for(x.first(); x.test(); x.next())
+	if(sim.relativistic_flag) // LCDM / relativistic f(R)
 	{
-		eightpiG_deltaT(x) = -negative_a3_t00(x) + a3_tij(x,0,0) + a3_tij(x,1,1) + a3_tij(x,2,2);
-		eightpiG_deltaT(x) /= a3;
-    eightpiG_deltaT(x) -= Trace_hom;
-		eightpiG_deltaT(x) *= eightpiG;
+		for(x.first(); x.test(); x.next())
+		{
+			eightpiG_deltaT(x) = -negative_a3_t00(x) + a3_tij(x,0,0) + a3_tij(x,1,1) + a3_tij(x,2,2);
+			eightpiG_deltaT(x) -= a3_Trace_hom;
+			eightpiG_deltaT(x) /= a3;
+			eightpiG_deltaT(x) *= eightpiG;
+		}
 	}
+	else // Newton / Newtonian f(R)
+	{
+		for(x.first(); x.test(); x.next())
+		{
+			eightpiG_deltaT(x) = -negative_a3_t00(x);
+			eightpiG_deltaT(x) -= a3_Trace_hom;
+			eightpiG_deltaT(x) /= a3;
+			eightpiG_deltaT(x) *= eightpiG;
+		}
+	}
+
   eightpiG_deltaT.updateHalo();
 
 	return;

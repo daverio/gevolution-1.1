@@ -162,7 +162,8 @@ void writeRestartSettings_fR(metadata & sim,
 		fprintf(outfile, ", %s%s%s_deltaR_prev.h5", sim.restart_path, sim.basename_restart, buffer);
 		fprintf(outfile, ", %s%s%s_dot_deltaR.h5", sim.restart_path, sim.basename_restart, buffer);
 		fprintf(outfile, ", %s%s%s_eightpiG_deltaT.h5", sim.restart_path, sim.basename_restart, buffer);
-		fprintf(outfile, ", %s%s%s_phidot.h5", sim.restart_path, sim.basename_restart, buffer);
+		fprintf(outfile, ", %s%s%s_phi_dot.h5", sim.restart_path, sim.basename_restart, buffer);
+		fprintf(outfile, ", %s%s%s_phi_ddot.h5", sim.restart_path, sim.basename_restart, buffer);
 		fprintf(outfile, ", %s%s%s_xi_dot.h5", sim.restart_path, sim.basename_restart, buffer);
 		fprintf(outfile, "\n");
 		// TODO: check what is necessary
@@ -271,22 +272,22 @@ void writeRestartSettings_fR(metadata & sim,
 		fprintf(outfile, "gravity theory      = fr\n");
 
 		fprintf(outfile, "\n#==================== f(R) settings ====================#\n");
-		if(sim.fR_type == FR_TYPE_RN || sim.fR_type == FR_TYPE_R2)
+		if(sim.fR_model == FR_MODEL_RN || sim.fR_model == FR_MODEL_R2)
 		{
-			// TODO: Check that comments are well written -- need something for FR_TYPE_DELTA too?
-			if(sim.fR_type == FR_TYPE_R2)
+			// TODO: Check that comments are well written -- need something for FR_MODEL_DELTA too?
+			if(sim.fR_model == FR_MODEL_R2)
 			{
 				fprintf(outfile, "# WARNING: f(R) parameters for R + R^2 model hav already been rescaled. See fR_tools.hpp for additional information.\n");
 			}
 			fprintf(outfile, "f(R) type                   = RN\n");
 			fprintf(outfile, "f(R) parameters             = %e, %f\n", sim.fR_params[0], sim.fR_params[1]);
 		}
-		else if(sim.fR_type == FR_TYPE_DELTA)
+		else if(sim.fR_model == FR_MODEL_DELTA)
 		{
 			fprintf(outfile, "f(R) type                   = DE\n");
 			fprintf(outfile, "f(R) parameters             = %e, %f\n", sim.fR_params[0], sim.fR_params[1]);
 		}
-		else if(sim.fR_type == FR_TYPE_HU_SAWICKI)
+		else if(sim.fR_model == FR_MODEL_HU_SAWICKI)
 		{
 			fprintf(outfile, "# WARNING: f(R) parameters for Hu-Sawicki model have already been rescaled. See fR_tools.hpp for additional information.\n");
 			fprintf(outfile, "f(R) type                   = HS\n");
@@ -297,7 +298,14 @@ void writeRestartSettings_fR(metadata & sim,
 			COUT << " error f(R) type not recognized!" << endl;
 		}
 
-		fprintf(outfile, "Newtonian f(R)              = %e\n", sim.newtonian_fR);
+		if(sim.relativistic_flag)
+		{
+			fprintf(outfile, "Newtonian f(R)              = 1\n");
+		}
+		else
+		{
+			fprintf(outfile, "Newtonian f(R)              = 0\n");
+		}
 		fprintf(outfile, "f(R) epsilon background     = %e\n", sim.fR_epsilon_bg);
 		fprintf(outfile, "f(R) epsilon fields         = %e\n", sim.fR_epsilon_fields);
 		fprintf(outfile, "f(R) target precision       = %e\n", sim.fR_target_precision);
@@ -323,11 +331,11 @@ void writeRestartSettings_fR(metadata & sim,
 		fprintf(outfile, "multigrid n-grids          = %d\n", sim.multigrid_n_grids);
 		fprintf(outfile, "multigrid n-cycles         = %d\n", sim.multigrid_n_cycles);
 		fprintf(outfile, "check shape                = %d\n", sim.multigrid_check_shape);
-		if(sim.multigrid_shape == MG_SHAPE_V)
+		if(sim.multigrid_shape == MULTIGRID_SHAPE_V)
 		{
 			fprintf(outfile, "multigrid shape            = V\n");
 		}
-		else if(sim.multigrid_shape == MG_SHAPE_W)
+		else if(sim.multigrid_shape == MULTIGRID_SHAPE_W)
 		{
 			fprintf(outfile, "multigrid shape            = W\n");
 		}
@@ -1687,7 +1695,8 @@ void hibernate_fR(metadata & sim,
 						 	 		Field<Real> & deltaR_prev,
 						 	 		Field<Real> & dot_deltaR,
 									Field<Real> & eightpiG_deltaT,
-							 		Field<Real> & phidot,
+							 		Field<Real> & phi_dot,
+							 		Field<Real> & phi_ddot,
 							 		Field<Real> & xi_dot,
 							 		const double a,
 							 		const double tau,
@@ -1770,7 +1779,8 @@ void hibernate_fR(metadata & sim,
 		deltaR_prev.saveHDF5_server_open(h5filename + "_deltaR_prev.h5");
 		dot_deltaR.saveHDF5_server_open(h5filename + "_dot_deltaR.h5");
 		eightpiG_deltaT.saveHDF5_server_open(h5filename + "_eightpiG_deltaT.h5");
-		phidot.saveHDF5_server_open(h5filename + "_phidot.h5");
+		phi_dot.saveHDF5_server_open(h5filename + "_phi_dot.h5");
+		phi_ddot.saveHDF5_server_open(h5filename + "_phi_ddot.h5");
 		xi_dot.saveHDF5_server_open(h5filename + "_xi_dot.h5");
 	}
 
@@ -1839,7 +1849,8 @@ void hibernate_fR(metadata & sim,
 		deltaR_prev.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 		dot_deltaR.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 		eightpiG_deltaT.saveHDF5_server_write(NUMBER_OF_IO_FILES);
-		phidot.saveHDF5_server_write(NUMBER_OF_IO_FILES);
+		phi_dot.saveHDF5_server_write(NUMBER_OF_IO_FILES);
+		phi_ddot.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 		xi_dot.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 	}
 
@@ -1919,7 +1930,8 @@ void hibernate_fR(metadata & sim,
 		deltaR_prev.saveHDF5(h5filename + "_deltaR_prev.h5");
 		dot_deltaR.saveHDF5(h5filename + "_dot_deltaR.h5");
 		eightpiG_deltaT.saveHDF5(h5filename + "_eightpiG_deltaT.h5");
-		phidot.saveHDF5(h5filename + "_phidot.h5");
+		phi_dot.saveHDF5(h5filename + "_phi_dot.h5");
+		phi_ddot.saveHDF5(h5filename + "_phi_ddot.h5");
 		xi_dot.saveHDF5(h5filename + "_xi_dot.h5");
 	}
 

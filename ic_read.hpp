@@ -530,7 +530,8 @@ void readIC_fR(metadata & sim,
 							 Field<Real> * deltaR_prev,
 							 Field<Real> * dot_deltaR,
 							 Field<Real> * eightpiG_deltaT,
-							 Field<Real> * phidot,
+							 Field<Real> * phi_dot,
+							 Field<Real> * phi_ddot,
 							 Field<Real> * xi_dot,
 							 Field<Real> * source,
 							 Field<Real> * Sij,
@@ -881,8 +882,13 @@ void readIC_fR(metadata & sim,
 			j++;
 
 			filename.assign(ic.metricfile[j]);
-			phidot->loadHDF5(filename);
-			phidot->updateHalo();
+			phi_dot->loadHDF5(filename);
+			phi_dot->updateHalo();
+			j++;
+
+			filename.assign(ic.metricfile[j]);
+			phi_ddot->loadHDF5(filename);
+			phi_ddot->updateHalo();
 			j++;
 
 			filename.assign(ic.metricfile[j]);

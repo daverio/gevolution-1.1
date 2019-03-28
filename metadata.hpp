@@ -62,6 +62,7 @@
 #define MASK_DELTAT     		131072
 #define MASK_LAPLACE_XI  	  262144
 #define MASK_PHI_EFFECTIVE  524288
+#define MASK_PHI_DDOT       1048576
 
 #define ICFLAG_CORRECT_DISPLACEMENT 1
 #define ICFLAG_KSPHERE              2
@@ -127,10 +128,10 @@
 // Modified gravity
 #define MODIFIED_GRAVITY_FLAG_FR 1   // f(R)
 
-#define FR_TYPE_RN 1
-#define FR_TYPE_R2 2
-#define FR_TYPE_HU_SAWICKI 3
-#define FR_TYPE_DELTA 4
+#define FR_MODEL_RN 1
+#define FR_MODEL_R2 2
+#define FR_MODEL_HU_SAWICKI 3
+#define FR_MODEL_DELTA 4
 
 #define FR_EPSILON_BACKGROUND_DEFAULT 0.1
 #define FR_EPSILON_FIELDS_DEFAULT 0.1
@@ -141,10 +142,12 @@
 #define FR_WRONG_RETURN 2. * FR_WRONG
 
 // Multigrid
-#define MG_SHAPE_V 1
-#define MG_SHAPE_W 2
+#define MULTIGRID_SHAPE_V 1
+#define MULTIGRID_SHAPE_W 2
 #define PRE_SMOOTHING_DEFAULT 5
 #define POST_SMOOTHING_DEFAULT 5
+#define MULTIGRID_MAX_COUNT 15
+#define MULTIGRID_ERROR_DIFFERENCE_THRESHOLD 0.01
 
 // Relaxation methods
 #define METHOD_RELAX 1
@@ -211,7 +214,7 @@ struct metadata
 	int baryon_flag;
 	int relativistic_flag;
 	int modified_gravity_flag;
-	int fR_type;
+	int fR_model;
 	int vector_flag;
 	int radiation_flag;
 	int out_pk;
@@ -223,6 +226,8 @@ struct metadata
 	int num_restart;
 	int num_fR_params;
 	int quasi_static;
+	int xi_Hubble;
+	int gr_curvature;
 	int background_only;
 	double z_fin;
 	int lcdm_background;
@@ -236,7 +241,6 @@ struct metadata
 	double fR_epsilon_fields;
 	double fR_target_precision;
 	double fR_count_max;
-	int newtonian_fR;
 	double relaxation_error;
 	double overrelaxation_coeff;
 	int relaxation_method;
@@ -294,7 +298,7 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "baryon_flag: " << sim.baryon_flag << "\n";
 	os << "relativistic_flag: " << sim.relativistic_flag << "\n";
 	os << "modified_gravity_flag: " << sim.modified_gravity_flag << "\n";
-	os << "fR_type: " << sim.fR_type << "\n";
+	os << "fR_model: " << sim.fR_model << "\n";
 	os << "vector_flag: " << sim.vector_flag << "\n";
 	os << "radiation_flag: " << sim.radiation_flag << "\n";
 	os << "out_pk: " << sim.out_pk << "\n";
@@ -305,6 +309,7 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "num_restart: " << sim.num_restart << "\n";
 	os << "num_fR_params: " << sim.num_fR_params << "\n";
 	os << "quasi_static: " << sim.quasi_static << "\n";
+	os << "xi_Hubble: " << sim.xi_Hubble << "\n";
 	os << "background_only: " << sim.background_only << "\n";
 	os << "background final redshift: " << sim.z_fin << "\n";
 	os << "lcdm_background: " << sim.lcdm_background << "\n";
@@ -338,7 +343,7 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 
 	for(int i=1; i<MAX_OUTPUTS; i++) os << " , " << sim.z_pk[i];
 	os << "\n";
-	
+
 	os << "z_restart: " << sim.z_restart[0];
 
 	for(int i=1; i<MAX_OUTPUTS; i++) os << " , " << sim.z_restart[i];

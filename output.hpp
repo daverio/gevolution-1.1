@@ -59,7 +59,7 @@ using namespace std;
 //
 //////////////////////////
 
-void writeSnapshots(metadata & sim, cosmology & cosmo, const double fourpiG, gadget2_header & hdr, const double a, const int snapcount, string h5filename, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm, Field<Real> * phi, Field<Real> * deltaR, Field<Real> * eightpiG_deltaT, Field<Real> * xi, Field<Real> * laplace_xi, Field<Real> * zeta, Field<Real> * chi, Field<Real> * Bi, Field<Real> * source, Field<Real> * Sij, Field<Cplx> * scalarFT, Field<Cplx> * BiFT, Field<Cplx> * SijFT, PlanFFT<Cplx> * plan_phi, PlanFFT<Cplx> * plan_deltaR, PlanFFT<Cplx> * plan_eightpiG_deltaT, PlanFFT<Cplx> * plan_xi, PlanFFT<Cplx> * plan_laplace_xi, PlanFFT<Cplx> * plan_zeta, PlanFFT<Cplx> * plan_chi, PlanFFT<Cplx> * plan_Bi, PlanFFT<Cplx> * plan_source, PlanFFT<Cplx> * plan_Sij, Field<Real> * Bi_check = NULL, Field<Cplx> * BiFT_check = NULL, PlanFFT<Cplx> * plan_Bi_check = NULL)
+void writeSnapshots(metadata & sim, cosmology & cosmo, const double fourpiG, gadget2_header & hdr, const double a, const int snapcount, string h5filename, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm, Field<Real> * phi, Field<Real> * deltaR, Field<Real> * eightpiG_deltaT, Field<Real> * xi, Field<Real> * laplace_xi, Field<Real> * zeta, Field<Real> * phi_ddot, Field<Real> * chi, Field<Real> * Bi, Field<Real> * source, Field<Real> * Sij, Field<Cplx> * scalarFT, Field<Cplx> * BiFT, Field<Cplx> * SijFT, PlanFFT<Cplx> * plan_phi, PlanFFT<Cplx> * plan_deltaR, PlanFFT<Cplx> * plan_eightpiG_deltaT, PlanFFT<Cplx> * plan_xi, PlanFFT<Cplx> * plan_laplace_xi, PlanFFT<Cplx> * plan_zeta, PlanFFT<Cplx> * plan_chi, PlanFFT<Cplx> * plan_Bi, PlanFFT<Cplx> * plan_source, PlanFFT<Cplx> * plan_Sij, Field<Real> * Bi_check = NULL, Field<Cplx> * BiFT_check = NULL, PlanFFT<Cplx> * plan_Bi_check = NULL)
 {
 	char filename[3*PARAM_MAX_LENGTH+40];
 	char buffer[64];
@@ -98,6 +98,9 @@ void writeSnapshots(metadata & sim, cosmology & cosmo, const double fourpiG, gad
 
 	if(sim.out_snapshot & MASK_LAPLACE_XI)
 			laplace_xi->saveHDF5_server_open(h5filename + filename + "_laplace_xi");
+
+	if(sim.out_snapshot & MASK_PHI_DDOT)
+			phi_ddot->saveHDF5_server_open(h5filename + filename + "_phi_ddot");
 
 	if(sim.out_snapshot & MASK_ZETA)
 		zeta->saveHDF5_server_open(h5filename + filename + "_zeta");
@@ -275,6 +278,22 @@ void writeSnapshots(metadata & sim, cosmology & cosmo, const double fourpiG, gad
 			zeta->saveHDF5(h5filename + filename + "_zeta.h5");
 		}
 #endif
+	}
+
+	if(sim.out_snapshot & MASK_PHI_DDOT)
+	{
+		#ifdef EXTERNAL_IO
+		phi_ddot->saveHDF5_server_write(NUMBER_OF_IO_FILES);
+		#else
+		if(sim.downgrade_factor > 1)
+		{
+			phi_ddot->saveHDF5_coarseGrain3D(h5filename + filename + "_phi_ddot.h5", sim.downgrade_factor);
+		}
+		else
+		{
+			phi_ddot->saveHDF5(h5filename + filename + "_phi_ddot.h5");
+		}
+		#endif
 	}
 
 	if(sim.out_snapshot & MASK_DELTAR)
@@ -560,6 +579,7 @@ void writeSpectra(
 	Field<Real> * xi,
 	Field<Real> * laplace_xi,
 	Field<Real> * zeta,
+	Field<Real> * phi_ddot,
 	Field<Real> * chi,
 	Field<Real> * Bi,
 	Field<Real> * source,
@@ -573,7 +593,7 @@ void writeSpectra(
 	PlanFFT<Cplx> * plan_xi,
 	PlanFFT<Cplx> * plan_laplace_xi,
 	PlanFFT<Cplx> * plan_zeta,
-	PlanFFT<Cplx> * plan_phidot,
+	PlanFFT<Cplx> * plan_phi_ddot,
 	PlanFFT<Cplx> * plan_phi_effective,
 	PlanFFT<Cplx> * plan_chi,
 	PlanFFT<Cplx> * plan_Bi,
@@ -754,6 +774,14 @@ void writeSpectra(
 		extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, false, KTYPE_LINEAR);
 		sprintf(filename, "%s%s_%s%03d_laplace_xi.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 		writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI, filename, "power spectrum of laplace_xi", a, cycle);
+	}
+
+	if(sim.out_pk & MASK_PHI_DDOT)
+	{
+		plan_phi_ddot->execute(FFT_FORWARD);
+		extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, false, KTYPE_LINEAR);
+		sprintf(filename, "%s%s_%s%03d_phi_ddot.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
+		writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI, filename, "power spectrum of phi_ddot", a, cycle);
 	}
 
 	if(sim.out_pk & MASK_PHI_EFFECTIVE)

@@ -129,14 +129,14 @@ int main(int argc, char **argv)
 	std::ofstream bgoutfile;
 
 	// f(R) background description
-	double Hubble;
-	double Rbar;
-	double dot_Rbar;
-	double fbar;
-	double fRbar;
-	double dot_fRbar;
-	double fRRbar;
-	double coeffm2;
+	double Hubble = 0.;
+	double Rbar = 0.;
+	double dot_Rbar = 0.;
+	double fbar = 0.;
+	double fRbar = 0.;
+	double dot_fRbar = 0.;
+	double fRRbar = 0.;
+	double coeffm2 = 0.;
 
 	bool do_I_check;
 
@@ -267,6 +267,8 @@ int main(int argc, char **argv)
 			{
 				dtau = sim.steplimit / Hconf(a, fourpiG, cosmo);
 			}
+
+			fbar = fRbar = fRRbar = 0.;
 		}
 
 		dtau_old = dtau_old_2 = dtau_print = 0.;

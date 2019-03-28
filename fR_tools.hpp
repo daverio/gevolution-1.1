@@ -161,7 +161,6 @@ Real fR(
 		{
 			cout << " fR Evaluated to NaN (code " << code << ")" << endl
 			<< " R = " << R << ", fR = " << output << endl;
-			parallel.abortForce();
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
 	}
@@ -178,7 +177,6 @@ Real fR(
 		{
 			cout << " fR Evaluated to NaN (code " << code << ")" << endl
 			     << " R = " << R << ", R^(n-1) = " << Rpow << ", fR = " << output << endl;
-			parallel.abortForce();
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
 	}
@@ -201,22 +199,12 @@ Real fR(
 
 			output = (1. + c2 * Rpow);
 			output = - c1 * n * pow(R/m2, n-1.) / output / output;
-
-      // if(n > 1.)
-      // {
-      //   output = - c1 * n * pow(R/m2, n-1.) / output / output;
-      // }
-      // else
-      // {
-      //   output = - c1 * n / pow(R/m2, 1.-n) / output / output;
-      // }
 		}
 
 		if(isnan(output))
 		{
-			cout << " fR Evaluated to NaN (code " << code << ")" << endl
-			     << " R = " << R << ", (R/m2)^n = " << Rpow << ", fR = " << output << endl;
-			parallel.abortForce();
+			cout << " fR Evaluated to NaN (code " << code << ")" << endl;
+			cout << " R = " << R << ", (R/m2)^n = " << Rpow << ", fR = " << output << endl;
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
 	}
@@ -231,7 +219,6 @@ Real fR(
 		{
 			cout << " fR Evaluated to NaN (code " << code << ")" << endl
 			     << " R = " << R << ", R^delta = " << Rpow << ", fR = " << output << endl;
-			parallel.abortForce();
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
 	}

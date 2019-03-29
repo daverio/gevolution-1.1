@@ -129,14 +129,14 @@ int main(int argc, char **argv)
 	std::ofstream bgoutfile;
 
 	// f(R) background description
-	double Hubble = 0.;
-	double Rbar = 0.;
-	double dot_Rbar = 0.;
-	double fbar = 0.;
-	double fRbar = 0.;
-	double dot_fRbar = 0.;
-	double fRRbar = 0.;
-	double coeffm2 = 0.;
+	double Hubble;
+	double Rbar;
+	double dot_Rbar;
+	double fbar;
+	double fRbar;
+	double dot_fRbar;
+	double fRRbar;
+	double coeffm2;
 
 	bool do_I_check;
 
@@ -632,6 +632,9 @@ int main(int argc, char **argv)
 				fbar = f(Rbar, sim, 400);
 				fRbar = fR(Rbar, sim, 401);
 				fRRbar = fRR(Rbar, sim, 402);
+
+				dot_fRbar = 0.;
+				dot_Rbar = 0.;
 			}
 			else
 			{

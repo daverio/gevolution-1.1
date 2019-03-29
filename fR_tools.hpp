@@ -485,15 +485,10 @@ bool xi_allowed(
 		{
 			xi_min = - c1 - fRbar;
 		}
-		else if(n > 1)
+		else
 		{
 			xi_min = - (1.+n)*(1.+n) * pow((n-1.) / c2 / (1.+n), 1.-1./n) / n / 4.- fRbar;
 		}
-		else
-    {
-      COUT << " Something weird (2) just happened. n < 1 in Hu-Sawicki! n = " << n << endl;
-			parallel.abortForce();
-    }
 
 		if(xi <= xi_min || xi + fRbar >= 0.)
 		{
@@ -1547,7 +1542,7 @@ double convert_xi_to_deltaR_single(
 		cout << " convert_xi_to_deltaR_single before deltaR + Rbar = " << deltaR + Rbar << endl;
 		cout << " convert_xi_to_deltaR_single before xi = " << xi << endl;
 		cout << endl;
-		parallel.abortForce();
+		return FR_WRONG_RETURN;
 	}
 
 	if(sim.fR_model == FR_MODEL_HU_SAWICKI)
@@ -1574,7 +1569,7 @@ double convert_xi_to_deltaR_single(
 				R_temp = 0.;
 			}
 		}
-		else if(n > 1.)
+		else
 		{
       fr = xi + fRbar;
       // The initial guess for R is:
@@ -1607,16 +1602,6 @@ double convert_xi_to_deltaR_single(
         }
       }
 		}
-    else
-    {
-      COUT << " Something weird just happened. n < 1 in Hu-Sawicki! n = " << n << endl;
-			parallel.abortForce();
-    }
-	}
-	else if(sim.fR_model == FR_MODEL_R2)
-	{
-		cout << "Something is wrong. R + R^2 should not call this function. Closing...\n";
-		parallel.abortForce();
 	}
 	else if(sim.fR_model == FR_MODEL_RN)
 	{

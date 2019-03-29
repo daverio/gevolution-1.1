@@ -1319,26 +1319,28 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		ic.numtile[i] = 0;
 	}
 
-	if(!parseParameter(params, numparam, "tiling factor", ic.numtile, i) && ic.generator != ICGEN_READ_FROM_DISK)
-	{
-		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": tiling factor not specified, using default value for all species (1)" << endl;
-		ic.numtile[0] = 1;
-		i = 1;
-	}
-
-	for(; i<MAX_PCL_SPECIES; i++)
-	{
-		ic.numtile[i] = ic.numtile[i-1];
-	}
-
-	for(i=0; i<MAX_PCL_SPECIES; i++)
-	{
-		if(ic.numtile[i] <= 0 && ic.generator != ICGEN_READ_FROM_DISK)
-		{
-			COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": tiling number for particle template not set properly; using default value (1)" << endl;
-			ic.numtile[i] = 1;
-		}
-	}
+	// TODO Commented this part out to make tiling factor automatic -- see later
+	// if(!parseParameter(params, numparam, "tiling factor", ic.numtile, i) && ic.generator != ICGEN_READ_FROM_DISK)
+	// {
+	// 	COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": tiling factor not specified, using default value for all species (1)" << endl;
+	// 	ic.numtile[0] = 1;
+	// 	i = 1;
+	// }
+	//
+	// for(; i<MAX_PCL_SPECIES; i++)
+	// {
+	// 	ic.numtile[i] = ic.numtile[i-1];
+	// }
+	//
+	// for(i=0; i<MAX_PCL_SPECIES; i++)
+	// {
+	// 	if(ic.numtile[i] <= 0 && ic.generator != ICGEN_READ_FROM_DISK)
+	// 	{
+	// 		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": tiling number for particle template not set properly; using default value (1)" << endl;
+	// 		ic.numtile[i] = 1;
+	// 	}
+	// }
+	// END of commented part
 
 	if(ic.pkfile[0] != '\0')
 	{
@@ -1557,10 +1559,14 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		parallel.abortForce();
 	}
 
-	if(sim.numpts != ic.numtile[0] * 4)
+	// TODO Check if this is correct
+	if(ic.generator != ICGEN_READ_FROM_DISK)
 	{
-		// TODO Check if this is correct
-		COUT << " /!\\ Warning! Ngrid and tiling factor are probably inconsistent! Don't be shocked if something weird happens :)" << endl;
+		COUT << " Setting tiling factor to Ngrid/4" << endl;
+		for(i=0; i<MAX_PCL_SPECIES; i++)
+		{
+			ic.numtile[i] = sim.numpts / 4;
+		}
 		COUT << "sim.numpts = " << sim.numpts << endl;
 		COUT << "ic.numtile[0] = " << ic.numtile[0] << endl;
 	}

@@ -23,7 +23,7 @@ DGEVOLUTION  += -DORIGINALMETRIC
 #DGEVOLUTION  += -DHAVE_CLASS # requires OPT -fopenmp and LIB -lclass
 
 # further compiler options
-OPT          := -O3 -std=c++11
+OPT          := -W -O3 -std=c++11
 
 $(EXEC): $(SOURCE) $(HEADERS) makefile
 	$(COMPILER) $< -o $@ $(OPT) $(DLATFIELD2) $(DGEVOLUTION) $(INCLUDE) $(LIB)

@@ -82,11 +82,13 @@ int prepare_initial_guess_trace_equation(
   }
   else if(sim.fR_model == FR_MODEL_RN || sim.fR_model == FR_MODEL_DELTA)
   {
-    // erase_field(deltaR);
-    // erase_field(xi);
-    copy_field(eightpiG_deltaT, deltaR, -1.);
-    convert_deltaR_to_xi(deltaR, xi, Rbar, fRbar, sim);
-    build_laplacian(xi, laplace_xi, dx);
+    erase_field(xi);
+    erase_field(deltaR);
+    erase_field(laplace_xi);
+
+    // copy_field(eightpiG_deltaT, deltaR, -1.);
+    // convert_deltaR_to_xi(deltaR, xi, Rbar, fRbar, sim);
+    // build_laplacian(xi, laplace_xi, dx);
   }
 
   copy_field(eightpiG_deltaT, rhs, a*a/3.);
@@ -543,21 +545,24 @@ double relaxation(
   const metadata & sim)
 {
   double error;
+  double a2_over_3 = a*a/3.;
   int max_level = sim.multigrid_n_grids - 1; // TODO Not really needed, just for clarity
 
   COUT << " z = " << 1./a - 1. << " -- " << flush;
+  error = compute_error(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], rhs[0], dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim);
+  COUT << "in.error = " << error << " -- " << flush;
 
   if(sim.relaxation_method == METHOD_RELAX)
   {
-    error = single_layer_solver(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], eightpiG_deltaT[0], rhs[0], dx, a*a/3., two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim);
+    error = single_layer_solver(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], eightpiG_deltaT[0], rhs[0], dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim);
   }
   else if(sim.relaxation_method == METHOD_MULTIGRID)
   {
-    error = multigrid_solver(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, residual, err, engine, dx, a*a/3., two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
+    error = multigrid_solver(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, residual, err, engine, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
   }
   else if(sim.relaxation_method == METHOD_FMG)
   {
-    error = FMG_solver(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, residual, err, engine, dx, a*a/3., two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
+    error = FMG_solver(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, residual, err, engine, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
   }
 
   // TODO REMOVE after debug
@@ -568,9 +573,10 @@ double relaxation(
   }
   // END REMOVE
 
-  COUT << "final error = " << error << endl;
+  COUT << "fin.error = " << error << endl;
 
-  error = compute_error(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], rhs[0], dx, a*a/3., two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim);
+  // build_residual(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], rhs[0], err[0], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
+  // check_field(err[0], "residual", numpts3d, sim, "Final Residual");
 
   return error;
 }
@@ -641,36 +647,22 @@ double single_layer_solver(
   const metadata & sim
 )
 {
-  int
-   count = 0;
   double
    error = 0.,
    previous_error = 1.;
-
-  error = compute_error(phi, xi, xi_old, laplace_xi, deltaR, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim);
-  COUT << "in.error = " << error << " -- " << flush;
 
   while(true)
   {
     error = relaxation_step(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim);
 
-    if(error < sim.relaxation_error || count >= MULTIGRID_MAX_COUNT)
+    if(error < sim.relaxation_error)
     {
       break;
-    }
-    else if(fabs(previous_error / error - 1.) <= MULTIGRID_ERROR_DIFFERENCE_THRESHOLD)
-    {
-      ++count;
-    }
-    else
-    {
-      count = 0;
     }
 
     previous_error = error;
   }
 
-  COUT << "(" << count << ") -- ";
   return error;
 }
 
@@ -699,8 +691,8 @@ double multigrid_solver(
   const metadata & sim)
 {
   int
-    max_level = sim.multigrid_n_grids-1,
-    count = 0; // TODO Not necessary, but good for clarity
+    max_level = sim.multigrid_n_grids-1;
+
   double
     dx[sim.multigrid_n_grids],
     error = 0.,
@@ -741,18 +733,11 @@ double multigrid_solver(
     error = compute_error(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], rhs[0], dx[0], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[0], sim);
 
     // TODO Check if this criterion makes sense -- test more
-    if(3. * error / trunc_error <= 1. || error < sim.relaxation_error || count >= MULTIGRID_MAX_COUNT)
+    if(3. * error / trunc_error <= 1. || error < sim.relaxation_error)
     {
       break;
     }
-    else if(fabs(previous_error / error - 1.) <= MULTIGRID_ERROR_DIFFERENCE_THRESHOLD)
-    {
-      ++count;
-    }
-    else
-    {
-      count = 0;
-    }
+
   }
 
   return error;
@@ -785,7 +770,6 @@ double FMG_solver(
   int
     i,
     j,
-    count = 0,
     max_level = sim.multigrid_n_grids - 1; // Not exactly needed, but more redable this way
   double
    dx[sim.multigrid_n_grids],
@@ -939,17 +923,9 @@ double FMG_solver(
 
     error = compute_error(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], rhs[0], dx[0], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[0], sim);
 
-    if(error < sim.relaxation_error || count >= MULTIGRID_MAX_COUNT)
+    if(error < sim.relaxation_error)
     {
       break;
-    }
-    else if(fabs(previous_error / error - 1.) <= MULTIGRID_ERROR_DIFFERENCE_THRESHOLD)
-    {
-      ++count;
-    }
-    else
-    {
-      count = 0;
     }
   }
 

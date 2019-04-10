@@ -132,6 +132,7 @@ double residual_xi(
   }
 
   temp = laplace_xi - a2_over_3 * temp - rhs;
+
   if(sim.xi_Hubble)
   {
     temp += 2. * phi * laplace_xi - two_Hubble_over_dtau * (xi - xi_old);
@@ -205,7 +206,7 @@ double update_xi_single(
   double rhs,
   double a2_over_3,
   double two_Hubble_over_dtau,
-  double coeff,
+  double coeff_laplacian,
   double overrelax,
   double Rbar,
   double fbar,
@@ -238,11 +239,11 @@ double update_xi_single(
 
   if(sim.relativistic_flag)
   {
-    denominator += (1. + 2.*phi) * coeff;
+    denominator += (1. + 2.*phi) * coeff_laplacian;
   }
   else
   {
-    denominator += coeff;
+    denominator += coeff_laplacian;
   }
 
   if(denominator)
@@ -295,7 +296,7 @@ double update_xi_and_deltaR_single(
   double rhs,
   double a2_over_3,
   double two_Hubble_over_dtau,
-  double coeff,
+  double coeff_laplacian,
   double overrelax,
   double Rbar,
   double fbar,
@@ -305,7 +306,7 @@ double update_xi_and_deltaR_single(
   double temp, dxi;
 
   dxi = xi; // original value
-  temp = update_xi_single(phi, xi, xi_previous_timestep, laplace_xi, deltaR, rhs, a2_over_3, two_Hubble_over_dtau, coeff, overrelax, Rbar, fbar, fRbar, sim);
+  temp = update_xi_single(phi, xi, xi_previous_timestep, laplace_xi, deltaR, rhs, a2_over_3, two_Hubble_over_dtau, coeff_laplacian, overrelax, Rbar, fbar, fRbar, sim);
 
   if(isnan(deltaR) || fabs(xi) >= 1.E20 || deltaR + Rbar <= 0.)
 	{
@@ -375,10 +376,10 @@ double update_xi_and_deltaR(
   double fRbar,
   const metadata & sim)
 {
-  double temp, resid, coeff, overrelax;
+  double temp, resid, coeff_laplacian, overrelax;
 
-  coeff = -6./dx/dx;
-  overrelax = sim.overrelaxation_coeff;
+  coeff_laplacian = -6./dx/dx;
+  overrelax = sim.overrelaxation_factor;
 
   if(sim.red_black)
   {
@@ -386,14 +387,14 @@ double update_xi_and_deltaR(
 
     for(x.firstRed(); x.testRed(); x.nextRed())
     {
-      update_xi_and_deltaR_single(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, coeff, overrelax, Rbar, fbar, fRbar, sim);
+      update_xi_and_deltaR_single(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, coeff_laplacian, overrelax, Rbar, fbar, fRbar, sim);
     }
 
     build_laplacian(xi, laplace_xi, dx); // TODO: This might be optimised somehow -- only build_laplacian on the Blacks?
 
     for(x.firstBlack(); x.testBlack(); x.nextBlack())
     {
-      update_xi_and_deltaR_single(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, coeff, overrelax, Rbar, fbar, fRbar, sim);
+      update_xi_and_deltaR_single(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, coeff_laplacian, overrelax, Rbar, fbar, fRbar, sim);
     }
   }
   else
@@ -415,7 +416,7 @@ double update_xi_and_deltaR(
         parallel.abortForce();
       }
 
-      update_xi_and_deltaR_single(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, coeff, overrelax, Rbar, fbar, fRbar, sim);
+      update_xi_and_deltaR_single(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, coeff_laplacian, overrelax, Rbar, fbar, fRbar, sim);
 
       if(isnan(xi(x)) || fabs(xi(x)) > 1.E20)
       {
@@ -647,21 +648,51 @@ double single_layer_solver(
   const metadata & sim
 )
 {
+  int count = 0;
   double
    error = 0.,
    previous_error = 1.;
 
-  while(true)
-  {
-    error = relaxation_step(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim);
+   if(sim.truncate_relaxation)
+   {
+     while(true)
+     {
+       error = relaxation_step(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim);
 
-    if(error < sim.relaxation_error)
-    {
-      break;
-    }
+       if(error < sim.relaxation_error)
+       {
+         break;
+       }
 
-    previous_error = error;
-  }
+       if(fabs(error/previous_error - 1.) <= sim.relaxation_truncation_threshold)
+       {
+         ++count;
+       }
+       else
+       {
+         count = 0;
+       }
+
+       if(count >= sim.truncate_relaxation)
+       {
+         break;
+       }
+
+       previous_error = error;
+     }
+   }
+   else
+   {
+     while(true)
+     {
+       error = relaxation_step(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim);
+
+       if(error < sim.relaxation_error)
+       {
+         break;
+       }
+     }
+   }
 
   return error;
 }

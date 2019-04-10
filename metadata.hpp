@@ -240,7 +240,9 @@ struct metadata
 	double fR_target_precision;
 	double fR_count_max;
 	double relaxation_error;
-	double overrelaxation_coeff;
+	double overrelaxation_factor;
+	double relaxation_truncation_threshold;
+	int truncate_relaxation;
 	int relaxation_method;
 	int red_black;
 	int pre_smoothing;
@@ -326,7 +328,7 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "pre_smoothing: " << sim.pre_smoothing << "\n";
 	os << "post_smoothing: " << sim.post_smoothing << "\n";
 	os << "relaxation_error: " << sim.relaxation_error << "\n";
-	os << "overrelaxation coefficient: " << sim.overrelaxation_coeff << "\n";
+	os << "overrelaxation factor: " << sim.overrelaxation_factor << "\n";
 	os << "movelimit: " << sim.movelimit << "\n";
 	os << "steplimit: " << sim.steplimit << "\n";
 	os << "boxsize: " << sim.boxsize << "\n";

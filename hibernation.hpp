@@ -325,7 +325,7 @@ void writeRestartSettings_fR(metadata & sim,
 		fprintf(outfile, "relaxation method          = %d\n", sim.relaxation_method);
 		fprintf(outfile, "relaxation error           = %e\n", sim.relaxation_error);
 		fprintf(outfile, "red black                  = %d\n", sim.red_black);
-		fprintf(outfile, "overrelaxation coefficient = %e\n", sim.overrelaxation_coeff);
+		fprintf(outfile, "overrelaxation factor      = %e\n", sim.overrelaxation_factor);
 		fprintf(outfile, "pre-smoothing              = %d\n", sim.pre_smoothing);
 		fprintf(outfile, "post-smoothing             = %d\n", sim.post_smoothing);
 		fprintf(outfile, "multigrid n-grids          = %d\n", sim.multigrid_n_grids);

@@ -992,6 +992,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 					}
 
 					sim.fR_model = FR_MODEL_HU_SAWICKI;
+
 					if(sim.lcdm_background)
 					{
 						cosmo.Omega_Lambda = 1. - cosmo.Omega_m - cosmo.Omega_rad;
@@ -1765,6 +1766,30 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 				COUT << " /!\\ Relaxation method not specified. Using default: single layer (no multigrid)" << endl;
 			}
 
+			if(!parseParameter(params, numparam, "truncate relaxation", sim.truncate_relaxation))
+			{
+				COUT << " Relaxation solver never truncated if convergence slows down." << endl;
+				sim.truncate_relaxation = 0;
+			}
+			else if(!sim.truncate_relaxation)
+			{
+				COUT << " Relaxation solver never truncated if convergence slows down." << endl;
+			}
+			else
+			{
+				COUT << " Relaxation truncated after " << sim.truncate_relaxation << " steps with (almost) no improvement." << endl;
+				
+				if(!parseParameter(params, numparam, "truncation threshold", sim.relaxation_truncation_threshold))
+				{
+					COUT << " Setting truncation threshold at default = 0.01." << endl;
+					sim.relaxation_truncation_threshold = 0.01;
+				}
+				else
+				{
+					COUT << " Truncation threshold set at: " << sim.relaxation_truncation_threshold << endl;
+				}
+			}
+
 			if(!parseParameter(params, numparam, "red black", sim.red_black))
 			{
 				sim.red_black = 0;
@@ -1791,15 +1816,15 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 				COUT << "/!\\ Wrong relaxation error specified. Using default: " << sim.relaxation_error << endl;
 			}
 
-			if(!parseParameter(params, numparam, "overrelaxation coefficient", sim.overrelaxation_coeff))
+			if(!parseParameter(params, numparam, "overrelaxation factor", sim.overrelaxation_factor))
 			{
-				sim.overrelaxation_coeff = 1.;
-				COUT << " No overrelaxation coefficient set. Using default value = " << sim.overrelaxation_coeff << endl;
+				sim.overrelaxation_factor = 1.;
+				COUT << " No overrelaxation fator set. Using default value = " << sim.overrelaxation_factor << endl;
 			}
-			else if(sim.overrelaxation_coeff >= 2. || sim.overrelaxation_coeff <= 0.)
+			else if(sim.overrelaxation_factor >= 2. || sim.overrelaxation_factor <= 0.)
 			{
-				sim.overrelaxation_coeff = 1.;
-				COUT << " Wrong value for overrelaxation coefficient. Using default value = " << sim.overrelaxation_coeff << endl;
+				sim.overrelaxation_factor = 1.;
+				COUT << " Wrong value for overrelaxation fator. Using default value = " << sim.overrelaxation_factor << endl;
 			}
 
 			if(sim.multigrid_or_not)

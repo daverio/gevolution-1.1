@@ -285,7 +285,7 @@ Real fRR(
 
     R_over_m2 = R/m2;
     Rpow = pow(R_over_m2, n);
-    output = (1. + c2 * Rpow);
+		output = (1. + c2 * Rpow);
 
 		if(n == 1. || n == 1)
 		{
@@ -1555,8 +1555,9 @@ double convert_xi_to_deltaR_single(
 		if(n == 1. || n == 1) // xi <-> R relation is invertible algebraically
 		{
       fr = xi + fRbar;
-      R_temp = - c1 / fr;
-      R_temp = m2 * (sqrt(R_temp) - 1.) / c2;
+			R_temp = - c1 / fr;
+			R_temp = m2 * (sqrt(R_temp) - 1.) / c2;
+
       if(isnan(R_temp) || R_temp < 0.)
 			{
 				cout << endl;

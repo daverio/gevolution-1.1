@@ -82,6 +82,7 @@
 #undef ICGEN_FALCONIC
 #define ICGEN_FALCONIC              4
 #endif
+#define ICGEN_BASIC_BH              5
 
 #define VECTOR_PARABOLIC            0
 #define VECTOR_ELLIPTIC             1
@@ -273,6 +274,8 @@ struct metadata
 	char output_path[PARAM_MAX_LENGTH];
 	char restart_path[PARAM_MAX_LENGTH];
 	char basename_restart[PARAM_MAX_LENGTH];
+
+	double BH_mass;
 };
 
 std::ostream& operator<< (std::ostream& os, const metadata& sim)

@@ -1208,6 +1208,11 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 	if(parseParameter(params, numparam, "IC generator", par_string))
 	{
+		if(par_string[0] == 'S' || par_string[0] == 's')
+		{
+			ic.generator = ICGEN_BASIC_BH;
+			parseParameter(params, numparam, "BH mass", sim.BH_mass);
+		}
 		if(par_string[0] == 'B' || par_string[0] == 'b')
 		{
 			ic.generator = ICGEN_BASIC;
@@ -1778,7 +1783,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			else
 			{
 				COUT << " Relaxation truncated after " << sim.truncate_relaxation << " steps with (almost) no improvement." << endl;
-				
+
 				if(!parseParameter(params, numparam, "truncation threshold", sim.relaxation_truncation_threshold))
 				{
 					COUT << " Setting truncation threshold at default = 0.01." << endl;

@@ -623,6 +623,10 @@ int main(int argc, char **argv)
 		{
 			generateIC_basic(sim, ic, cosmo, fourpiG, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij); // generates ICs on the fly
 		}
+		else if (ic.generator == ICGEN_BASIC)
+		{
+			generateIC_basic_BH(sim, ic, cosmo, fourpiG, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
+		}
 		else if(ic.generator == ICGEN_READ_FROM_DISK)
 		{
 			if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)

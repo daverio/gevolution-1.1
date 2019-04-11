@@ -2343,6 +2343,81 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 	}
 }
 
+void generateIC_basic_BH(metadata & sim, icsettings & ic, cosmology & cosmo,
+	 											const double fourpiG, Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm,
+												Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_b,
+												Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm,
+												double * maxvel, Field<Real> * phi, Field<Real> * chi, Field<Real> * Bi,
+												Field<Real> * source, Field<Real> * Sij, Field<Cplx> * scalarFT, Field<Cplx> * BiFT,
+												Field<Cplx> * SijFT, PlanFFT<Cplx> * plan_phi, PlanFFT<Cplx> * plan_chi, PlanFFT<Cplx> * plan_Bi,
+												PlanFFT<Cplx> * plan_source, PlanFFT<Cplx> * plan_Sij)
+{
+	part_simple_dataType pcls_cdm_dataType;
+	part_simple_info pcls_cdm_info;
+	part_simple part;
+	double x,y,z;
+	Real boxSize[3] = {1.,1.,1.};
+	rKSite kFT(scalarFT->lattice());
+	Site sx(phi->lattice());
+
+	pcls_cdm_info.mass = sim.BH_mass; //DO we want to set the mass that way.... might be better to set it in respect to dx...
+	pcls_cdm_info.relativistic = false;
+	pcls_cdm->initialize(pcls_cdm_info, pcls_cdm_dataType, &(phi->lattice()), boxSize);
+
+
+
+	x = ((double)(pcls_cdm->lattice().size(0) / 2) + 0.5) * pcls_cdm->res();
+	y = ((double)(pcls_cdm->lattice().size(1) / 2) + 0.5) * pcls_cdm->res();
+	z = ((double)(pcls_cdm->lattice().size(2) / 2) + 0.5) * pcls_cdm->res();
+
+	part.ID = 1;
+	part.pos[0] = x;
+	part.pos[1] = y;
+	part.pos[2] = z;
+	part.vel[0] = 0.;
+	part.vel[1] = 0.;
+	part.vel[2] = 0.;
+	pcls_cdm.addParticle_global(part);
+
+
+	projection_init(source);
+	scalarProjectionCIC_project(pcls_cdm, source);
+
+	scalarProjectionCIC_comm(source);
+
+	plan_source->execute(FFT_FORWARD);
+
+	kFT.first();
+	if(kFT.coord(0) == 0 && kFT.coord(1) == 0 && kFT.coord(2) == 0)
+	{
+		(*scalarFT)(kFT) = Cplx(0.,0.);
+	}
+
+	solveModifiedPoissonFT(*scalarFT, *scalarFT, fourpiG,
+		 										3. * sim.relativistic_flag * (fourpiG * cosmo.Omega_m));
+
+	phi->updateHalo();
+
+	//B_i is null as p is null
+	for(sx.first();sx.test();sx.next())
+	{
+		for(int i=0;i<3;i++)Bi(sx,i) = 0;
+	}
+	Bi->updateHalo()
+
+	//is chi null? LOL
+	projection_init(Sij);
+	projection_Tij_project(pcls_cdm, Sij, 1, phi);
+	projection_Tij_comm(Sij);
+
+	prepareFTsource<Real>(*phi, *Sij, *Sij, 2. * fourpiG / (double) sim.numpts / (double) sim.numpts);
+	plan_Sij->execute(FFT_FORWARD);
+	projectFTscalar(*SijFT, *scalarFT);
+	plan_chi->execute(FFT_BACKWARD);
+	chi->updateHalo();
+}
+
+
 #endif
 
 #endif

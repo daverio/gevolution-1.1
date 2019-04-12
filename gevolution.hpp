@@ -193,20 +193,16 @@ void prepareFTsource(
 // TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
-void prepareFTsource_S00_fR_rel(
-	Field<FieldType> & negative_a3_T00, // -a^3 * T00
+void prepareFTsource_S00_fR_BH(
+	Field<FieldType> & negative_T00, // -a^3 * T00
 	Field<FieldType> & phi,
 	Field<FieldType> & chi,
 	Field<FieldType> & xi,
-	Field<FieldType> & xi_old,
 	Field<FieldType> & deltaR,
 	Field<FieldType> & source, //
-	const double negative_a3_T00_hom, //  background T00
+	const double negative_T00_hom, //  background T00
 	const double dx2,
-	const double dtau,
-	const double Hubble,
-	const double a,
-	const double fourpiG_over_a,
+	const double fourpiG,
 	const double Rbar,
 	const double fbar,
 	const double fRbar,
@@ -216,8 +212,6 @@ void prepareFTsource_S00_fR_rel(
   Site xn(phi.lattice());
   Site xp(phi.lattice());
 	double laplace = 0.;
-  double a2 = a*a;
-  double threeH2 = 3. * Hubble * Hubble;
 	double gradphi[3], gradxi[3];
   int i=0;
 
@@ -226,10 +220,8 @@ void prepareFTsource_S00_fR_rel(
 	{
 		fR = xi(x) + fRbar;
 
-		source(x) = fourpiG_over_a * (negative_a3_T00(x) - negative_a3_T00_hom);// 4piG * (-a^3*T00 + a^3*Tbar00) / a = -4piG * a^2 * dT00
+		source(x) = fourpiG * (negative_T00(x) - negative_T00_hom);// 4piG * (-a^3*T00 + a^3*Tbar00) / a = -4piG * a^2 * dT00
 		source(x) *= 1. - 4. * phi(x);
-		source(x) += threeH2 * (phi(x) - chi(x));
-		source(x) -= 3. * Hubble * phi(x) / dtau; //TODO: Do we want to keep this in the Quasi-static limit?
 
 		laplace = 0.;
 		for(i=0; i<3; ++i)
@@ -245,10 +237,8 @@ void prepareFTsource_S00_fR_rel(
 		laplace -= 6. * xi(x);
 
 		// F(R) terms -- METHOD 2 TODO: Optimize this, e.g. combining with the previous terms
-		source(x) -= fourpiG_over_a * (negative_a3_T00(x) - negative_a3_T00_hom) * fR / 2.;
-		source(x) -= 1.5 * Hubble * (xi(x) - xi_old(x)) / dtau; //TODO: Do we want to keep this in the Quasi-static limit?
-		source(x) -= threeH2 * xi(x) / 2.;
-		source(x) += 0.25 * a2 * (Rbar * xi(x) + fbar - f(Rbar + deltaR(x), sim, 110));
+		source(x) -= fourpiG * (negative_T00(x) - negative_T00_hom) * fR / 2.;
+		source(x) += 0.25 * (Rbar * xi(x) + fbar - f(Rbar + deltaR(x), sim, 110));
 
 		// Rescaling with dx^2 (Needed! To be done before adding gradient squared)
 		source(x) *= dx2;
@@ -262,64 +252,6 @@ void prepareFTsource_S00_fR_rel(
 
   return;
 }
-
-
-/////////////////////////////////////////////////
-// Prepare source for 00 equation in F(R) gravity
-// TODO: Add comments here
-/////////////////////////////////////////////////
-template <class FieldType>
-void prepareFTsource_S00_fR_Newtonian(
-	Field<FieldType> & negative_a3_T00, // -a^3 * T00
-	Field<FieldType> & phi,
-	Field<FieldType> & chi,
-	Field<FieldType> & xi,
-	Field<FieldType> & xi_old,
-	Field<FieldType> & deltaR,
-	Field<FieldType> & source, //
-	const double negative_a3_T00_hom, //  background T00
-	const double dx2,
-	const double dtau,
-	const double Hubble,
-	const double a,
-	const double fourpiG_over_a,
-	const double Rbar,
-	const double fbar,
-	const double fRbar,
-	const metadata & sim)
-	{
-		Site x(phi.lattice());
-	  Site xn(phi.lattice());
-	  Site xp(phi.lattice());
-		double laplace = 0.;
-	  double a2 = a*a;
-	  double threeH2 = 3. * Hubble * Hubble;
-		double gradphi[3], gradxi[3];
-	  int i=0;
-
-		double fR;
-		for(x.first(); x.test(); x.next())
-		{
-			fR = xi(x) + fRbar;
-
-			source(x) = fourpiG_over_a * (negative_a3_T00(x) - negative_a3_T00_hom);// 4piG * (-a^3*T00 + a^3*Tbar00) / a = -4piG * a^2 * dT00
-
-			laplace = 0.;
-			for(i=0; i<3; ++i)
-			{
-				xn = x+i;
-				xp = x-i;
-				laplace += xi(xn) + xi(xp);
-			}
-			laplace -= 6. * xi(x);
-			// Rescaling with dx^2 (Needed! To be done before adding gradient squared)
-			source(x) *= dx2;
-			// F(R) terms
-			source(x) += 0.5 * laplace;
-		}
-
-	  return;
-	}
 
 
 /////////////////////////////////////////////////
@@ -475,23 +407,21 @@ void compute_eightpiG_deltaT(
 //   source     reference to fully dressed source field (rescaled by a^3)
 //   bgmodel    background model of the source (rescaled by a^3) to be subtracted
 //   result     reference to allocated field which will contain the result (may be identical to source)
-//   coeff      diffusion coefficient ("3 H_conformal dx^2 / dtau")
 //   coeff2     scaling coefficient for the source ("4 pi G dx^2 / a")
-//   coeff3     scaling coefficient for the psi-term ("3 H_conformal^2 dx^2")
 //
 // Returns:
 //
 //////////////////////////
 
 template <class FieldType>
-void prepareFTsource(Field<FieldType> & phi,
-                     Field<FieldType> & chi,
-                     Field<FieldType> & source,
-                     const FieldType bgmodel,
-                     Field<FieldType> & result,
-                     const double coeff,
-                     const double coeff2,
-                     const double coeff3)
+void prepareFTsource_BH(
+	Field<FieldType> & phi,
+	Field<FieldType> & chi,
+	Field<FieldType> & source,
+	const FieldType bgmodel,
+	Field<FieldType> & result,
+	const double coeff2
+)
 {
 	Site x(phi.lattice());
 
@@ -512,7 +442,6 @@ void prepareFTsource(Field<FieldType> & phi,
 		result(x) += 0.125 * (phi(x-2) - phi(x+2)) * (phi(x-2) - phi(x+2));
 #endif
 #endif
-		result(x) += (coeff3 - coeff) * phi(x) - coeff3 * chi(x);
 	}
 }
 

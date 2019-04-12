@@ -2377,7 +2377,7 @@ void generateIC_basic_BH(metadata & sim, icsettings & ic, cosmology & cosmo,
 	part.vel[0] = 0.;
 	part.vel[1] = 0.;
 	part.vel[2] = 0.;
-	pcls_cdm.addParticle_global(part);
+	pcls_cdm->addParticle_global(part);
 
 
 	projection_init(source);
@@ -2401,9 +2401,9 @@ void generateIC_basic_BH(metadata & sim, icsettings & ic, cosmology & cosmo,
 	//B_i is null as p is null
 	for(sx.first();sx.test();sx.next())
 	{
-		for(int i=0;i<3;i++)Bi(sx,i) = 0;
+		for(int i=0;i<3;i++) (*Bi)(sx,i) = 0;
 	}
-	Bi->updateHalo()
+	Bi->updateHalo();
 
 	//is chi null? LOL
 	projection_init(Sij);

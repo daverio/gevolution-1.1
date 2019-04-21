@@ -1153,5 +1153,230 @@ int output_background_data(
 }
 
 
+///black hole output:
+/// function output lines (for scalars)
+///
+
+template <typename FType>
+void output_lines(Field<FType> & field, double resolution, string filename)
+{
+	fstream file;
+	Site x(field.lattice());
+
+	double line[field.lattice().size(0)];
+	double line_y[field.lattice().size(1)];
+
+	double line_dist[field.lattice().size(0)];
+	double line_y_dist[field.lattice().size(1)];
+
+	int point_coord[3];
+	double part_coord[3];
+
+	int local_desc[2];
+	int xofs,zofs;
+
+	int i,j,k;
+
+	bool proc_have = false;
+
+
+
+
+	int md_local_desc[parallel.size()*2];
+
+
+	for(i=0;i<3;i++)
+	{
+		point_coord[i] = field.lattice().size(i) / 2;
+		part_coord[i] = (double)point_coord[i] + 0.5*resolution;
+	}
+
+	xofs = point_coord[0] -  point_coord[1];
+	zofs = point_coord[2] -  point_coord[1];
+
+	//creating line x...
+
+	for(i=0;i<field.lattice().size(0);i++)
+	{
+		line[i] = 0;
+		line_dist[i] = 0;
+	}
+
+	if(x.setCoord(point_coord) )
+	{
+		for(i=0;i<field.lattice().size(0);i++)
+		{
+				x.setCoord(i,point_coord[1],point_coord[2]);
+				line[i] = ( field(x) + field(x+1) + field(x+2) + field(x+1+2) )/4.0;
+				line_dist[i] =  i*resolution - part_coord[0];
+		}
+
+		//this proc write in the file the first line
+
+
+    file.open( filename.c_str() , std::fstream::out | std::fstream::trunc);
+    if( !file.is_open() )
+    {
+      cout << "cannot open file: " << filename << ", exiting" << endl;
+      exit(145);
+    }
+		file<<line_dist[0];
+		for(i=1;i<field.lattice().size(0);i++)file<<","<<line_dist[i];
+		file<<endl;
+		file<<line[0];
+		for(i=1;i<field.lattice().size(0);i++)file<<","<<line[i];
+		file<<endl;
+		file.close();
+	}
+
+	//creating line xy (here index is the y_coord)
+
+	local_desc[0]=-1;
+	local_desc[1]=0;
+	for(i=0;i<parallel.size();i++)
+	{
+		md_local_desc[2*i] = -1;
+		md_local_desc[2*i+1] = 0;
+	}
+	for(j=0;j<field.lattice().size(1);j++)
+	{
+		line_y[j] = 0;
+		line_y_dist[j] = 0;
+	}
+
+
+	for(j=0;j<field.lattice().size(1);j++)
+	{
+		i = j + xofs;
+		if(i<0)i += field.lattice().size(0);
+		if(i>=field.lattice().size(0)) i -= field.lattice().size(0);
+
+		if(x.setCoord(i,j,point_coord[2]) )
+		{
+			line_y[j] = (field(x) + field(x+2))/2.0;
+			local_desc[1]++;
+			if(local_desc[0]==-1)local_desc[0] = j;
+
+			line_y_dist[j] = sqrt( (part_coord[0]- i*resolution)*(part_coord[0]- i*resolution) +
+													(part_coord[1]- j*resolution)*(part_coord[1]- j*resolution) );
+			if(j<point_coord[1]) line_y_dist[j] *= -1;
+		}
+	}
+
+	//MPI gather all data..
+	MPI_Gather(local_desc, 2*sizeof(int), MPI_BYTE,
+			   		 md_local_desc, 2*sizeof(int), MPI_BYTE, 0, parallel.lat_world_comm());
+
+	//send data to root:
+	if(local_desc[0]!=-1 && parallel.rank()!=0)
+	{
+		parallel.send(&line_y[local_desc[0]],local_desc[1],0);
+		parallel.send(&line_y_dist[local_desc[0]],local_desc[1],0);
+	}
+
+	if(parallel.rank()==0)
+	{
+		for(i=1;i<parallel.size();i++)
+		{
+			if(md_local_desc[2*i]!=-1)
+			{
+				parallel.receive(&line_y[md_local_desc[2*i]],md_local_desc[2*i+1],i);
+				parallel.receive(&line_y_dist[md_local_desc[2*i]],md_local_desc[2*i+1],i);
+			}
+		}
+
+		file.open( filename.c_str() , std::fstream::out | std::fstream::app);
+    if( !file.is_open() )
+    {
+      cout << "cannot open file: " << filename << ", exiting" << endl;
+      exit(145);
+    }
+		file<<line_dist[0];
+		for(i=1;i<field.lattice().size(0);i++)file<<","<<line_y_dist[i];
+		file<<endl;
+		file<<line[0];
+		for(i=1;i<field.lattice().size(0);i++)file<<","<<line_y[i];
+		file<<endl;
+		file.close();
+
+	}
+
+
+	///XYZ direction
+	local_desc[0]=-1;
+	local_desc[1]=0;
+	for(i=0;i<parallel.size();i++)
+	{
+		md_local_desc[2*i] = -1;
+		md_local_desc[2*i+1] = 0;
+	}
+	for(j=0;j<field.lattice().size(1);j++)
+	{
+		line_y[j] = 0;
+		line_y_dist[j] = 0;
+	}
+
+	for(j=0;j<field.lattice().size(1);j++)
+	{
+		i = j + xofs;
+		if(i<0)i += field.lattice().size(0);
+		if(i>=field.lattice().size(0)) i -= field.lattice().size(0);
+		k = j + zofs;
+		if(k<0)k += field.lattice().size(2);
+		if(k>=field.lattice().size(2)) k -= field.lattice().size(2);
+
+		if(x.setCoord(i,j,k) )
+		{
+			line_y[j] = field(x);
+			local_desc[1]++;
+			if(local_desc[0]==-1)local_desc[0] = j;
+
+			line_y_dist[j] = sqrt( (part_coord[0]- i*resolution)*(part_coord[0]- i*resolution) +
+													(part_coord[1]- j*resolution)*(part_coord[1]- j*resolution) +
+												  (part_coord[2]- k*resolution)*(part_coord[2]- k*resolution) );
+			if(j<point_coord[1]) line_y_dist[j] *= -1;
+
+		}
+	}
+
+	MPI_Gather(local_desc, 2*sizeof(int), MPI_BYTE,
+			   		 md_local_desc, 2*sizeof(int), MPI_BYTE, 0, parallel.lat_world_comm());
+
+	//send data to root:
+	if(local_desc[0]!=-1 && parallel.rank()!=0)
+	{
+		parallel.send(&line_y[local_desc[0]],local_desc[1],0);
+		parallel.send(&line_y_dist[local_desc[0]],local_desc[1],0);
+	}
+
+	if(parallel.rank()==0)
+	{
+		for(i=1;i<parallel.size();i++)
+		{
+			if(md_local_desc[2*i]!=-1)
+			{
+				parallel.receive(&line_y[md_local_desc[2*i]],md_local_desc[2*i+1],i);
+				parallel.receive(&line_y_dist[md_local_desc[2*i]],md_local_desc[2*i+1],i);
+			}
+		}
+
+		file.open( filename.c_str() , std::fstream::out | std::fstream::app);
+    if( !file.is_open() )
+    {
+      cout << "cannot open file: " << filename << ", exiting" << endl;
+      exit(145);
+    }
+		file<<line_dist[0];
+		for(i=1;i<field.lattice().size(0);i++)file<<","<<line_y_dist[i];
+		file<<endl;
+		file<<line[0];
+		for(i=1;i<field.lattice().size(0);i++)file<<","<<line_y[i];
+		file<<endl;
+		file.close();
+
+	}
+}
+
+
 
 #endif

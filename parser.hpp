@@ -1213,7 +1213,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			ic.generator = ICGEN_BASIC_BH;
 			parseParameter(params, numparam, "BH mass", sim.BH_mass);
 		}
-		if(par_string[0] == 'B' || par_string[0] == 'b')
+		else if(par_string[0] == 'B' || par_string[0] == 'b')
 		{
 			ic.generator = ICGEN_BASIC;
 		}
@@ -1241,7 +1241,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 #endif
 		else
 		{
-			COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": IC generator not recognized!" << endl;
+			COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": IC generator not recognized! (read value: " << par_string[0] <<")" << endl;
 			parallel.abortForce();
 		}
 	}

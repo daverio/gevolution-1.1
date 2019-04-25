@@ -848,6 +848,10 @@ int main(int argc, char **argv)
 		spectra_output_time += MPI_Wtime() - ref_time;
 #endif
 
+
+		writeProfiles(phi, xi, chi, eightpiG_deltaT, deltaR, zeta, dx, sim);
+
+
 		COUT << COLORTEXT_GREEN << " simulation complete." << COLORTEXT_RESET << endl;
 
 #ifdef BENCHMARK

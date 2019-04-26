@@ -1714,14 +1714,14 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 	}
 	else					// initial displacements and velocities are set by individual transfer functions
 	{
-		#ifdef HAVE_CLASS
+#ifdef HAVE_CLASS
 		if(ic.tkfile[0] == '\0')
 		{
 			initializeCLASSstructures(sim, ic, cosmo, class_background, class_perturbs, class_spectra);
 			loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_t1, "tot", sim.boxsize, sim.z_in, cosmo.h);
 		}
 		else
-		#endif
+#endif
 		loadTransferFunctions(ic.tkfile, tk_d1, tk_t1, "tot", sim.boxsize, cosmo.h);
 
 		if(tk_d1 == NULL || tk_t1 == NULL)
@@ -1756,7 +1756,7 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 		gsl_spline_free(tk_d1);
 		gsl_spline_free(tk_t1);
 
-		#ifdef HAVE_CLASS
+#ifdef HAVE_CLASS
 		if(ic.tkfile[0] == '\0')
 		{
 			if(sim.relativistic_flag == 0)
@@ -1798,7 +1798,7 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 			loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_t1, "cdm", sim.boxsize, sim.z_in, cosmo.h);
 		}
 		else
-		#endif
+#endif
 		loadTransferFunctions(ic.tkfile, tk_d1, tk_t1, "cdm", sim.boxsize, cosmo.h);	// get transfer functions for CDM
 
 		if(tk_d1 == NULL || tk_t1 == NULL)
@@ -1809,13 +1809,13 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 
 		if(sim.baryon_flag > 0)
 		{
-			#ifdef HAVE_CLASS
+#ifdef HAVE_CLASS
 			if(ic.tkfile[0] == '\0')
 			{
 				loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d2, tk_t2, "b", sim.boxsize, sim.z_in, cosmo.h);
 			}
 			else
-			#endif
+#endif
 			loadTransferFunctions(ic.tkfile, tk_d2, tk_t2, "b", sim.boxsize, cosmo.h);	// get transfer functions for baryons
 
 			if(tk_d2 == NULL || tk_t2 == NULL)
@@ -2152,13 +2152,13 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 		if(ic.pkfile[0] == '\0')
 		{
 			sprintf(ncdm_name, "ncdm[%d]", p);
-			#ifdef HAVE_CLASS
+#ifdef HAVE_CLASS
 			if(ic.tkfile[0] == '\0')
 			{
 				loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_t1, ncdm_name, sim.boxsize, sim.z_in, cosmo.h);
 			}
 			else
-			#endif
+#endif
 			loadTransferFunctions(ic.tkfile, tk_d1, tk_t1, ncdm_name, sim.boxsize, cosmo.h);
 
 			if(tk_d1 == NULL || tk_t1 == NULL)
@@ -2245,12 +2245,12 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 	{
 		plan_source->execute(FFT_FORWARD);
 		generateDisplacementField(*scalarFT, 0., pkspline, (unsigned int) ic.seed, ic.flags & ICFLAG_KSPHERE, 0);
-		#ifdef HAVE_CLASS
+#ifdef HAVE_CLASS
 		if(ic.tkfile[0] == '\0')
 		{
 			freeCLASSstructures(class_background, class_perturbs, class_spectra);
 		}
-		#endif
+#endif
 	}
 	else
 	{
@@ -2364,11 +2364,9 @@ void generateIC_basic_BH(metadata & sim, icsettings & ic, cosmology & cosmo,
 	pcls_cdm_info.relativistic = false;
 	pcls_cdm->initialize(pcls_cdm_info, pcls_cdm_dataType, &(phi->lattice()), boxSize);
 
-
-
-	x = ((double)(pcls_cdm->lattice().size(0) / 2) + 0.5) * pcls_cdm->res();
-	y = ((double)(pcls_cdm->lattice().size(1) / 2) + 0.5) * pcls_cdm->res();
-	z = ((double)(pcls_cdm->lattice().size(2) / 2) + 0.5) * pcls_cdm->res();
+	x = ((double)(pcls_cdm->lattice().size(0) / 2.) + 0.5) * pcls_cdm->res();
+	y = ((double)(pcls_cdm->lattice().size(1) / 2.) + 0.5) * pcls_cdm->res();
+	z = ((double)(pcls_cdm->lattice().size(2) / 2.) + 0.5) * pcls_cdm->res();
 
 	part.ID = 1;
 	part.pos[0] = x;
@@ -2378,7 +2376,6 @@ void generateIC_basic_BH(metadata & sim, icsettings & ic, cosmology & cosmo,
 	part.vel[1] = 0.;
 	part.vel[2] = 0.;
 	pcls_cdm->addParticle_global(part);
-
 
 	projection_init(source);
 	scalarProjectionCIC_project(pcls_cdm, source);
@@ -2419,5 +2416,6 @@ void generateIC_basic_BH(metadata & sim, icsettings & ic, cosmology & cosmo,
 
 
 #endif
+
 
 #endif

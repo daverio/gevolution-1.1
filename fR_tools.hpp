@@ -1044,6 +1044,7 @@ void check_all_fields(
 	Field<FieldType> &xi,
 	Field<FieldType> &laplace_xi,
 	Field<FieldType> &chi,
+	Field<FieldType> &rho,
 	Field<FieldType> &deltaR,
 	Field<FieldType> &eightpiG_deltaT,
 	Field<FieldType> &zeta,
@@ -1057,6 +1058,7 @@ void check_all_fields(
 
 	if(oc & MASK_PHI) check_field(phi, "phi", n3, sim);
 	if(oc & MASK_CHI) check_field(chi, "chi", n3, sim);
+	if(oc & MASK_CHI) check_field(rho, "rho", n3, sim);
 	if(oc & MASK_DELTAR) check_field(deltaR, "deltaR", n3, sim);
 	if(oc & MASK_DELTAT) check_field(eightpiG_deltaT, "eightpiG_deltaT", n3, sim);
 	if(oc & MASK_B) check_vector_field(Bi, "Bi", n3, sim);
@@ -1723,6 +1725,8 @@ void prepareFTsource_leapfrog_R2(
 }
 
 
+/////////////////////////////////////////////////
+/////////////////////////////////////////////////
 template <class FieldType>
 double remove_homogeneous_part(
 	Field<FieldType> & original_field,
@@ -1750,6 +1754,8 @@ double remove_homogeneous_part(
 }
 
 
+/////////////////////////////////////////////////
+/////////////////////////////////////////////////
 template <class FieldType>
 double build_phi_ddot(
 	Field<FieldType> & phi,
@@ -1810,6 +1816,45 @@ double build_phi_ddot(
 	}
 
 	return 1.;
+}
+
+
+/////////////////////////////////////////////////
+/////////////////////////////////////////////////
+template <class FieldType>
+void generate_density_field_BH(
+	Field<FieldType> & source,
+	long numpts3d,
+	const cosmology cosmo,
+	const metadata & sim
+)
+{
+	Site x(source.lattice());
+	int xPointMass, yPointMass, zPointMass;
+	double rho_point_mass, rho_elsewhere;
+	xPointMass = sim.numpts/2;
+	yPointMass = sim.numpts/2;
+	zPointMass = sim.numpts/2;
+	rho_point_mass = (1. + 1.E-4 * (numpts3d - 1)) * cosmo.Omega_m;
+	rho_elsewhere = (1. - 1.E-4) * cosmo.Omega_m;
+
+	for(x.first(); x.test(); x.next())
+	{
+		if(x.coord(0) == xPointMass && x.coord(1) == yPointMass && x.coord(2) == zPointMass)
+		{
+			source(x) = rho_point_mass;
+		}
+		else
+		{
+			source(x) = rho_elsewhere;
+		}
+	}
+
+
+	source.updateHalo();
+
+	return;
+
 }
 
 

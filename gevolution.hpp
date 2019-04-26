@@ -354,17 +354,13 @@ void projectFTsource_S0i(
 template <class FieldType>
 void compute_eightpiG_deltaT(
 	Field<FieldType> & eightpiG_deltaT,
-	Field<FieldType> & negative_a3_t00,
-	Field<FieldType> & a3_tij,
-	double a,
-	double a3_Trace_hom,
+	Field<FieldType> & negative_t00,
+	double Trace_hom,
 	double fourpiG,
 	const metadata & sim
 )
 {
-  double
-		eightpiG = 2. * fourpiG,
-	 	a3 = a*a*a;
+  double eightpiG = 2. * fourpiG;
 
 	Site x(eightpiG_deltaT.lattice());
 
@@ -372,9 +368,8 @@ void compute_eightpiG_deltaT(
 	{
 		for(x.first(); x.test(); x.next())
 		{
-			eightpiG_deltaT(x) = -negative_a3_t00(x) + a3_tij(x,0,0) + a3_tij(x,1,1) + a3_tij(x,2,2);
-			eightpiG_deltaT(x) -= a3_Trace_hom;
-			eightpiG_deltaT(x) /= a3;
+			eightpiG_deltaT(x) = -negative_t00(x);
+			eightpiG_deltaT(x) -= Trace_hom;
 			eightpiG_deltaT(x) *= eightpiG;
 		}
 	}
@@ -382,9 +377,8 @@ void compute_eightpiG_deltaT(
 	{
 		for(x.first(); x.test(); x.next())
 		{
-			eightpiG_deltaT(x) = -negative_a3_t00(x);
-			eightpiG_deltaT(x) -= a3_Trace_hom;
-			eightpiG_deltaT(x) /= a3;
+			eightpiG_deltaT(x) = -negative_t00(x);
+			eightpiG_deltaT(x) -= Trace_hom;
 			eightpiG_deltaT(x) *= eightpiG;
 		}
 	}

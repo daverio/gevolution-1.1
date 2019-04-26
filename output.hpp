@@ -1180,16 +1180,13 @@ void output_lines(Field<FType> & field, double resolution, string filename)
 
 	bool proc_have = false;
 
-
-
-
 	int md_local_desc[parallel.size()*2];
 
 
 	for(i=0;i<3;i++)
 	{
 		point_coord[i] = field.lattice().size(i) / 2;
-		part_coord[i] = (double)point_coord[i] + 0.5 * resolution * field.lattice().size(i);
+		part_coord[i] = point_coord[i] * resolution;
 	}
 
 	xofs = point_coord[0] - point_coord[1];
@@ -1203,17 +1200,16 @@ void output_lines(Field<FType> & field, double resolution, string filename)
 		line_dist[i] = 0;
 	}
 
-	if(x.setCoord(point_coord) )
+	if(x.setCoord(point_coord))
 	{
 		for(i=0;i<field.lattice().size(0);i++)
 		{
 				x.setCoord(i,point_coord[1],point_coord[2]);
-				line[i] = ( field(x) + field(x+1) + field(x+2) + field(x+1+2) )/4.0;
-				line_dist[i] = (i - part_coord[0]) * resolution;
+				line[i] = field(x);
+				line_dist[i] = i * resolution - part_coord[0];
 		}
 
 		//this proc write in the file the first line
-
 
     file.open( filename.c_str() , std::fstream::out | std::fstream::trunc);
     if( !file.is_open() )
@@ -1222,10 +1218,10 @@ void output_lines(Field<FType> & field, double resolution, string filename)
       exit(145);
     }
 		file<<line_dist[0];
-		for(i=1;i<field.lattice().size(0);i++)file<<" "<<line_dist[i];
+		for(i=1;i<field.lattice().size(0);i++)file<<", "<<line_dist[i];
 		file<<endl;
 		file<<line[0];
-		for(i=1;i<field.lattice().size(0);i++)file<<" "<<line[i];
+		for(i=1;i<field.lattice().size(0);i++)file<<", "<<line[i];
 		file<<endl;
 		file.close();
 	}
@@ -1254,12 +1250,12 @@ void output_lines(Field<FType> & field, double resolution, string filename)
 
 		if(x.setCoord(i,j,point_coord[2]) )
 		{
-			line_y[j] = (field(x) + field(x+2))/2.0;
+			line_y[j] = field(x);
 			local_desc[1]++;
-			if(local_desc[0]==-1)local_desc[0] = j;
+			if(local_desc[0]==-1) local_desc[0] = j;
 
 			// line_y_dist[j] = sqrt( (part_coord[0]- i*resolution)*(part_coord[0]- i*resolution) + (part_coord[1]- j*resolution)*(part_coord[1]- j*resolution) );
-			line_y_dist[j] = sqrt( (part_coord[0] - i)*(part_coord[0] - i) + (part_coord[1] - j)*(part_coord[1] - j) ) * resolution;
+			line_y_dist[j] = sqrt( (point_coord[0] - i)*(point_coord[0] - i) + (point_coord[1] - j)*(point_coord[1] - j) ) * resolution;
 			if(j<point_coord[1]) line_y_dist[j] *= -1;
 		}
 	}
@@ -1286,17 +1282,17 @@ void output_lines(Field<FType> & field, double resolution, string filename)
 			}
 		}
 
-		file.open( filename.c_str() , std::fstream::out | std::fstream::app);
-    if( !file.is_open() )
+		file.open(filename.c_str(), std::fstream::out | std::fstream::app);
+    if(!file.is_open())
     {
       cout << "cannot open file: " << filename << ", exiting" << endl;
       exit(145);
     }
 		file<<line_dist[0];
-		for(i=1;i<field.lattice().size(0);i++)file<<" "<<line_y_dist[i];
+		for(i=1;i<field.lattice().size(0);i++)file<<", "<<line_y_dist[i];
 		file<<endl;
 		file<<line[0];
-		for(i=1;i<field.lattice().size(0);i++)file<<" "<<line_y[i];
+		for(i=1;i<field.lattice().size(0);i++)file<<", "<<line_y[i];
 		file<<endl;
 		file.close();
 
@@ -1335,9 +1331,9 @@ void output_lines(Field<FType> & field, double resolution, string filename)
 			// line_y_dist[j] = sqrt( (part_coord[0]- i*resolution)*(part_coord[0]- i*resolution) +
 			// 										(part_coord[1]- j*resolution)*(part_coord[1]- j*resolution) +
 			// 									  (part_coord[2]- k*resolution)*(part_coord[2]- k*resolution) );
-			line_y_dist[j] = sqrt( (part_coord[0]- i)*(part_coord[0]- i) +
-													(part_coord[1]- j)*(part_coord[1]- j) +
-												  (part_coord[2]- k)*(part_coord[2]- k) ) * resolution;
+			line_y_dist[j] = sqrt( (point_coord[0]- i)*(point_coord[0]- i) +
+													(point_coord[1]- j)*(point_coord[1]- j) +
+												  (point_coord[2]- k)*(point_coord[2]- k) ) * resolution;
 			if(j<point_coord[1]) line_y_dist[j] *= -1;
 
 		}
@@ -1371,28 +1367,27 @@ void output_lines(Field<FType> & field, double resolution, string filename)
       exit(145);
     }
 		file<<line_dist[0];
-		for(i=1;i<field.lattice().size(0);i++)file<<" "<<line_y_dist[i];
+		for(i=1;i<field.lattice().size(0);i++)file<<", "<<line_y_dist[i];
 		file<<endl;
 		file<<line[0];
-		for(i=1;i<field.lattice().size(0);i++)file<<" "<<line_y[i];
+		for(i=1;i<field.lattice().size(0);i++)file<<", "<<line_y[i];
 		file<<endl;
 		file.close();
 
 	}
 }
 
-
-
-
+/////////////////////////////////////////////////
+/////////////////////////////////////////////////
 void writeProfiles(
 	Field<Real> & phi,
 	Field<Real> & xi,
 	Field<Real> & chi,
+	Field<Real> & rho,
 	Field<Real> & eightpiG_deltaT,
 	Field<Real> & deltaR,
 	Field<Real> & zeta,
-	double dx,
-	metadata & sim
+	const metadata & sim
 )
 {
 	string filename_base, filename_field;
@@ -1402,22 +1397,25 @@ void writeProfiles(
 	filename_field.reserve(2*PARAM_MAX_LENGTH + 24); // Pretty random value at this point
 
 	filename_field = filename_base + "_phi.dat";
-	output_lines(phi, dx, filename_field);
+	output_lines(phi, sim.boxsize / sim.numpts, filename_field);
 
 	filename_field = filename_base + "_xi.dat";
-	output_lines(xi, dx, filename_field);
+	output_lines(xi, sim.boxsize / sim.numpts, filename_field);
 
 	filename_field = filename_base + "_chi.dat";
-	output_lines(chi, dx, filename_field);
+	output_lines(chi, sim.boxsize / sim.numpts, filename_field);
+
+	filename_field = filename_base + "_T00.dat";
+	output_lines(rho, sim.boxsize / sim.numpts, filename_field);
 
 	filename_field = filename_base + "_eightpiG_deltaT.dat";
-	output_lines(eightpiG_deltaT, dx, filename_field);
+	output_lines(eightpiG_deltaT, sim.boxsize / sim.numpts, filename_field);
 
 	filename_field = filename_base + "_deltaR.dat";
-	output_lines(deltaR, dx, filename_field);
+	output_lines(deltaR, sim.boxsize / sim.numpts, filename_field);
 
 	filename_field = filename_base + "_zeta.dat";
-	output_lines(zeta, dx, filename_field);
+	output_lines(zeta, sim.boxsize / sim.numpts, filename_field);
 
 	return;
 }

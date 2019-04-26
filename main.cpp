@@ -240,6 +240,7 @@ int main(int argc, char **argv)
 			fbar = fRbar = fRRbar = 0.;
 		}
 
+
 		//=========================================== Full evolution -- Background + Perturbations ===========================================//
 		//========= TODO: A lot of stuff unnecessary (background, for instance), remove all of it
 		//
@@ -438,69 +439,65 @@ int main(int argc, char **argv)
 		tau_Lambda = -1.0;
 		numsteps_bg = 1;
 
-		// Generate Initial Conditions
-		if(ic.generator == ICGEN_BASIC)
-		{
-			generateIC_basic(sim, ic, cosmo, fourpiG, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij); // generates ICs on the fly
-		}
-		else if(ic.generator == ICGEN_BASIC_BH)
-		{
-			generateIC_basic_BH(sim, ic, cosmo, fourpiG, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
-		}
-// 		else if(ic.generator == ICGEN_READ_FROM_DISK)
+// 		// Generate Initial Conditions
+// 		if(ic.generator == ICGEN_BASIC)
 // 		{
-// 			if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
-// 			{
-// 				readIC_fR(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, Hubble, Rbar, dot_Rbar, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &xi, &xi_old, &zeta, &deltaR, &deltaR_prev, &dot_deltaR, &eightpiG_deltaT, &phi_dot, &phi_ddot, &xi_dot, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount, settingsfile_bin);
+// 			generateIC_basic(sim, ic, cosmo, fourpiG, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij); // generates ICs on the fly
+// 		}
+// 		else if(ic.generator == ICGEN_BASIC_BH)
+// 		{
+// 			generateIC_basic_BH(sim, ic, cosmo, fourpiG, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
+// 		}
 //
-// 				fbar = f(Rbar, sim, 400);
-// 				fRbar = fR(Rbar, sim, 401);
-// 				fRRbar = fRR(Rbar, sim, 402);
 //
-// 				dot_fRbar = 0.;
-// 				dot_Rbar = 0.;
-// 			}
-// 			else
-// 			{
-// 				readIC_GR(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount);
-// 				Hubble = Hconf(a, fourpiG, cosmo);
-// 				Rbar = 2. * fourpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a + 4.*cosmo.Omega_Lambda );
-// 			}
-// 		}
-// #ifdef ICGEN_PREVOLUTION
-// 		else if(ic.generator == ICGEN_PREVOLUTION)
+// // 		else if(ic.generator == ICGEN_READ_FROM_DISK)
+// // 		{
+// // 			if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
+// // 			{
+// // 				readIC_fR(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, Hubble, Rbar, dot_Rbar, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &xi, &xi_old, &zeta, &deltaR, &deltaR_prev, &dot_deltaR, &eightpiG_deltaT, &phi_dot, &phi_ddot, &xi_dot, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount, settingsfile_bin);
+// //
+// // 				fbar = f(Rbar, sim, 400);
+// // 				fRbar = fR(Rbar, sim, 401);
+// // 				fRRbar = fRR(Rbar, sim, 402);
+// //
+// // 				dot_fRbar = 0.;
+// // 				dot_Rbar = 0.;
+// // 			}
+// // 			else
+// // 			{
+// // 				readIC_GR(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount);
+// // 				Hubble = Hconf(a, fourpiG, cosmo);
+// // 				Rbar = 2. * fourpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a + 4.*cosmo.Omega_Lambda );
+// // 			}
+// // 		}
+// // #ifdef ICGEN_PREVOLUTION
+// // 		else if(ic.generator == ICGEN_PREVOLUTION)
+// // 		{
+// // 			generateIC_prevolution(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
+// // 		}
+// // #endif
+// // #ifdef ICGEN_FALCONIC
+// // 		else if(ic.generator == ICGEN_FALCONIC)
+// // 		{
+// // 			maxvel[0] = generateIC_FalconIC(sim, ic, cosmo, fourpiG, dtau, &pcls_cdm, pcls_ncdm, maxvel+1, &phi, &source, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_source, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
+// // 		}
+// // #endif
+//
+//
+// 		else
 // 		{
-// 			generateIC_prevolution(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
+// 			COUT << " error: IC generator not implemented!" << endl;
+// 			parallel.abortForce();
 // 		}
-// #endif
-// #ifdef ICGEN_FALCONIC
-// 		else if(ic.generator == ICGEN_FALCONIC)
+//
+// 		if(sim.baryon_flag > 1)
 // 		{
-// 			maxvel[0] = generateIC_FalconIC(sim, ic, cosmo, fourpiG, dtau, &pcls_cdm, pcls_ncdm, maxvel+1, &phi, &source, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_source, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
+// 			COUT << " error: baryon_flag > 1 after IC generation, something went wrong in IC generator!" << endl;
+// 			parallel.abortForce();
 // 		}
-// #endif
-		else
-		{
-			COUT << " error: IC generator not implemented!" << endl;
-			parallel.abortForce();
-		}
-
-		if(sim.baryon_flag > 1)
-		{
-			COUT << " error: baryon_flag > 1 after IC generation, something went wrong in IC generator!" << endl;
-			parallel.abortForce();
-		}
-
-		numspecies = 1 + sim.baryon_flag + cosmo.num_ncdm;
-		parallel.max<double>(maxvel, numspecies);
-
-		// if(sim.relativistic_flag > 0)
-		// {
-		// 	for(i=0; i<numspecies; ++i)
-		// 	{
-		// 		maxvel[i] /= sqrt(maxvel[i] * maxvel[i] + 1.0);
-		// 	}
-		// }
+//
+// 		numspecies = 1 + sim.baryon_flag + cosmo.num_ncdm;
+// 		parallel.max<double>(maxvel, numspecies);
 
 		for(i=0; i<6; ++i)
 		{
@@ -545,126 +542,130 @@ int main(int argc, char **argv)
 // 			}
 // 		}
 // #endif
+//
+// 		//=========================================== Main loop ===========================================//
+//
+// #ifdef BENCHMARK
+// 		cycle_start_time = MPI_Wtime();
+// #endif
+//
+// 		// construct stress-energy tensor -- Writes -a^3 T00 in {source} (note the minus sign!)
+// 		projection_init(&source);
+//
+// #ifdef HAVE_CLASS
+// 		if(sim.radiation_flag > 0)
+// 		{
+// 			projection_T00_project(class_background, class_perturbs, class_spectra, source, scalarFT, &plan_source, sim, ic, cosmo, fourpiG, a);
+// 		}
+// #endif
+//
+// 		// Project T00
+// 		if(sim.relativistic_flag > 0)
+// 		{
+// 			projection_T00_project(&pcls_cdm, &source, a, &phi);
+// 			if(sim.baryon_flag)
+// 			{
+// 				projection_T00_project(&pcls_b, &source, a, &phi);
+// 			}
+//
+// 			for(i=0; i<cosmo.num_ncdm; ++i)
+// 			{
+// 				if(a >= 1. / (sim.z_switch_deltancdm[i] + 1.))
+// 				{
+// 					projection_T00_project(pcls_ncdm+i, &source, a, &phi);
+// 				}
+// 				else if(sim.radiation_flag == 0)
+// 				{
+// 					tmp = bg_ncdm(a, cosmo, i);
+// 					for(x.first(); x.test(); x.next())
+// 					{
+// 						source(x) += tmp;
+// 					}
+// 				}
+// 			}
+// 			projection_T00_comm(&source);
+// 		}
+// 		else // Newtonian gravity and f(R) Newtonian
+// 		{//n-body gauge
+// 			scalarProjectionCIC_project(&pcls_cdm, &source);
+// 			if(sim.baryon_flag)
+// 			{
+// 				scalarProjectionCIC_project(&pcls_b, &source);
+// 			}
+//
+// 			for(i=0; i<cosmo.num_ncdm; ++i)
+// 			{
+// 				if(a >= 1. / (sim.z_switch_deltancdm[i] + 1.))
+// 				{
+// 					scalarProjectionCIC_project(pcls_ncdm+i, &source);
+// 				}
+// 			}
+// 			projection_T00_comm(&source);
+// 		}
+//
+// 		// // Project T0i -- writes a^4 T0i in {Bi}
+// 		if(sim.vector_flag == VECTOR_ELLIPTIC)
+// 		{
+// 			copy_vector_field(Bi, Bi_old);
+//
+// 			projection_init(&Bi);
+// 			projection_T0i_project(&pcls_cdm, &Bi, &phi);
+// 			if(sim.baryon_flag)
+// 			{
+// 				projection_T0i_project(&pcls_b, &Bi, &phi);
+// 			}
+// 			for(i=0; i<cosmo.num_ncdm; ++i)
+// 			{
+// 				if(a >= 1. / (sim.z_switch_Bncdm[i] + 1.))
+// 				{
+// 					projection_T0i_project(pcls_ncdm+i, &Bi, &phi);
+// 				}
+// 			}
+// 			projection_T0i_comm(&Bi);
+// 		}
+//
+// 		// Project Tij -- Write a^3 Tij in {Sij}
+// 		projection_init(&Sij);
+// 		projection_Tij_project(&pcls_cdm, &Sij, a, &phi);
+// 		if(sim.baryon_flag)
+// 		{
+// 			projection_Tij_project(&pcls_b, &Sij, a, &phi);
+// 		}
+// 		if(a >= 1. / (sim.z_switch_linearchi + 1.))
+// 		{
+// 			for(i=0; i<cosmo.num_ncdm; ++i)
+// 			{
+// 				projection_Tij_project(pcls_ncdm+i, &Sij, a, &phi);
+// 			}
+// 		}
+// 		projection_Tij_comm(&Sij);
+//
+//
+// #ifdef BENCHMARK
+// 		projection_time += MPI_Wtime() - cycle_start_time;
+// 		ref_time = MPI_Wtime();
+// #endif
 
-		//=========================================== Main loop ===========================================//
-
-#ifdef BENCHMARK
-		cycle_start_time = MPI_Wtime();
-#endif
-
-		// construct stress-energy tensor -- Writes -a^3 T00 in {source} (note the minus sign!)
-		projection_init(&source);
-
-#ifdef HAVE_CLASS
-		if(sim.radiation_flag > 0)
-		{
-			projection_T00_project(class_background, class_perturbs, class_spectra, source, scalarFT, &plan_source, sim, ic, cosmo, fourpiG, a);
-		}
-#endif
-
-		// Project T00
-		if(sim.relativistic_flag > 0)
-		{
-			projection_T00_project(&pcls_cdm, &source, a, &phi);
-			if(sim.baryon_flag)
-			{
-				projection_T00_project(&pcls_b, &source, a, &phi);
-			}
-
-			for(i=0; i<cosmo.num_ncdm; ++i)
-			{
-				if(a >= 1. / (sim.z_switch_deltancdm[i] + 1.))
-				{
-					projection_T00_project(pcls_ncdm+i, &source, a, &phi);
-				}
-				else if(sim.radiation_flag == 0)
-				{
-					tmp = bg_ncdm(a, cosmo, i);
-					for(x.first(); x.test(); x.next())
-					{
-						source(x) += tmp;
-					}
-				}
-			}
-			projection_T00_comm(&source);
-		}
-		else // Newtonian gravity and f(R) Newtonian
-		{//n-body gauge
-			scalarProjectionCIC_project(&pcls_cdm, &source);
-			if(sim.baryon_flag)
-			{
-				scalarProjectionCIC_project(&pcls_b, &source);
-			}
-
-			for(i=0; i<cosmo.num_ncdm; ++i)
-			{
-				if(a >= 1. / (sim.z_switch_deltancdm[i] + 1.))
-				{
-					scalarProjectionCIC_project(pcls_ncdm+i, &source);
-				}
-			}
-			projection_T00_comm(&source);
-		}
-
-		// // Project T0i -- writes a^4 T0i in {Bi}
-		if(sim.vector_flag == VECTOR_ELLIPTIC)
-		{
-			copy_vector_field(Bi, Bi_old);
-
-			projection_init(&Bi);
-			projection_T0i_project(&pcls_cdm, &Bi, &phi);
-			if(sim.baryon_flag)
-			{
-				projection_T0i_project(&pcls_b, &Bi, &phi);
-			}
-			for(i=0; i<cosmo.num_ncdm; ++i)
-			{
-				if(a >= 1. / (sim.z_switch_Bncdm[i] + 1.))
-				{
-					projection_T0i_project(pcls_ncdm+i, &Bi, &phi);
-				}
-			}
-			projection_T0i_comm(&Bi);
-		}
-
-		// Project Tij -- Write a^3 Tij in {Sij}
-		projection_init(&Sij);
-		projection_Tij_project(&pcls_cdm, &Sij, a, &phi);
-		if(sim.baryon_flag)
-		{
-			projection_Tij_project(&pcls_b, &Sij, a, &phi);
-		}
-		if(a >= 1. / (sim.z_switch_linearchi + 1.))
-		{
-			for(i=0; i<cosmo.num_ncdm; ++i)
-			{
-				projection_Tij_project(pcls_ncdm+i, &Sij, a, &phi);
-			}
-		}
-		projection_Tij_comm(&Sij);
-
-#ifdef BENCHMARK
-		projection_time += MPI_Wtime() - cycle_start_time;
-		ref_time = MPI_Wtime();
-#endif
+		COUT << " Generating stress-energy tensor..." << flush;
+		generate_density_field_BH(source, numpts3d, cosmo, sim);
+		COUT << " done. " << endl;
 
 		// Computes 8piG*deltaT = 8piG( (T00 + T11 + T22 + T33) - (-rho_backg + 3P_backg) ), to be stored in {eightpiG_deltaT}
 		// At the moment: {source} = -a^3*T00, {Sij} = a^3*Tij
 		// NB: in Newtonian f(R), consider only delta_rho instead of full T_mn
-		compute_eightpiG_deltaT(eightpiG_deltaT, source, Sij, a, -cosmo.Omega_m, fourpiG, sim);
+		compute_eightpiG_deltaT(eightpiG_deltaT, source, -cosmo.Omega_m, fourpiG, sim);
 
 		if(sim.modified_gravity_flag != MODIFIED_GRAVITY_FLAG_FR || sim.gr_curvature) // in GR/Newton, deltaR tracks exactly eightpiG_deltaT
 		{
 			copy_field(eightpiG_deltaT, deltaR, -1.);
 		}
 
-		build_homogeneous_terms(source, phi, Sij, T00_hom, Tii_hom, phi_hom, T00_hom_rescaled_a3, a, numpts3d);
-
 		//==========================================================================================================//
 		//========================================= EVOLVE deltaR, zeta, xi ========================================//
 		//==========================================================================================================//
 		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 		{
+			COUT << " Solving for scalaron..." << flush;
 			if(sim.fR_model == FR_MODEL_R2) // First let's work out the R + R^2 case
 			{
 				coeffm2 = a*a/6./sim.fR_params[0];
@@ -690,11 +691,13 @@ int main(int argc, char **argv)
 			// TODO: Avoid updating the halo twice (see later)
 			// Build laplacian of xi
 			build_laplacian(xi, laplace_xi, dx);
+			COUT << " done." << endl;
 		}
 
 		//==========================================================================================================//
 		//=============================================== EVOLVE phi ===============================================//
 		//==========================================================================================================//
+		COUT << " Solving for phi..." << flush;
 		// GR and relativistic f(R)
 		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 		{
@@ -726,6 +729,8 @@ int main(int argc, char **argv)
 		// go back to position space: {scalarFT} --> {phi_dot}
 		plan_phi.execute(FFT_BACKWARD);
 
+		COUT << " done." << endl;
+
 #ifdef BENCHMARK
 		fft_time += MPI_Wtime() - ref2_time;
 		fft_count++;
@@ -734,6 +739,7 @@ int main(int argc, char **argv)
 		//==========================================================================================================//
 		//=============================================== EVOLVE chi ===============================================//
 		//==========================================================================================================//
+		COUT << " Solving for chi..." << flush;
 		copy_field(chi, chi_dot); // Before evolving chi
 
 		// prepare nonlinear source for additional equations
@@ -779,10 +785,12 @@ int main(int argc, char **argv)
 
 		chi.updateHalo();  // communicate halo values
 
+		COUT << " done." << endl;
 
 		//==========================================================================================================//
 		//=============================================== EVOLVE Bi ================================================//
 		//==========================================================================================================//
+		COUT << " Solving for Bi..." << flush;
 
 		if(sim.vector_flag == VECTOR_ELLIPTIC) // solve B using elliptic constraint; TODO: check for f(R) -- should be the same
 		{
@@ -821,36 +829,44 @@ int main(int argc, char **argv)
 			Bi.updateHalo();  // communicate halo values
 		}
 
+		COUT << " done." << endl;
+
 #ifdef BENCHMARK
 		gravity_solver_time += MPI_Wtime() - ref_time;
 		ref_time = MPI_Wtime();
 #endif
 
-		check_all_fields(phi, xi, laplace_xi, chi, deltaR, eightpiG_deltaT, zeta, phi_effective, phi_ddot, Bi, numpts3d, sim);
-		add_fields(xi, fRbar, xi);
-		check_field(xi, "fR", numpts3d, sim);
-		add_fields(xi, -fRbar, xi);
+		generate_density_field_BH(source, numpts3d, cosmo, sim);
+		check_all_fields(phi, xi, laplace_xi, chi, source, deltaR, eightpiG_deltaT, zeta, phi_effective, phi_ddot, Bi, numpts3d, sim);
 
-		// snapshot output
-		COUT << COLORTEXT_CYAN << " writing snapshot" << COLORTEXT_RESET << " at z = " << ((1./a) - 1.) <<  " (cycle " << cycle << "), tau/boxsize = " << tau << endl;
+		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
+		{
+			add_fields(xi, fRbar, xi);
+			check_field(xi, "fR", numpts3d, sim);
+			add_fields(xi, -fRbar, xi);
+		}
 
-		writeSnapshots(sim, cosmo, fourpiG, hdr, a, snapcount, h5filename, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &phi_ddot, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
+// 		// snapshot output
+// 		COUT << COLORTEXT_CYAN << " writing snapshot" << COLORTEXT_RESET << " at z = " << ((1./a) - 1.) <<  " (cycle " << cycle << "), tau/boxsize = " << tau << endl;
+//
+// 		writeSnapshots(sim, cosmo, fourpiG, hdr, a, snapcount, h5filename, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &phi_ddot, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
+//
+// #ifdef BENCHMARK
+// 		snapshot_output_time += MPI_Wtime() - ref_time;
+// 		ref_time = MPI_Wtime();
+// #endif
+//
+// 		// power spectra
+// 		writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &phi_ddot, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_phi_ddot, &plan_phi_effective, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
+//
+// #ifdef BENCHMARK
+// 		spectra_output_time += MPI_Wtime() - ref_time;
+// #endif
 
-#ifdef BENCHMARK
-		snapshot_output_time += MPI_Wtime() - ref_time;
-		ref_time = MPI_Wtime();
-#endif
 
-		// power spectra
-		writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &phi_ddot, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_phi_ddot, &plan_phi_effective, &plan_chi, &plan_Bi, &plan_source, &plan_Sij);
-
-#ifdef BENCHMARK
-		spectra_output_time += MPI_Wtime() - ref_time;
-#endif
-
-
-		writeProfiles(phi, xi, chi, eightpiG_deltaT, deltaR, zeta, dx, sim);
-
+		COUT << " Writing profiles..." << flush;
+		writeProfiles(phi, xi, chi, source, eightpiG_deltaT, deltaR, zeta, sim);
+		COUT << " done." << endl;
 
 		COUT << COLORTEXT_GREEN << " simulation complete." << COLORTEXT_RESET << endl;
 

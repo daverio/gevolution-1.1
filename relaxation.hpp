@@ -649,51 +649,50 @@ double single_layer_solver(
 )
 {
   int count = 0;
-  double
-   error = 0.,
-   previous_error = 1.;
+  double error = 0., previous_error = 1.;
 
-   if(sim.truncate_relaxation)
-   {
-     while(true)
-     {
-       error = relaxation_step(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim);
+  if(sim.truncate_relaxation)
+  {
+    while(true)
+    {
+      error = relaxation_step(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim);
 
-       if(error < sim.relaxation_error)
-       {
-         break;
-       }
+      if(error < sim.relaxation_error)
+      {
+        break;
+      }
 
-       if(fabs(error/previous_error - 1.) <= sim.relaxation_truncation_threshold)
-       {
-         ++count;
-       }
-       else
-       {
-         count = 0;
-       }
+      if(fabs(error/previous_error - 1.) <= sim.relaxation_truncation_threshold)
+      {
+        ++count;
+      }
+      else
+      {
+        count = 0;
+      }
 
-       if(count >= sim.truncate_relaxation)
-       {
-         break;
-       }
+      if(count >= sim.truncate_relaxation)
+      {
+        break;
+      }
 
-       previous_error = error;
-     }
-   }
-   else
-   {
-     while(true)
-     {
-       error = relaxation_step(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim);
+      previous_error = error;
+    }
+  }
+  else
+  {
+    while(true)
+    {
+      error = relaxation_step(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim);
 
-       if(error < sim.relaxation_error)
-       {
-         break;
-       }
-     }
-   }
+      if(error < sim.relaxation_error)
+      {
+        break;
+      }
+    }
+  }
 
+  COUT << "(" << count << ") ";
   return error;
 }
 

@@ -1815,6 +1815,10 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 				sim.relaxation_error = RELAXATION_ERROR_DEFAULT;
 				COUT << "/!\\ Wrong relaxation error specified. Using default: " << sim.relaxation_error << endl;
 			}
+			else
+			{
+				COUT << " Relaxation error = " << sim.relaxation_error << endl;
+			}
 
 			if(!parseParameter(params, numparam, "overrelaxation factor", sim.overrelaxation_factor))
 			{

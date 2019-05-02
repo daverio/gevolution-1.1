@@ -1774,6 +1774,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			else if(sim.truncate_relaxation <= 0)
 			{
 				COUT << " Relaxation solver never truncated, even if convergence slows down." << endl;
+				sim.truncate_relaxation = 0;
 			}
 			else
 			{

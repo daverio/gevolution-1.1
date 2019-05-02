@@ -1768,17 +1768,17 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 			if(!parseParameter(params, numparam, "truncate relaxation", sim.truncate_relaxation))
 			{
-				COUT << " Relaxation solver never truncated if convergence slows down." << endl;
+				COUT << " Relaxation solver never truncated, even if convergence slows down." << endl;
 				sim.truncate_relaxation = 0;
 			}
-			else if(!sim.truncate_relaxation)
+			else if(sim.truncate_relaxation <= 0)
 			{
-				COUT << " Relaxation solver never truncated if convergence slows down." << endl;
+				COUT << " Relaxation solver never truncated, even if convergence slows down." << endl;
 			}
 			else
 			{
 				COUT << " Relaxation truncated after " << sim.truncate_relaxation << " steps with (almost) no improvement." << endl;
-				
+
 				if(!parseParameter(params, numparam, "truncation threshold", sim.relaxation_truncation_threshold))
 				{
 					COUT << " Setting truncation threshold at default = 0.01." << endl;

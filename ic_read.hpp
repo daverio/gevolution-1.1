@@ -4,9 +4,9 @@
 // 
 // read initial conditions from disk
 //
-// Author: Julian Adamek (Université de Genève & Observatoire de Paris)
+// Author: Julian Adamek (Université de Genève & Observatoire de Paris & Queen Mary University of London)
 //
-// Last modified: December 2016
+// Last modified: April 2019
 //
 //////////////////////////
 
@@ -55,7 +55,7 @@
 // 
 //////////////////////////
 
-void readIC(metadata & sim, icsettings & ic, cosmology & cosmo, const double fourpiG, double & a, double & tau, double & dtau, double & dtau_old, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm, double * maxvel, Field<Real> * phi, Field<Real> * chi, Field<Real> * Bi, Field<Real> * source, Field<Real> * Sij, Field<Cplx> * scalarFT, Field<Cplx> * BiFT, Field<Cplx> * SijFT, PlanFFT<Cplx> * plan_phi, PlanFFT<Cplx> * plan_chi, PlanFFT<Cplx> * plan_Bi, PlanFFT<Cplx> * plan_source, PlanFFT<Cplx> * plan_Sij, int & cycle, int & snapcount, int & pkcount, int & restartcount)
+void readIC(metadata & sim, icsettings & ic, cosmology & cosmo, const double fourpiG, double & a, double & tau, double & dtau, double & dtau_old, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm, double * maxvel, Field<Real> * phi, Field<Real> * chi, Field<Real> * Bi, Field<Real> * source, Field<Real> * Sij, Field<Cplx> * scalarFT, Field<Cplx> * BiFT, Field<Cplx> * SijFT, PlanFFT<Cplx> * plan_phi, PlanFFT<Cplx> * plan_chi, PlanFFT<Cplx> * plan_Bi, PlanFFT<Cplx> * plan_source, PlanFFT<Cplx> * plan_Sij, int & cycle, int & snapcount, int & pkcount, int & restartcount, set<long> * IDbacklog)
 {
 	part_simple_info pcls_cdm_info;
 	part_simple_dataType pcls_cdm_dataType;
@@ -66,17 +66,24 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo, const double fou
 	Real boxSize[3] = {1.,1.,1.};
 	string filename;
 	string buf;
-	int i, p;
+	int i, p, c;
 	char * ext;
 	char line[PARAM_MAX_LINESIZE];
 	FILE * bgfile;
+	FILE * lcfile;
 	struct fileDsc fd;
 	gadget2_header hdr;
 	long * numpcl;
 	Real * dummy1;
 	Real * dummy2;
 	Site x(Bi->lattice());
+	Site xPart(pcls_cdm->lattice());
 	rKSite kFT(scalarFT->lattice());
+	double d;
+	long count;
+	void * IDbuffer;
+	void * buf2;
+	set<long> IDlookup;
 	
 	filename.reserve(PARAM_MAX_LENGTH);
 	hdr.npart[1] = 0;
@@ -198,6 +205,11 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo, const double fou
 		
 	for (p = 0; p < cosmo.num_ncdm; p++)
 	{
+		if (ic.numtile[1+sim.baryon_flag+i] < 1)
+		{
+			maxvel[sim.baryon_flag+1+p] = 0;
+			continue;
+		}
 		strcpy(pcls_ncdm_info[p].type_name, "part_simple");
 		pcls_ncdm_info[p].mass = 0.;
 		pcls_ncdm_info[p].relativistic = true;
@@ -274,6 +286,19 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo, const double fou
 	}
 
 	phi->updateHalo();
+	
+	if (ic.restart_tau > 0.)
+		tau = ic.restart_tau;
+	else
+		tau = particleHorizon(a, fourpiG, cosmo);
+		
+	if (ic.restart_dtau > 0.)
+		dtau_old = ic.restart_dtau;
+		
+	if (sim.Cf / (double) sim.numpts < sim.steplimit / Hconf(a, fourpiG, cosmo))
+		dtau = sim.Cf / (double) sim.numpts;
+	else
+		dtau = sim.steplimit / Hconf(a, fourpiG, cosmo);
 
 	if (ic.restart_cycle >= 0)
 	{	
@@ -374,6 +399,281 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo, const double fou
 				}
 			}
 		}
+		
+		for (i = 0; i < sim.num_lightcone; i++)
+		{
+			if (parallel.isRoot())
+			{
+				if (sim.num_lightcone > 1)
+					sprintf(line, "%s%s%d_info.dat", sim.output_path, sim.basename_lightcone, i);
+				else
+					sprintf(line, "%s%s_info.dat", sim.output_path, sim.basename_lightcone);
+						
+				lcfile = fopen(line, "r");
+				
+				if (lcfile == NULL)
+				{
+					COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": unable to locate file for lightcone information! A new file will be created" << endl;
+					lcfile = fopen(line, "w");
+					if (lcfile == NULL)
+					{
+						COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": unable to create file for lightcone information!" << endl;
+						parallel.abortForce();
+					}
+					else
+					{
+						if (sim.num_lightcone > 1)
+							fprintf(lcfile, "# information file for lightcone %d\n# geometric parameters:\n# vertex = (%f, %f, %f) Mpc/h\n# redshift = %f\n# distance = (%f - %f) Mpc/h\n# opening half-angle = %f degrees\n# direction = (%f, %f, %f)\n# cycle   tau/boxsize    a              pcl_inner        pcl_outer        metric_inner     metric_outer\n", i, sim.lightcone[i].vertex[0]*sim.boxsize, sim.lightcone[i].vertex[1]*sim.boxsize, sim.lightcone[i].vertex[2]*sim.boxsize, sim.lightcone[i].z, sim.lightcone[i].distance[0]*sim.boxsize, sim.lightcone[i].distance[1]*sim.boxsize, (sim.lightcone[i].opening > -1.) ? acos(sim.lightcone[i].opening) * 180. / M_PI : 180., sim.lightcone[i].direction[0], sim.lightcone[i].direction[1], sim.lightcone[i].direction[2]);
+						else
+							fprintf(lcfile, "# information file for lightcone\n# geometric parameters:\n# vertex = (%f, %f, %f) Mpc/h\n# redshift = %f\n# distance = (%f - %f) Mpc/h\n# opening half-angle = %f degrees\n# direction = (%f, %f, %f)\n# cycle   tau/boxsize    a              pcl_inner        pcl_outer        metric_inner     metric_outer\n", sim.lightcone[i].vertex[0]*sim.boxsize, sim.lightcone[i].vertex[1]*sim.boxsize, sim.lightcone[i].vertex[2]*sim.boxsize, sim.lightcone[i].z, sim.lightcone[i].distance[0]*sim.boxsize, sim.lightcone[i].distance[1]*sim.boxsize, (sim.lightcone[i].opening > -1.) ? acos(sim.lightcone[i].opening) * 180. / M_PI : 180., sim.lightcone[i].direction[0], sim.lightcone[i].direction[1], sim.lightcone[i].direction[2]);
+						fclose(lcfile);
+					}
+				}
+				else
+				{
+					buf.reserve(PARAM_MAX_LINESIZE);
+					buf.clear();
+				
+					for(p = 0; p < 8; p++)
+					{
+						if (fgets(line, PARAM_MAX_LINESIZE, lcfile) == 0)
+						{
+							COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": unable to read file for lightcone information! A new file will be created" << endl;
+							break;
+						}
+						else if (line[0] != '#')
+						{
+							COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": file for lightcone information has unexpected format! Contents will be overwritten!" << endl;
+							break;
+						}
+					}
+					
+					p = 0;
+					while (fgets(line, PARAM_MAX_LINESIZE, lcfile) != 0)
+					{
+						if (sscanf(line, " %d", &c) != 1)
+							break;
+						
+						if (c > ic.restart_cycle)
+							break;
+						else
+						{
+							buf += line;
+							p++;
+						}
+					}
+		
+					fclose(lcfile);
+					
+					if (sim.num_lightcone > 1)
+						sprintf(line, "%s%s%d_info.dat", sim.output_path, sim.basename_lightcone, i);
+					else
+						sprintf(line, "%s%s_info.dat", sim.output_path, sim.basename_lightcone);
+						
+					lcfile = fopen(line, "w");
+					
+					if (lcfile == NULL)
+					{
+						COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": unable to create file for lightcone information!" << endl;
+						parallel.abortForce();
+					}
+					else
+					{
+						if (sim.num_lightcone > 1)
+							fprintf(lcfile, "# information file for lightcone %d\n# geometric parameters:\n# vertex = (%f, %f, %f) Mpc/h\n# redshift = %f\n# distance = (%f - %f) Mpc/h\n# opening half-angle = %f degrees\n# direction = (%f, %f, %f)\n# cycle   tau/boxsize    a              pcl_inner        pcl_outer        metric_inner     metric_outer\n", i, sim.lightcone[i].vertex[0]*sim.boxsize, sim.lightcone[i].vertex[1]*sim.boxsize, sim.lightcone[i].vertex[2]*sim.boxsize, sim.lightcone[i].z, sim.lightcone[i].distance[0]*sim.boxsize, sim.lightcone[i].distance[1]*sim.boxsize, (sim.lightcone[i].opening > -1.) ? acos(sim.lightcone[i].opening) * 180. / M_PI : 180., sim.lightcone[i].direction[0], sim.lightcone[i].direction[1], sim.lightcone[i].direction[2]);
+						else
+							fprintf(lcfile, "# information file for lightcone\n# geometric parameters:\n# vertex = (%f, %f, %f) Mpc/h\n# redshift = %f\n# distance = (%f - %f) Mpc/h\n# opening half-angle = %f degrees\n# direction = (%f, %f, %f)\n# cycle   tau/boxsize    a              pcl_inner        pcl_outer        metric_inner     metric_outer\n", sim.lightcone[i].vertex[0]*sim.boxsize, sim.lightcone[i].vertex[1]*sim.boxsize, sim.lightcone[i].vertex[2]*sim.boxsize, sim.lightcone[i].z, sim.lightcone[i].distance[0]*sim.boxsize, sim.lightcone[i].distance[1]*sim.boxsize, (sim.lightcone[i].opening > -1.) ? acos(sim.lightcone[i].opening) * 180. / M_PI : 180., sim.lightcone[i].direction[0], sim.lightcone[i].direction[1], sim.lightcone[i].direction[2]);
+						fwrite((const void *) buf.data(), sizeof(char), buf.length(), lcfile);
+						fclose(lcfile);
+						buf.clear();
+					}
+					
+					if (sim.num_lightcone > 1)
+						sprintf(line, "%s%s%d_info.bin", sim.output_path, sim.basename_lightcone, i);
+					else
+						sprintf(line, "%s%s_info.bin", sim.output_path, sim.basename_lightcone);
+						
+					lcfile = fopen(line, "r");
+					
+					if (lcfile == NULL)
+					{
+						if (p > 0)
+						{
+							COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": unable to read binary file for lightcone information!" << endl;
+						}
+					}
+					else
+					{
+						if (p > 0)
+						{
+							buf2 = malloc(p * (sizeof(int) + 6 * sizeof(double)));
+							c = fread(buf2, 1, p * (sizeof(int) + 6 * sizeof(double)), lcfile);
+							if (c != p * (sizeof(int) + 6 * sizeof(double)))
+							{
+								COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": unable to read binary file for lightcone information!" << endl;
+							}
+							
+							fclose(lcfile);
+							lcfile = fopen(line, "r");
+							
+							if (lcfile == NULL)
+							{
+								COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": unable to create file for lightcone information!" << endl;
+								parallel.abortForce();
+							}
+							else
+							{
+								fwrite(buf2, 1, c, lcfile);
+								fclose(lcfile);
+							}
+							
+							free(buf2);
+						}
+						else
+						{
+							fclose(lcfile);
+							lcfile = fopen(line, "r");
+							if (lcfile != NULL)
+								fclose(lcfile);
+						}
+					}
+				}
+			}
+		
+			d = particleHorizon(1. / (1. + sim.lightcone[i].z), fourpiG, cosmo);
+			if (sim.out_lightcone[i] & MASK_GADGET && sim.lightcone[i].distance[0] > d - tau + 0.5 * dtau_old && sim.lightcone[i].distance[1] <= d - tau + 0.5 * dtau_old && d - tau + 0.5 * dtau_old > 0.)
+			{
+				for (p = 0; p < 1 + sim.baryon_flag + cosmo.num_ncdm; p++)
+				{
+					if (sim.numpcl[p] == 0) continue;
+					
+					if (p == 0)
+					{
+						for (xPart.first(); xPart.test(); xPart.next())
+						{
+							for (std::list<part_simple>::iterator it = (pcls_cdm->field())(xPart).parts.begin(); it != (pcls_cdm->field())(xPart).parts.end(); ++it)
+								IDlookup.insert((*it).ID);
+						}
+					}
+					else if (p == 1 && sim.baryon_flag > 0)
+					{
+						for (xPart.first(); xPart.test(); xPart.next())
+						{
+							for (std::list<part_simple>::iterator it = (pcls_b->field())(xPart).parts.begin(); it != (pcls_b->field())(xPart).parts.end(); ++it)
+								IDlookup.insert((*it).ID);
+						}
+					}
+					else
+					{
+						for (xPart.first(); xPart.test(); xPart.next())
+						{
+							for (std::list<part_simple>::iterator it = (pcls_ncdm[p-1-sim.baryon_flag].field())(xPart).parts.begin(); it != (pcls_ncdm[p-1-sim.baryon_flag].field())(xPart).parts.end(); ++it)
+								IDlookup.insert((*it).ID);
+						}
+					}
+				
+					if (parallel.isRoot())
+					{
+						if (sim.num_lightcone > 1)
+						{
+							if (p == 0)
+								sprintf(line, "%s%s%d_%04d_cdm", sim.output_path, sim.basename_lightcone, i, ic.restart_cycle);
+							else if (p == 1 && sim.baryon_flag > 0)
+								sprintf(line, "%s%s%d_%04d_b", sim.output_path, sim.basename_lightcone, i, ic.restart_cycle);
+							else
+								sprintf(line, "%s%s%d_%04d_ncdm%d", sim.output_path, sim.basename_lightcone, i, ic.restart_cycle, p-1-sim.baryon_flag);
+						}
+						else
+						{
+							if (p == 0)
+								sprintf(line, "%s%s_%04d_cdm", sim.output_path, sim.basename_lightcone, ic.restart_cycle);
+							else if (p == 1 && sim.baryon_flag > 0)
+								sprintf(line, "%s%s_%04d_b", sim.output_path, sim.basename_lightcone, ic.restart_cycle);
+							else
+								sprintf(line, "%s%s_%04d_ncdm%d", sim.output_path, sim.basename_lightcone, ic.restart_cycle, p-1-sim.baryon_flag);
+						}
+						
+						lcfile = fopen(line, "r");
+					
+						if (lcfile == NULL)
+						{
+							COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": unable to open " << line << " for retrieving particle ID backlog" << endl;
+							count = 0;
+						}
+						else if (fseek(lcfile, 4, SEEK_SET) || fread(&hdr, sizeof(gadget2_header), 1, lcfile) != 1 || fseek(lcfile, 276l + 6l * sizeof(float) * (hdr.npartTotal[1] + ((long) hdr.npartTotalHW[1] << 32)), SEEK_SET))
+						{
+							COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": unable to read " << line << " for retrieving particle ID backlog" << endl;
+							count = 0;
+							fclose(lcfile);
+							lcfile = NULL;
+						}
+						else
+							count = hdr.npartTotal[1] + ((long) hdr.npartTotalHW[1] << 32);
+					}
+				
+					parallel.broadcast<long>(count, 0);
+				
+					IDbuffer = malloc(PCLBUFFER * GADGET_ID_BYTES);
+				
+					while (count > 0)
+					{
+						if (count > PCLBUFFER)
+						{
+							if (parallel.isRoot() && fread(IDbuffer, 1, PCLBUFFER * GADGET_ID_BYTES, lcfile) != PCLBUFFER * GADGET_ID_BYTES)
+							{
+								COUT << COLORTEXT_RED << " /!\\ error" << COLORTEXT_RESET << ": unable to read particle ID block from " << line << endl;
+								parallel.abortForce();
+							}
+						
+							parallel.broadcast<char>((char *) IDbuffer, PCLBUFFER * GADGET_ID_BYTES, 0);
+						
+							for (int j = 0; j < PCLBUFFER; j++)
+							{
+#if GADGET_ID_BYTES == 8
+								if (IDlookup.erase((long) *(((int64_t *) IDbuffer) + j)))
+									IDbacklog[p].insert((long) *(((int64_t *) IDbuffer) + j));
+#else
+								if (IDlookup.erase((long) *(((int32_t *) IDbuffer) + j)))
+									IDbacklog[p].insert((long) *(((int32_t *) IDbuffer) + j));
+#endif
+							}
+						
+							count -= PCLBUFFER;
+						}
+						else
+						{
+							if (parallel.isRoot() && fread(IDbuffer, 1, count * GADGET_ID_BYTES, lcfile) != count * GADGET_ID_BYTES)
+							{
+								COUT << COLORTEXT_RED << " /!\\ error" << COLORTEXT_RESET << ": unable to read particle ID block from " << line << endl;
+								parallel.abortForce();
+							}
+						
+							parallel.broadcast<char>((char *) IDbuffer, count * GADGET_ID_BYTES, 0);
+						
+							for (int j = 0; j < count; j++)
+							{
+#if GADGET_ID_BYTES == 8
+								if (IDlookup.erase((long) *(((int64_t *) IDbuffer) + j)))
+									IDbacklog[p].insert((long) *(((int64_t *) IDbuffer) + j));
+#else
+								if (IDlookup.erase((long) *(((int32_t *) IDbuffer) + j)))
+									IDbacklog[p].insert((long) *(((int32_t *) IDbuffer) + j));
+#endif
+							}
+						
+							count = 0;
+						}
+					}
+				
+					free(IDbuffer);
+				
+					if (parallel.isRoot() && lcfile != NULL)
+						fclose(lcfile);
+					
+					IDlookup.clear();
+				}
+			}
+		}
 	}
 	else
 	{
@@ -399,19 +699,6 @@ void readIC(metadata & sim, icsettings & ic, cosmology & cosmo, const double fou
 		plan_chi->execute(FFT_BACKWARD);		
 		chi->updateHalo();
 	}
-		
-	if (ic.restart_tau > 0.)
-		tau = ic.restart_tau;
-	else
-		particleHorizon(a, fourpiG, cosmo);
-		
-	if (ic.restart_dtau > 0.)
-		dtau_old = ic.restart_dtau;
-		
-	if (sim.Cf / (double) sim.numpts < sim.steplimit / Hconf(a, fourpiG, cosmo))
-		dtau = sim.Cf / (double) sim.numpts;
-	else
-		dtau = sim.steplimit / Hconf(a, fourpiG, cosmo);
 
 	if (ic.restart_cycle >= 0)
 		cycle = ic.restart_cycle + 1;

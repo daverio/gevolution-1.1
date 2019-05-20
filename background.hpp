@@ -4,9 +4,9 @@
 // 
 // code components related to background evolution
 //
-// Author: Julian Adamek (Université de Genève & Observatoire de Paris)
+// Author: Julian Adamek (Université de Genève & Observatoire de Paris & Queen Mary University of London)
 //
-// Last modified: October 2016
+// Last modified: September 2018
 //
 //////////////////////////
 
@@ -136,15 +136,15 @@ double bg_ncdm(const double a, const cosmology cosmo)
 
 double Hconf(const double a, const double fourpiG, const cosmology cosmo)
 {	
-	return sqrt((2. * fourpiG / 3.) * (((cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) / a) + (cosmo.Omega_Lambda * a * a) + (cosmo.Omega_rad / a / a)));
+	return sqrt((2. * fourpiG / 3.) * (((cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) / a) + (cosmo.Omega_Lambda * a * a) + (cosmo.Omega_rad / a / a) + (cosmo.Omega_fld * exp(3. * cosmo.wa_fld * (a - 1.)) / pow(a, 1. + 3. * (cosmo.w0_fld + cosmo.wa_fld)))));
 }
 
 
-double Omega_m(const double a, const cosmology cosmo) { return cosmo.Omega_m / (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo) + cosmo.Omega_Lambda * a * a * a + cosmo.Omega_rad / a); }
+double Omega_m(const double a, const cosmology cosmo) { return cosmo.Omega_m / (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo) + cosmo.Omega_Lambda * a * a * a + cosmo.Omega_rad / a + cosmo.Omega_fld * exp(3. * cosmo.wa_fld * (a - 1.)) / pow(a, 3. * (cosmo.w0_fld + cosmo.wa_fld))); }
 
-double Omega_rad(const double a, const cosmology cosmo) { return (cosmo.Omega_rad + (bg_ncdm(a, cosmo) + cosmo.Omega_cdm + cosmo.Omega_b - cosmo.Omega_m) * a) / ((cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * a + cosmo.Omega_Lambda * a * a * a * a + cosmo.Omega_rad); }
+double Omega_rad(const double a, const cosmology cosmo) { return (cosmo.Omega_rad + (bg_ncdm(a, cosmo) + cosmo.Omega_cdm + cosmo.Omega_b - cosmo.Omega_m) * a) / ((cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * a + cosmo.Omega_Lambda * a * a * a * a + cosmo.Omega_rad + cosmo.Omega_fld * exp(3. * cosmo.wa_fld * (a - 1.)) / pow(a, 3. * (cosmo.w0_fld + cosmo.wa_fld) - 1.)); }
 
-double Omega_Lambda(const double a, const cosmology cosmo) { return cosmo.Omega_Lambda / ((cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) / a / a / a + cosmo.Omega_Lambda + cosmo.Omega_rad / a / a / a / a); }
+double Omega_Lambda(const double a, const cosmology cosmo) { return cosmo.Omega_Lambda / ((cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) / a / a / a + cosmo.Omega_Lambda + cosmo.Omega_rad / a / a / a / a + cosmo.Omega_fld * exp(3. * cosmo.wa_fld * (a - 1.)) / pow(a, 3. + 3. * (cosmo.w0_fld + cosmo.wa_fld))); }
 
 
 //////////////////////////

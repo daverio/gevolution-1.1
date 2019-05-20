@@ -109,7 +109,6 @@ int main(int argc, char **argv)
 	int box[3];
 	double dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, dx, tau, a, fourpiG, tau_Lambda, tmp, start_time;
 	double dtau_print, tau_print;
-	double error; // TODO Remove after debugging
 	double maxvel[MAX_PCL_SPECIES];
 	char filename[2*PARAM_MAX_LENGTH+24];
 	string bgfilename;
@@ -189,8 +188,8 @@ int main(int argc, char **argv)
 		ioserver.start();
 	}
 	else
-#endif
 	{
+#endif
 		COUT
 		<< "   __  ___                 _        _    _            " << endl
 		<< "  / _|| _ \\ ___ __ __ ___ | | _  _ | |_ (_) ___  _ _  " << endl

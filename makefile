@@ -1,7 +1,7 @@
 # programming environment
 COMPILER     := mpic++
-INCLUDE      := # add the path to LATfield2 and other libraries (if necessary)
-LIB          := -lfftw3 -lm -lhdf5 -lgsl -lgslcblas
+INCLUDE      := -I../LATfield2/ -I/home/lorerev/LATfield2/ -I../Healpix_3.50/include -L../Healpix_3.50/lib
+LIB          := -lfftw3 -lm -lhdf5 -lgsl -lgslcblas -lchealpix
 
 # target and source
 EXEC         := gevolution
@@ -9,7 +9,7 @@ SOURCE       := main.cpp
 HEADERS      := $(wildcard *.hpp)
 
 # mandatory compiler settings (LATfield2)
-DLATFIELD2   := -DFFT3D -DHDF5
+DLATFIELD2   := -DFFT3D -DHDF5 -DMULTIGRID
 
 # optional compiler settings (LATfield2)
 #DLATFIELD2   += -DH5_HAVE_PARALLEL
@@ -18,6 +18,8 @@ DLATFIELD2   := -DFFT3D -DHDF5
 # optional compiler settings (gevolution)
 DGEVOLUTION  := -DPHINONLINEAR
 DGEVOLUTION  += -DBENCHMARK
+DGEVOLUTION  += -DORIGINALMETRIC
+DGEVOLUTION  += -DHAVE_HEALPIX 
 #DGEVOLUTION  += -DCHECK_B
 #DGEVOLUTION  += -DHAVE_CLASS # requires OPT -fopenmp and LIB -lclass
 
@@ -26,4 +28,3 @@ OPT          := -O3 -std=c++11
 
 $(EXEC): $(SOURCE) $(HEADERS) makefile
 	$(COMPILER) $< -o $@ $(OPT) $(DLATFIELD2) $(DGEVOLUTION) $(INCLUDE) $(LIB)
-

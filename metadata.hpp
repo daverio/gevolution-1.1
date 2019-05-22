@@ -1,68 +1,70 @@
 //////////////////////////
 // metadata.hpp
 //////////////////////////
-//
+// 
 // Constants and metadata structures
 //
-// Author: Julian Adamek (Université de Genève & Observatoire de Paris)
-//         f(R):
-//				 David Daverio (Cambridge University)
-//				 Lorenzo Reverberi (University of Cape Town)
+// Author: Julian Adamek (Université de Genève & Observatoire de Paris & Queen Mary University of London)
 //
-// Last modified: December 2016
+// Last modified: April 2019
 //
 //////////////////////////
 
 #ifndef METADATA_HEADER
 #define METADATA_HEADER
 
-#define FREVOLUTION_VERSION 1.0
+#define GEVOLUTION_VERSION 1.2
 
 #ifndef MAX_OUTPUTS
 #define MAX_OUTPUTS 32
 #endif
 
-#ifndef MAX_FR_PARAMS
-#define MAX_FR_PARAMS 8
-#endif
-
 #ifndef PARAM_MAX_LENGTH
-#define PARAM_MAX_LENGTH 128
+#define PARAM_MAX_LENGTH 256
 #endif
 
 #ifndef PARAM_MAX_LINESIZE
 #define PARAM_MAX_LINESIZE 1024
 #endif
 
+#ifndef MAX_INTERSECTS
+#define MAX_INTERSECTS 12
+#endif
+
+#ifndef LIGHTCONE_IDCHECK_ZONE
+#define LIGHTCONE_IDCHECK_ZONE 0.05
+#endif
+
+#define LIGHTCONE_PHI_OFFSET 0
+#define LIGHTCONE_CHI_OFFSET 1
+#define LIGHTCONE_B_OFFSET   2
+#define LIGHTCONE_HIJ_OFFSET 5
+#define LIGHTCONE_MAX_FIELDS 10
+
 #ifndef MAX_PCL_SPECIES
 #define MAX_PCL_SPECIES 6
 #endif
 
-#ifndef METRICFILE_LENGTH
-#define METRICFILE_LENGTH 20
+#ifndef CYCLE_INFO_INTERVAL
+#define CYCLE_INFO_INTERVAL 10
 #endif
 
-#define MASK_PHI        		1
-#define MASK_CHI        		2
-#define MASK_POT        		4
-#define MASK_B          		8
-#define MASK_T00        		16
-#define MASK_TIJ        		32
-#define MASK_RBARE      		64
-#define MASK_HIJ        		128
-#define MASK_P          		256
-#define MASK_GADGET     		512
-#define MASK_PCLS       		1024
-#define MASK_XSPEC      		2048
-#define MASK_DELTA      		4096
-#define MASK_DBARE      		8192
-#define MASK_XI   		   	  16384
-#define MASK_ZETA       		32768
-#define MASK_DELTAR	    		65536
-#define MASK_DELTAT     		131072
-#define MASK_LAPLACE_XI  	  262144
-#define MASK_PHI_EFFECTIVE  524288
-#define MASK_PHI_DDOT       1048576
+#define MASK_PHI    1
+#define MASK_CHI    2
+#define MASK_POT    4
+#define MASK_B      8
+#define MASK_T00    16
+#define MASK_TIJ    32
+#define MASK_RBARE  64
+#define MASK_HIJ    128
+#define MASK_P      256
+#define MASK_GADGET 512
+#define MASK_PCLS   1024
+#define MASK_XSPEC  2048
+#define MASK_DELTA  4096
+#define MASK_DBARE  8192
+#define MASK_MULTI  16384
+#define MASK_VEL    32768
 
 #define ICFLAG_CORRECT_DISPLACEMENT 1
 #define ICFLAG_KSPHERE              2
@@ -121,45 +123,6 @@
 #endif
 #endif
 
-// Hibernation particle save mode
-#define HIB_SAVE_HDF5 0
-#define HIB_SAVE_GADGET2 1
-
-// Modified gravity
-#define MODIFIED_GRAVITY_FLAG_FR 1   // f(R)
-
-#define FR_MODEL_RN 1
-#define FR_MODEL_R2 2
-#define FR_MODEL_HU_SAWICKI 3
-#define FR_MODEL_DELTA 4
-
-#define FR_EPSILON_BACKGROUND_DEFAULT 0.1
-#define FR_EPSILON_FIELDS_DEFAULT 0.1
-#define FR_COUNT_MAX_DEFAULT 100
-#define FR_TARGET_PRECISION_DEFAULT 1.E-5
-
-#define FR_WRONG 1.E+30
-#define FR_WRONG_RETURN 2. * FR_WRONG
-
-// Multigrid
-#define MULTIGRID_SHAPE_V 1
-#define MULTIGRID_SHAPE_W 2
-#define PRE_SMOOTHING_DEFAULT 5
-#define POST_SMOOTHING_DEFAULT 5
-
-// Relaxation methods
-#define METHOD_RELAX 1
-#define METHOD_MULTIGRID 2
-#define METHOD_FMG 3
-
-// Restrict/prolong u or deltaR
-#define RESTRICT_XI 1
-#define RESTRICT_DELTAR 2
-
-
-// Relaxation error
-#define RELAXATION_ERROR_DEFAULT 1.E-5
-
 // color escape sequences for terminal highlighting (enable with -DCOLORTERMINAL)
 #ifdef COLORTERMINAL
 #define COLORTEXT_WHITE     "\033[37;1m"
@@ -169,12 +132,12 @@
 #define COLORTEXT_YELLOW    "\033[33;1m"
 #define COLORTEXT_RESET     "\033[0m"
 #else
-#define COLORTEXT_WHITE     '\0'
-#define COLORTEXT_CYAN      '\0'
-#define COLORTEXT_GREEN     '\0'
-#define COLORTEXT_RED       '\0'
-#define COLORTEXT_YELLOW    '\0'
-#define COLORTEXT_RESET     '\0'
+#define COLORTEXT_WHITE     ""
+#define COLORTEXT_CYAN      ""
+#define COLORTEXT_GREEN     ""
+#define COLORTEXT_RED       ""
+#define COLORTEXT_YELLOW    ""
+#define COLORTEXT_RESET     ""
 #endif
 
 // header structure for GADGET-2 files [V. Springel, N. Yoshida, and S.D. White, New Astron. 6 (2001) 79
@@ -197,76 +160,80 @@ struct gadget2_header
 	double Omega0;
 	double OmegaLambda;
 	double HubbleParam;
-	char fill[256 - 6 * 4 - 6 * 8 - 2 * 8 - 2 * 4 - 6 * 4 - 2 * 4 - 4 * 8];   /* fills to 256 Bytes */
+	int32_t flag_age;
+	int32_t flag_metals;
+	uint32_t npartTotalHW[6];
+	char fill[256 - 6 * 4 - 6 * 8 - 2 * 8 - 2 * 4 - 6 * 4 - 2 * 4 - 4 * 8 - 2 * 4 - 6 * 4]; /* fills to 256 Bytes */
 };
 #endif
 
+#ifdef HAVE_HEALPIX
+#include "chealpix.h"
+#ifndef PIXBUFFER
+#define PIXBUFFER 1048576
+#endif
+
+struct healpix_header
+{
+	uint32_t Nside;
+	uint32_t Npix;
+	uint32_t precision;
+	uint32_t Ngrid;
+	double direction[3];
+	double distance;
+	double boxsize;
+	uint32_t Nside_ring;
+	char fill[256 - 5 * 4 - 5 * 8]; /* fills to 256 Bytes */
+};
+#endif
+
+struct lightcone_geometry
+{
+	double vertex[3];
+	double z;
+	double direction[3];
+	double opening;
+	double distance[2];
+};
+
 struct metadata
 {
-	int CYCLE_INFO_INTERVAL; // Previously fixed: #define CYCLE_INFO_INTERVAL = 10
-	int BACKGROUND_NUMPTS;
 	int numpts;
 	int downgrade_factor;
 	long numpcl[MAX_PCL_SPECIES];
 	int tracer_factor[MAX_PCL_SPECIES];
 	int baryon_flag;
-	int relativistic_flag;
-	int modified_gravity_flag;
-	int fR_model;
+	int gr_flag;
 	int vector_flag;
 	int radiation_flag;
+	int fluid_flag;
 	int out_pk;
 	int out_snapshot;
-	int out_check;
+	int out_lightcone[MAX_OUTPUTS];
 	int num_pk;
 	int numbins;
 	int num_snapshot;
+	int num_lightcone;
 	int num_restart;
-	int num_fR_params;
-	int quasi_static;
-	int xi_Hubble;
-	int gr_curvature;
-	int background_only;
-	double z_fin;
-	int lcdm_background;
+	int Nside[MAX_OUTPUTS][2];
 	double Cf;
-	int check_fields;
-	int check_fields_precision;
-	int check_pause;
-	int hibernation_save_mode;
-	double fR_params[MAX_FR_PARAMS];
-	double fR_epsilon_bg;
-	double fR_epsilon_fields;
-	double fR_target_precision;
-	double fR_count_max;
-	double relaxation_error;
-	double overrelaxation_factor;
-	double relaxation_truncation_threshold;
-	int truncate_relaxation;
-	int relaxation_method;
-	int red_black;
-	int pre_smoothing;
-	int post_smoothing;
-	int multigrid_or_not;
-	int multigrid_restrict_mode;
-	int multigrid_shape;
-	int multigrid_n_grids;
-	int multigrid_n_cycles;
-	int multigrid_check_shape;
 	double movelimit;
 	double steplimit;
 	double boxsize;
 	double wallclocklimit;
+	double pixelfactor[MAX_OUTPUTS];
+	double shellfactor[MAX_OUTPUTS];
+	double covering[MAX_OUTPUTS];
 	double z_in;
-	double z_check; // TODO: Remove after debugging
 	double z_snapshot[MAX_OUTPUTS];
 	double z_pk[MAX_OUTPUTS];
 	double z_restart[MAX_OUTPUTS];
-	double z_switch_fR_background;
 	double z_switch_deltarad;
 	double z_switch_linearchi;
 	double z_switch_deltancdm[MAX_PCL_SPECIES-2];
 	double z_switch_Bncdm[MAX_PCL_SPECIES-2];
+	lightcone_geometry lightcone[MAX_OUTPUTS];
+	char basename_lightcone[PARAM_MAX_LENGTH];
 	char basename_snapshot[PARAM_MAX_LENGTH];
 	char basename_pk[PARAM_MAX_LENGTH];
 	char basename_generic[PARAM_MAX_LENGTH];
@@ -274,103 +241,6 @@ struct metadata
 	char restart_path[PARAM_MAX_LENGTH];
 	char basename_restart[PARAM_MAX_LENGTH];
 };
-
-std::ostream& operator<< (std::ostream& os, const metadata& sim)
-{
-	os << "===== Metadata structure: =====\n";
-	os << "CYCLE_INFO_INTERVAL: " << sim.CYCLE_INFO_INTERVAL << "\n";
-	os << "BACKGROUND_NUMPTS: " << sim.BACKGROUND_NUMPTS << "\n";
-	os << "numpts: " << sim.numpts << "\n";
-	os << "downgrade_factor: " << sim.downgrade_factor << "\n";
-	os << "numpcl: " << sim.numpcl[0];
-	for(int i=1; i<MAX_PCL_SPECIES; i++)
-	{
-		os << " , " << sim.numpcl[i];
-	}
-	os << "\n";
-
-	os << "tracer_factor: " << sim.tracer_factor[0];
-	for(int i=1; i<MAX_PCL_SPECIES; i++)
-	{
-		os << " , " << sim.tracer_factor[i];
-	}
-	os << "\n";
-	os << "baryon_flag: " << sim.baryon_flag << "\n";
-	os << "relativistic_flag: " << sim.relativistic_flag << "\n";
-	os << "modified_gravity_flag: " << sim.modified_gravity_flag << "\n";
-	os << "fR_model: " << sim.fR_model << "\n";
-	os << "vector_flag: " << sim.vector_flag << "\n";
-	os << "radiation_flag: " << sim.radiation_flag << "\n";
-	os << "out_pk: " << sim.out_pk << "\n";
-	os << "out_snapshot: " << sim.out_snapshot << "\n";
-	os << "num_pk: " << sim.num_pk << "\n";
-	os << "numbins: " << sim.numbins << "\n";
-	os << "num_snapshot: " << sim.num_snapshot << "\n";
-	os << "num_restart: " << sim.num_restart << "\n";
-	os << "num_fR_params: " << sim.num_fR_params << "\n";
-	os << "quasi_static: " << sim.quasi_static << "\n";
-	os << "xi_Hubble: " << sim.xi_Hubble << "\n";
-	os << "background_only: " << sim.background_only << "\n";
-	os << "background final redshift: " << sim.z_fin << "\n";
-	os << "lcdm_background: " << sim.lcdm_background << "\n";
-	os << "check_fields: " << sim.check_fields << "\n";
-	os << "check_pause: " << sim.check_pause << "\n";
-	os << "Cf: " << sim.Cf << "\n";
-	os << "fR_params: " << sim.fR_params[0];
-
-	for(int i=1; i<MAX_FR_PARAMS; i++) os << " , " << sim.fR_params[i];
-	os << "\n";
-
-	os << "fR_epsilon_bg: " << sim.fR_epsilon_bg << "\n";
-	os << "fR_epsilon_fields: " << sim.fR_epsilon_fields << "\n";
-	os << "fR_target_precision: " << sim.fR_target_precision << "\n";
-	os << "multigrid_shape: " << sim.multigrid_shape << "\n";
-	os << "pre_smoothing: " << sim.pre_smoothing << "\n";
-	os << "post_smoothing: " << sim.post_smoothing << "\n";
-	os << "relaxation_error: " << sim.relaxation_error << "\n";
-	os << "overrelaxation factor: " << sim.overrelaxation_factor << "\n";
-	os << "movelimit: " << sim.movelimit << "\n";
-	os << "steplimit: " << sim.steplimit << "\n";
-	os << "boxsize: " << sim.boxsize << "\n";
-	os << "wallclocklimit: " << sim.wallclocklimit << "\n";
-	os << "z_in: " << sim.z_in << "\n";
-	os << "z_check: " << sim.z_check << "\n";
-	os << "z_snapshot: " << sim.z_snapshot[0];
-
-	for(int i=1; i<MAX_OUTPUTS; i++) os << " , " << sim.z_snapshot[i];
-	os << "\n";
-	os << "z_pk: " << sim.z_pk[0];
-
-	for(int i=1; i<MAX_OUTPUTS; i++) os << " , " << sim.z_pk[i];
-	os << "\n";
-
-	os << "z_restart: " << sim.z_restart[0];
-
-	for(int i=1; i<MAX_OUTPUTS; i++) os << " , " << sim.z_restart[i];
-	os << "\n";
-
-	os << "z_switch_fR_background: " << sim.z_switch_fR_background << "\n";
-	os << "z_switch_deltarad: " << sim.z_switch_deltarad << "\n";
-	os << "z_switch_linearchi: " << sim.z_switch_linearchi << "\n";
-
-	os << "z_switch_deltancdm: " << sim.z_switch_deltancdm[0];
-	for(int i=1; i<MAX_PCL_SPECIES-2; i++) os << " , " << sim.z_switch_deltancdm[i];
-	os << "\n";
-
-	os << "z_switch_Bncdm: " << sim.z_switch_Bncdm[0];
-	for(int i=1; i<MAX_PCL_SPECIES-2; i++) os << " , " << sim.z_switch_Bncdm[i];
-	os << "\n";
-
-	os << "basename_snapshot: " << sim.basename_snapshot << "\n";
-	os << "basename_pk: " << sim.basename_pk << "\n";
-	os << "basename_generic: " << sim.basename_generic << "\n";
-	os << "output_path: " << sim.output_path << "\n";
-	os << "restart_path: " << sim.restart_path << "\n";
-	os << "basename_restart: " << sim.basename_restart << "\n";
-	os << "---------------------------------\n";
-
-	return os;
-}
 
 struct icsettings
 {
@@ -382,8 +252,8 @@ struct icsettings
 	char pclfile[MAX_PCL_SPECIES][PARAM_MAX_LENGTH];
 	char pkfile[PARAM_MAX_LENGTH];
 	char tkfile[PARAM_MAX_LENGTH];
-	char metricfile[METRICFILE_LENGTH][PARAM_MAX_LENGTH];
- 	double restart_tau;
+	char metricfile[3][PARAM_MAX_LENGTH];
+	double restart_tau;
 	double restart_dtau;
 	double restart_version;
 	double z_ic;
@@ -392,16 +262,6 @@ struct icsettings
 	double A_s;
 	double n_s;
 	double k_pivot;
-
-	// f(R) restart
-	double restart_dtau_old;
-	double restart_dtau_old_2;
-	double restart_dtau_osci;
-	double restart_dtau_bg;
-	double restart_a;
-	double restart_Hubble;
-	double restart_Rbar;
-	double restart_dot_Rbar;
 };
 
 struct cosmology
@@ -410,50 +270,19 @@ struct cosmology
 	double Omega_b;
 	double Omega_m;
 	double Omega_Lambda;
+	double Omega_fld;
+	double w0_fld;
+	double wa_fld;
+	double cs2_fld;
 	double Omega_g;
 	double Omega_ur;
-	double Omega_rad; //sum og g and ur
+	double Omega_rad;
 	double Omega_ncdm[MAX_PCL_SPECIES-2];
 	double h;
-	double m_ncdm[MAX_PCL_SPECIES-2];//mass in eV
+	double m_ncdm[MAX_PCL_SPECIES-2];
 	double T_ncdm[MAX_PCL_SPECIES-2];
 	double deg_ncdm[MAX_PCL_SPECIES-2];
 	int num_ncdm;
 };
-
-std::ostream& operator<< (std::ostream& os, const cosmology& cosmo)
-{
-	os << "===== Cosmology structure: =====\n";
-	os << "Omega_cdm: " << cosmo.Omega_cdm << "\n";
-	os << "Omega_b: " << cosmo.Omega_b << "\n";
-	os << "Omega_m: " << cosmo.Omega_m << "\n";
-	os << "Omega_Lambda: " << cosmo.Omega_Lambda << "\n";
-	os << "Omega_g: " << cosmo.Omega_g << "\n";
-	os << "Omega_ur: " << cosmo.Omega_ur << "\n";
-	os << "Omega_rad: " << cosmo.Omega_rad << "\n";
-
-	os << "Omega_ncdm: " << cosmo.Omega_ncdm[0];
-	for(int i=1; i<MAX_PCL_SPECIES-2; i++) os << " , " << cosmo.Omega_ncdm[i];
-	os << "\n";
-
-	os << "h: " << cosmo.h << "\n";
-
-	os << "m_ncdm: " << cosmo.m_ncdm[0];
-	for(int i=1; i<MAX_PCL_SPECIES-2; i++) os << " , " << cosmo.m_ncdm[i];
-	os << "\n";
-
-	os << "T_ncdm: " << cosmo.T_ncdm[0];
-	for(int i=1; i<MAX_PCL_SPECIES-2; i++) os << " , " << cosmo.T_ncdm[i];
-	os << "\n";
-
-	os << "deg_ncdm: " << cosmo.deg_ncdm[0];
-	for(int i=1; i<MAX_PCL_SPECIES-2; i++) os << " , " << cosmo.deg_ncdm[i];
-	os << "\n";
-
-	os << "num_ncdm: " << cosmo.num_ncdm << "\n";
-	os << "---------------------------------\n";
-
-	return os;
-}
 
 #endif

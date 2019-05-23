@@ -1,7 +1,7 @@
 # programming environment
 COMPILER     := mpic++
-INCLUDE      := -I../LATfield2 -I/home/lorerev/LATfield2
-LIB          := -lfftw3 -lm -lhdf5 -lgsl -lgslcblas
+INCLUDE      := -I../LATfield2/ -I/home/lorerev/LATfield2/ -I../Healpix_3.50/include -L../Healpix_3.50/lib
+LIB          := -lfftw3 -lm -lhdf5 -lgsl -lgslcblas -lchealpix
 
 # target and source
 EXEC         := gevolution
@@ -9,10 +9,9 @@ SOURCE       := main.cpp
 HEADERS      := $(wildcard *.hpp)
 
 # mandatory compiler settings (LATfield2)
-DLATFIELD2   := -DFFT3D -DHDF5
+DLATFIELD2   := -DFFT3D -DHDF5 -DMULTIGRID
 
 # optional compiler settings (LATfield2)
-#DLATFIELD2   += -DH5_HAVE_PARALLEL
 #DLATFIELD2   += -DEXTERNAL_IO # enables I/O server (use with care)
 #DLATFIELD2   += -DSINGLE      # switches to single precision, use LIB -lfftw3f
 

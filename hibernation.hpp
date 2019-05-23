@@ -1,7 +1,7 @@
 //////////////////////////
 // hibernation.hpp
 //////////////////////////
-// 
+//
 // Auxiliary functions for hibernation
 //
 // Author: Julian Adamek (Université de Genève & Observatoire de Paris & Queen Mary University of London)
@@ -20,7 +20,7 @@
 //   writes a settings file containing all the relevant metadata for restarting
 //   a run from a hibernation point
 //
-// Arguments: 
+// Arguments:
 //   sim            simulation metadata structure
 //   ic             settings for IC generation
 //   cosmo          cosmological parameter structure
@@ -32,7 +32,7 @@
 //                  if < 0 no number is associated to the hibernation point
 //
 // Returns:
-// 
+//
 //////////////////////////
 
 void writeRestartSettings(metadata & sim, icsettings & ic, cosmology & cosmo, const double a, const double tau, const double dtau, const int cycle, const int restartcount = -1)
@@ -40,9 +40,9 @@ void writeRestartSettings(metadata & sim, icsettings & ic, cosmology & cosmo, co
 	char buffer[2*PARAM_MAX_LENGTH+24];
 	FILE * outfile;
 	int i;
-	
+
 	if (!parallel.isRoot()) return;
-	
+
 	if (restartcount >= 0)
 		sprintf(buffer, "%s%s%03d.ini", sim.restart_path, sim.basename_restart, restartcount);
 	else
@@ -60,7 +60,7 @@ void writeRestartSettings(metadata & sim, icsettings & ic, cosmology & cosmo, co
 		else
 			fprintf(outfile, "requested ");
 		fprintf(outfile, "at redshift z=%f\n\n", (1./a)-1.);
-		
+
 		fprintf(outfile, "# info related to IC generation\n\n");
 		fprintf(outfile, "IC generator       = restart\n");
 		if (restartcount >= 0)
@@ -78,7 +78,7 @@ void writeRestartSettings(metadata & sim, icsettings & ic, cosmology & cosmo, co
 				fprintf(outfile, ", %s%s%s_ncdm%d.h5", sim.restart_path, sim.basename_restart, buffer, i);
 		}
 		fprintf(outfile, "\n");
-		if (sim.gr_flag > 0)
+		if (sim.relativistic_flag > 0)
 		{
 			fprintf(outfile, "metric file        = %s%s%s_phi.h5", sim.restart_path, sim.basename_restart, buffer);
 			fprintf(outfile, ", %s%s%s_chi.h5", sim.restart_path, sim.basename_restart, buffer);
@@ -97,12 +97,11 @@ void writeRestartSettings(metadata & sim, icsettings & ic, cosmology & cosmo, co
 		else
 			fprintf(outfile, "metric file        = %s%s%s_B_check.h5\n", sim.restart_path, sim.basename_restart, buffer);
 #endif
-			
+
 		fprintf(outfile, "restart redshift   = %.15lf\n", (1./a) - 1.);
 		fprintf(outfile, "cycle              = %d\n", cycle);
 		fprintf(outfile, "tau                = %.15le\n", tau);
 		fprintf(outfile, "dtau               = %.15le\n", dtau);
-		fprintf(outfile, "gevolution version = %g\n\n", GEVOLUTION_VERSION);
 		fprintf(outfile, "seed               = %d\n", ic.seed);
 		if (ic.flags & ICFLAG_KSPHERE)
 			fprintf(outfile, "k-domain           = sphere\n");
@@ -160,7 +159,7 @@ void writeRestartSettings(metadata & sim, icsettings & ic, cosmology & cosmo, co
 		}
 		if (sim.fluid_flag > 0)
 			fprintf(outfile, "fluid treatment     = CLASS\n");
-		if (sim.gr_flag > 0)
+		if (sim.relativistic_flag > 0)
 			fprintf(outfile, "gravity theory      = GR\n");
 		else
 			fprintf(outfile, "gravity theory      = N\n");
@@ -413,7 +412,7 @@ void writeRestartSettings(metadata & sim, icsettings & ic, cosmology & cosmo, co
 			else
 				fprintf(outfile, "lightcone Nside     = %d\n", sim.Nside[0][0]);
 			fprintf(outfile, "lightcone pixel factor = %lg\n", sim.pixelfactor[0]);
-			fprintf(outfile, "lightcone shell factor = %lg\n", sim.shellfactor[0]);	
+			fprintf(outfile, "lightcone shell factor = %lg\n", sim.shellfactor[0]);
 		}
 		else if (sim.num_lightcone > 1)
 		{
@@ -460,7 +459,7 @@ void writeRestartSettings(metadata & sim, icsettings & ic, cosmology & cosmo, co
 				else
 					fprintf(outfile, "lightcone %d Nside     = %d\n", i, sim.Nside[0][0]);
 				fprintf(outfile, "lightcone %d pixel factor = %lg\n", i, sim.pixelfactor[0]);
-				fprintf(outfile, "lightcone %d shell factor = %lg\n", i, sim.shellfactor[0]);	
+				fprintf(outfile, "lightcone %d shell factor = %lg\n", i, sim.shellfactor[0]);
 			}
 		}
 		fprintf(outfile, "\n\n# hibernations\n\n");
@@ -476,7 +475,7 @@ void writeRestartSettings(metadata & sim, icsettings & ic, cosmology & cosmo, co
 		if (sim.restart_path[0] != '\0')
 			fprintf(outfile, "hibernation path            = %s\n", sim.restart_path);
 		fprintf(outfile, "hibernation file base       = %s\n", sim.basename_restart);
-			
+
 		fclose(outfile);
 	}
 }
@@ -488,7 +487,7 @@ void writeRestartSettings(metadata & sim, icsettings & ic, cosmology & cosmo, co
 // Description:
 //   creates a hibernation point by writing snapshots of the simulation data and metadata
 //
-// Arguments: 
+// Arguments:
 //   sim            simulation metadata structure
 //   ic             settings for IC generation
 //   cosmo          cosmological parameter structure
@@ -506,7 +505,7 @@ void writeRestartSettings(metadata & sim, icsettings & ic, cosmology & cosmo, co
 //                  if < 0 no number is associated to the hibernation point
 //
 // Returns:
-// 
+//
 //////////////////////////
 
 void hibernate(metadata & sim, icsettings & ic, cosmology & cosmo, Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm, Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_b, Particles<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm, Field<Real> & phi, Field<Real> & chi, Field<Real> & Bi, const double a, const double tau, const double dtau, const int cycle, const int restartcount = -1)
@@ -526,7 +525,7 @@ void hibernate(metadata & sim, icsettings & ic, cosmology & cosmo, Particles<par
 	}
 
 	writeRestartSettings(sim, ic, cosmo, a, tau, dtau, cycle, restartcount);
-	
+
 #ifndef CHECK_B
 	if (sim.vector_flag == VECTOR_PARABOLIC)
 #endif
@@ -536,10 +535,10 @@ void hibernate(metadata & sim, icsettings & ic, cosmology & cosmo, Particles<par
 		Bi(x,1) /= a * a * sim.numpts;
 		Bi(x,2) /= a * a * sim.numpts;
 	}
-	
+
 #ifdef EXTERNAL_IO
 	while (ioserver.openOstream()== OSTREAM_FAIL);
-	
+
 	pcls_cdm->saveHDF5_server_open(h5filename + "_cdm");
 	if (sim.baryon_flag)
 		pcls_b->saveHDF5_server_open(h5filename + "_b");
@@ -549,20 +548,20 @@ void hibernate(metadata & sim, icsettings & ic, cosmology & cosmo, Particles<par
 		sprintf(buffer, "%d", i);
 		pcls_ncdm[i].saveHDF5_server_open(h5filename + "_ncdm" + buffer);
 	}
-		
-	if (sim.gr_flag > 0)
+
+	if (sim.relativistic_flag > 0)
 	{
 		phi.saveHDF5_server_open(h5filename + "_phi");
 		chi.saveHDF5_server_open(h5filename + "_chi");
 	}
-	
+
 	if (sim.vector_flag == VECTOR_PARABOLIC)
 		Bi.saveHDF5_server_open(h5filename + "_B");
 #ifdef CHECK_B
 	else
 		Bi.saveHDF5_server_open(h5filename + "_B_check");
 #endif
-		
+
 	pcls_cdm->saveHDF5_server_write();
 	if (sim.baryon_flag)
 		pcls_b->saveHDF5_server_write();
@@ -571,8 +570,8 @@ void hibernate(metadata & sim, icsettings & ic, cosmology & cosmo, Particles<par
 		if (sim.numpcl[1+sim.baryon_flag+i] < 1) continue;
 		pcls_ncdm[i].saveHDF5_server_write();
 	}
-		
-	if (sim.gr_flag > 0)
+
+	if (sim.relativistic_flag > 0)
 	{
 		phi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
 		chi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
@@ -582,7 +581,7 @@ void hibernate(metadata & sim, icsettings & ic, cosmology & cosmo, Particles<par
 	if (sim.vector_flag == VECTOR_PARABOLIC)
 #endif
 		Bi.saveHDF5_server_write(NUMBER_OF_IO_FILES);
-		
+
 	ioserver.closeOstream();
 #else
 	pcls_cdm->saveHDF5(h5filename + "_cdm", 1);
@@ -594,13 +593,13 @@ void hibernate(metadata & sim, icsettings & ic, cosmology & cosmo, Particles<par
 		sprintf(buffer, "%d", i);
 		pcls_ncdm[i].saveHDF5(h5filename + "_ncdm" + buffer, 1);
 	}
-		
-	if (sim.gr_flag > 0)
+
+	if (sim.relativistic_flag > 0)
 	{
 		phi.saveHDF5(h5filename + "_phi.h5");
 		chi.saveHDF5(h5filename + "_chi.h5");
 	}
-	
+
 	if (sim.vector_flag == VECTOR_PARABOLIC)
 		Bi.saveHDF5(h5filename + "_B.h5");
 #ifdef CHECK_B
@@ -611,4 +610,3 @@ void hibernate(metadata & sim, icsettings & ic, cosmology & cosmo, Particles<par
 }
 
 #endif
-

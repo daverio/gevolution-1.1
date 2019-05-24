@@ -875,36 +875,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": setting chosen for k-domain option not recognized, using default (cube)" << endl;
 	}
 
-	for(i = 0; i < MAX_PCL_SPECIES; i++)
-		ic.numtile[i] = 0;
-
-	if(!parseParameter(params, numparam, "tiling factor", ic.numtile, i) && ic.generator != ICGEN_READ_FROM_DISK)
-	{
-		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": tiling factor not specified, using default value for all species (1)" << endl;
-		ic.numtile[0] = 1;
-		i = 1;
-	}
-
-	for(; i < MAX_PCL_SPECIES; i++)
-		ic.numtile[i] = ic.numtile[i-1];
-
-	if(ic.numtile[0] <= 0 && ic.generator != ICGEN_READ_FROM_DISK)
-	{
-		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": tiling number for cdm particle template not set properly; using default value (1)" << endl;
-		ic.numtile[0] = 1;
-	}
-
-	for(i = 1; i < MAX_PCL_SPECIES; i++)
-	{
-		if(ic.numtile[i] < 0 && ic.generator != ICGEN_READ_FROM_DISK)
-		{
-			COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": tiling number for particle template not set properly; using default value (1)" << endl;
-			ic.numtile[i] = 1;
-		}
-		else if(ic.generator == ICGEN_READ_FROM_DISK && strcmp(ic.pclfile[i], "/dev/null") != 0)
-			ic.numtile[i] = 1;
-	}
-
 	if(ic.pkfile[0] != '\0')
 	{
 		sim.baryon_flag = 0;
@@ -954,6 +924,33 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	{
 		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": baryon treatment not specified, using default (blend)" << endl;
 		sim.baryon_flag = 2;
+	}
+
+	if(!parseParameter(params, numparam, "tiling factor", ic.numtile, i) && ic.generator != ICGEN_READ_FROM_DISK)
+	{
+		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": tiling factor not specified, using default value for all species (1)" << endl;
+		ic.numtile[0] = 1;
+		i = 1;
+	}
+
+	for(; i < MAX_PCL_SPECIES; i++)
+		ic.numtile[i] = ic.numtile[i-1];
+
+	if(ic.numtile[0] <= 0 && ic.generator != ICGEN_READ_FROM_DISK)
+	{
+		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": tiling number for cdm particle template not set properly; using default value (1)" << endl;
+		ic.numtile[0] = 1;
+	}
+
+	for(i = 1; i < MAX_PCL_SPECIES; i++)
+	{
+		if(ic.numtile[i] < 0 && ic.generator != ICGEN_READ_FROM_DISK)
+		{
+			COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": tiling number for particle template not set properly; using default value (1)" << endl;
+			ic.numtile[i] = 1;
+		}
+		else if(ic.generator == ICGEN_READ_FROM_DISK && strcmp(ic.pclfile[i], "/dev/null") != 0)
+			ic.numtile[i] = 1;
 	}
 
 	if(sim.baryon_flag == 1 && ic.numtile[1] <= 0 && ic.generator != ICGEN_READ_FROM_DISK)
@@ -1183,12 +1180,19 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	}
 
 	parseParameter(params, numparam, "Ngrid", sim.numpts);
-	if(sim.numpts < 2 || !isfinite(sim.numpts))
+	if(sim.numpts < 4 || !isfinite(sim.numpts))
 	{
 		COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": number of grid points not set properly!" << endl;
 #ifdef LATFIELD2_HPP
 		parallel.abortForce();
 #endif
+	}
+	else if(ic.generator != ICGEN_READ_FROM_DISK)
+	{
+		for(i=0; i<MAX_PCL_SPECIES; ++i)
+		{
+			ic.numtile[i] = sim.numpts / 4;
+		}
 	}
 
 	if(parseParameter(params, numparam, "downgrade factor", sim.downgrade_factor))
@@ -1793,8 +1797,25 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			sim.z_switch_Bncdm[i] = sim.z_switch_deltancdm[i];
 	}
 	for(; i < MAX_PCL_SPECIES-2; i++)
+	{
 		sim.z_switch_Bncdm[i] = sim.z_switch_Bncdm[i-1];
+	}
 
+	// =============================== multigrid ===============================
+	if(!parseParameter(params, numparam, "multigrid n-grids", sim.multigrid_n_grids))
+	{
+		sim.multigrid_n_grids = 1; //  TODO: Must default to 1 otherwise it gives malloc() errors
+	}
+	else if(sim.multigrid_n_grids < 1)
+	{
+		sim.multigrid_n_grids = 1; //  TODO: Must default to 1 otherwise it gives malloc() errors
+		COUT << " /!\\ Wrong multigrid_n_grids specified. Using default: " << sim.multigrid_n_grids << endl;
+	}
+
+	if(!parseParameter(params, numparam, "relaxation method", sim.relaxation_method))
+	{
+		sim.relaxation_method = METHOD_RELAX;
+	}
 
 	// ========================== f(R) ==========================
 	if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
@@ -1948,19 +1969,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			COUT << " /!\\ Wrong f(R) epsilon fields specified. Using default: " << sim.fR_epsilon_fields << endl;
 		}
 
-
-		// =============================== multigrid ===============================
-		if(!parseParameter(params, numparam, "multigrid n-grids", sim.multigrid_n_grids))
-		{
-			sim.multigrid_n_grids = 1; //  TODO: Must default to 1 otherwise it gives malloc() errors
-		}
-		else if(sim.multigrid_n_grids < 1)
-		{
-			sim.multigrid_n_grids = 1; //  TODO: Must default to 1 otherwise it gives malloc() errors
-			COUT << " /!\\ Wrong multigrid_n_grids specified. Using default: " << sim.multigrid_n_grids << endl;
-		}
-
-
 		if(!parseParameter(params, numparam, "f(R) target precision", sim.fR_target_precision))
 		{
 			sim.fR_target_precision = FR_TARGET_PRECISION_DEFAULT;
@@ -1987,52 +1995,44 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 		if(sim.fR_model != FR_MODEL_R2)
 		{
-			if(parseParameter(params, numparam, "relaxation method", sim.relaxation_method))
+			sim.multigrid_or_not = 1;
+			if(sim.relaxation_method == METHOD_FMG)
 			{
-				sim.multigrid_or_not = 1;
-				if(sim.relaxation_method == METHOD_FMG)
+				COUT << " Relaxation: multigrid FMG mode" << endl;
+			}
+			else if(sim.relaxation_method == METHOD_RELAX)
+			{
+				sim.multigrid_or_not = 0;
+				COUT << " Relaxation: single layer (no multigrid)" << endl;
+			}
+			else if(sim.relaxation_method == METHOD_MULTIGRID)
+			{
+				COUT << " Relaxation: multigrid" << endl;
+				if(!parseParameter(params, numparam, "multigrid shape", par_string))
 				{
-					COUT << " Relaxation: multigrid FMG mode" << endl;
+					sim.multigrid_shape = MULTIGRID_SHAPE_V;
+					COUT << " /!\\ Multigrid shape not specified: Using default: V" << endl;
 				}
-				else if(sim.relaxation_method == METHOD_RELAX)
+				else if(par_string[0] == 'V' || par_string[0] == 'v')
 				{
-					sim.multigrid_or_not = 0;
-					COUT << " Relaxation: single layer (no multigrid)" << endl;
+					sim.multigrid_shape = MULTIGRID_SHAPE_V;
+					COUT << " Multigrid shape = V" << endl;
 				}
-				else if(sim.relaxation_method == METHOD_MULTIGRID)
+				else if(par_string[0] == 'W' || par_string[0] == 'w')
 				{
-					COUT << " Relaxation: multigrid" << endl;
-					if(!parseParameter(params, numparam, "multigrid shape", par_string))
-					{
-						sim.multigrid_shape = MULTIGRID_SHAPE_V;
-						COUT << " /!\\ Multigrid shape not specified: Using default: V" << endl;
-					}
-					else if(par_string[0] == 'V' || par_string[0] == 'v')
-					{
-						sim.multigrid_shape = MULTIGRID_SHAPE_V;
-						COUT << " Multigrid shape = V" << endl;
-					}
-					else if(par_string[0] == 'W' || par_string[0] == 'w')
-					{
-						sim.multigrid_shape = MULTIGRID_SHAPE_W;
-						COUT << " Multigrid shape = W" << endl;
-					}
-					else
-					{
-						sim.multigrid_shape = MULTIGRID_SHAPE_V;
-						COUT << " /!\\ Multigrid shape not recognised. Using default: V" << endl;
-					}
+					sim.multigrid_shape = MULTIGRID_SHAPE_W;
+					COUT << " Multigrid shape = W" << endl;
 				}
 				else
 				{
-					sim.relaxation_method = METHOD_RELAX;
-					COUT << " /!\\ Wrong relaxation method specified. Using default: single layer (no multigrid)" << endl;
+					sim.multigrid_shape = MULTIGRID_SHAPE_V;
+					COUT << " /!\\ Multigrid shape not recognised. Using default: V" << endl;
 				}
 			}
 			else
 			{
 				sim.relaxation_method = METHOD_RELAX;
-				COUT << " /!\\ Relaxation method not specified. Using default: single layer (no multigrid)" << endl;
+				COUT << " /!\\ Wrong relaxation method specified. Using default: single layer (no multigrid)" << endl;
 			}
 
 			if(!parseParameter(params, numparam, "truncate relaxation", sim.truncate_relaxation))
@@ -2188,12 +2188,15 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	}
 
 
-
-
-
-
-
-
+	if(!parseParameter(params, numparam, "CYCLE_INFO_INTERVAL", sim.CYCLE_INFO_INTERVAL))
+	{
+		sim.CYCLE_INFO_INTERVAL = 10;
+	}
+	else if(sim.CYCLE_INFO_INTERVAL <= 0)
+	{
+		sim.CYCLE_INFO_INTERVAL = 10;
+		COUT << " /!\\ Wrong CYCLE_INFO_INTERVAL specified. Using default: " << sim.CYCLE_INFO_INTERVAL << endl;
+	}
 
 	for(i = 0; i < numparam; i++)
 	{

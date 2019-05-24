@@ -123,8 +123,6 @@ int main(int argc, char **argv)
 	icsettings ic;
 	double T00_hom;
 	double phi_hom;
-	string settingsfile_bin(settingsfile);
-	settingsfile_bin += ".bin";
 
 	//========================================== f(R)
 	double Hubble;
@@ -206,7 +204,7 @@ int main(int argc, char **argv)
 	<< "   __  ___                 _        _    _            " << endl
 	<< "  / _|| _ \\ ___ __ __ ___ | | _  _ | |_ (_) ___  _ _  " << endl
 	<< " |  _||   // -_)\\ V // _ \\| || || ||  _|| |/ _ \\| ' \\ " << endl
-	<< " |_|  |_|_\\\\___| \\_/ \\___/|_| \\_,_| \\__||_|\\___/|_||_| version 1.0 running on " << n*m << " cores." << endl;
+	<< " |_|  |_|_\\\\___| \\_/ \\___/|_| \\_,_| \\__||_|\\___/|_||_| version 1.1 running on " << n*m << " cores." << endl;
 
 	COUT << COLORTEXT_RESET << endl;
 
@@ -222,6 +220,7 @@ int main(int argc, char **argv)
 	numparam = loadParameterFile(settingsfile, params);
 	usedparams = parseMetadata(params, numparam, sim, cosmo, ic);
 	COUT << " parsing of settings file completed. " << numparam << " parameters found, " << usedparams << " were used." << endl;
+
 	sprintf(filename, "%s%s_settings_used.ini", sim.output_path, sim.basename_generic);
 	saveParameterFile(filename, params, numparam);
 	free(params);
@@ -241,11 +240,11 @@ int main(int argc, char **argv)
 		numparam = 0;
 	}
 
+
 	h5filename.reserve(2*PARAM_MAX_LENGTH);
 	h5filename.assign(sim.output_path);
 	h5filename += sim.basename_generic;
 	h5filename += "_";
-	h5filename += sim.basename_snapshot;
 
 	box[0] = sim.numpts;
 	box[1] = sim.numpts;
@@ -429,6 +428,7 @@ int main(int argc, char **argv)
 	update_ncdm_fields[1] = &chi;
 	update_ncdm_fields[2] = &Bi;
 
+
 	Site x(lat);
 	rKSite kFT(latFT);
 
@@ -460,44 +460,22 @@ int main(int argc, char **argv)
 		fRRbar = fRR(Rbar, sim, 102);
 		Hubble = H_initial_fR(a, Hconf(a, fourpiG, cosmo), Rbar, fbar, fRbar,	6. * fourpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * fRRbar / a / a / a); // TODO: Check Omega_m term
 		dot_Rbar = dot_R_initial_fR(a, Hubble, fourpiG, cosmo, sim);
-
-		// if(sim.Cf * dx < sim.steplimit / Hubble)
-		// {
-		// 	dtau = sim.Cf * dx;
-		// }
-		// else
-		// {
-		// 	dtau = sim.steplimit / Hubble;
-		// }
-		//
-		// dtau_bg = sim.fR_epsilon_bg * sqrt(3. * fRRbar) / a; // This would be the "ideal" timestep to evolve the f(R) background
-		// if(dtau >= 2. * dtau_bg) // numsteps_bg must be even -- we split the background evolution in two steps of dtau/2 each
-		// {
-		// 	numsteps_bg = (int) (dtau / dtau_bg / 2.);
-		// 	numsteps_bg = (int) (2 * numsteps_bg);
-		// 	dtau_bg = (double) (dtau / numsteps_bg);
-		// }
-		// else
-		// {
-		// 	dtau_bg = dtau;
-		// }
 	}
 	else
 	{
 		Hubble = Hconf(a, fourpiG, cosmo);
 		Rbar = 2. * fourpiG * ( (cosmo.Omega_cdm + cosmo.Omega_b) / a / a / a + 4.*cosmo.Omega_Lambda );
 		dot_Rbar = 0.;
-
 		fbar = fRbar = fRRbar = 0.;
+	}
 
-		// if(sim.Cf * dx < sim.steplimit / Hconf(a, fourpiG, cosmo))
-		// {
-		// 	dtau = sim.Cf * dx;
-		// }
-		// else
-		// {
-		// 	dtau = sim.steplimit / Hconf(a, fourpiG, cosmo);
-		// }
+	if(sim.Cf * dx < sim.steplimit / Hubble)
+	{
+		dtau = sim.Cf * dx;
+	}
+	else
+	{
+		dtau = sim.steplimit / Hubble;
 	}
 
 	dtau_old = dtau_old_2 = dtau_print = 0.;
@@ -774,6 +752,7 @@ int main(int argc, char **argv)
 			output_background_data(tau, a, Hubble, dtau_old, Rbar, dot_Rbar, cosmo, T00_hom, T00_hom_rescaled_a3, fbar, fRbar, fRRbar, sim.modified_gravity_flag);
 		}
 
+
 		//==========================================================================================================//
 		//========================================= EVOLVE deltaR, zeta, xi ========================================//
 		//==========================================================================================================//
@@ -1030,28 +1009,13 @@ int main(int argc, char **argv)
 				}
 			}
 		}
-		// For when the full background evolution only starts at sim.z_switch_fR_background
-		if(1./a - 1. < sim.z_switch_fR_background && sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR && sim.lcdm_background)
-		{
-			COUT << endl;
-			COUT << " ===============================================================" << endl;
-			COUT << " Beginning full f(R) background evolution at z = " << 1./a - 1.;
-			COUT << " ===============================================================" << endl;
-			COUT << endl;
-
-			if(sim.fR_model == FR_MODEL_HU_SAWICKI)
-			{
-				cosmo.Omega_Lambda = 0.;
-			}
-			sim.lcdm_background = 0;
-		}
 
 		//==========================================================================================================//
 		//============================================ lightcone output ============================================
 		//==========================================================================================================//
 		if(sim.num_lightcone > 0)
 		{
-			writeLightcones(sim, cosmo, fourpiG, a, tau, dtau, dtau_old, maxvel[0], cycle, h5filename + sim.basename_lightcone, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &chi, &Bi, &Sij, &BiFT, &SijFT, &plan_Bi, &plan_Sij, done_hij, IDbacklog);
+			writeLightcones(sim, cosmo, fourpiG, a, tau, dtau, dtau_old, maxvel[0], cycle, h5filename + (string) sim.basename_lightcone, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &chi, &Bi, &Sij, &BiFT, &SijFT, &plan_Bi, &plan_Sij, done_hij, IDbacklog);
 		}
 		else
 		{
@@ -1110,7 +1074,6 @@ int main(int argc, char **argv)
 			pkcount++;
 		}
 
-
 		// Background timesteps in f(R)
 		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR && !sim.lcdm_background) // set timesteps for f(R) background evolution
 		{
@@ -1168,7 +1131,27 @@ int main(int argc, char **argv)
 					i = sim.num_lightcone + 1;
 				}
 			}
-			if(i == sim.num_lightcone) break; // simulation complete
+
+			if(i == sim.num_lightcone)
+			{
+				break; // simulation complete
+			}
+		}
+
+		// For when the full background evolution only starts at sim.z_switch_fR_background
+		if(1./a - 1. < sim.z_switch_fR_background && sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR && sim.lcdm_background)
+		{
+			COUT << endl;
+			COUT << " ===============================================================" << endl;
+			COUT << " Beginning full f(R) background evolution at z = " << 1./a - 1. << endl;
+			COUT << " ===============================================================" << endl;
+			COUT << endl;
+
+			if(sim.fR_model == FR_MODEL_HU_SAWICKI)
+			{
+				cosmo.Omega_Lambda = 0.;
+			}
+			sim.lcdm_background = 0;
 		}
 
 		// compute number of step subdivisions for ncdm particle updates

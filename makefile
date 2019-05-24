@@ -4,7 +4,7 @@ INCLUDE      := -I../LATfield2/ -I/home/lorerev/LATfield2/ -I../Healpix_3.50/inc
 LIB          := -lfftw3 -lm -lhdf5 -lgsl -lgslcblas -lchealpix
 
 # target and source
-EXEC         := gevolution
+EXEC         := fRevolution
 SOURCE       := main.cpp
 HEADERS      := $(wildcard *.hpp)
 

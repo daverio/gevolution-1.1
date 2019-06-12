@@ -71,10 +71,10 @@ bool readline(char * line, char * pname, char * pvalue)
 	if(phash != NULL && phash < pequal) return false;
 
 	l = line;
-	while (*l == ' ' || *l == '\t') l++;
+	while(*l == ' ' || *l == '\t') l++;
 
 	r = pequal-1;
-	while ((*r == ' ' || *r == '\t') && r > line) r--;
+	while((*r == ' ' || *r == '\t') && r > line) r--;
 
 	if(r < l) return false;
 
@@ -84,14 +84,14 @@ bool readline(char * line, char * pname, char * pvalue)
 	pname[r-l+1] = '\0';
 
 	l = pequal+1;
-	while (*l == ' ' || *l == '\t') l++;
+	while(*l == ' ' || *l == '\t') l++;
 
 	if(phash == NULL)
 		r = line+strlen(line)-1;
 	else
 		r = phash-1;
 
-	while (*r == ' ' || *r == '\t' || *r == '\n' || *r == '\r') r--;
+	while(*r == ' ' || *r == '\t' || *r == '\n' || *r == '\r') r--;
 
 	if(r < l) return false;
 
@@ -146,7 +146,7 @@ int loadParameterFile(const char * filename, parameter * & params)
 #endif
 		}
 
-		while (!feof(paramfile) && !ferror(paramfile))
+		while(!feof(paramfile) && !ferror(paramfile))
 		{
 			if(fgets(line, PARAM_MAX_LINESIZE, paramfile) == NULL) break;
 
@@ -181,7 +181,7 @@ int loadParameterFile(const char * filename, parameter * & params)
 
 		rewind(paramfile);
 
-		while (!feof(paramfile) && !ferror(paramfile) && i < numparam)
+		while(!feof(paramfile) && !ferror(paramfile) && i < numparam)
 		{
 			if(fgets(line, PARAM_MAX_LINESIZE, paramfile) == NULL) break;
 
@@ -436,14 +436,14 @@ bool parseParameter(parameter * & params, const int numparam, const char * pname
 	char item[PARAM_MAX_LENGTH];
 	int n = 0;
 
-	for(int i = 0; i < numparam; i++)
+	for(int i=0; i<numparam; i++)
 	{
 		if(strcmp(params[i].name, pname) == 0)
 		{
 			start = params[i].value;
 			if(nmax > 1)
 			{
-				while ((comma = strchr(start, ',')) != NULL)
+				while((comma = strchr(start, ',')) != NULL)
 				{
 					strncpy(item, start, comma-start);
 					item[comma-start] = '\0';
@@ -454,9 +454,12 @@ bool parseParameter(parameter * & params, const int numparam, const char * pname
 					}
 					start = comma+1;
 					if(++n > nmax-2)
+					{
 						break;
+					}
 				}
 			}
+
 			if(sscanf(start, " %lf ", pvalue+n) != 1)
 			{
 				nmax = n;
@@ -505,7 +508,7 @@ bool parseParameter(parameter * & params, const int numparam, const char * pname
 			start = params[i].value;
 			if(nmax > 1)
 			{
-				while ((comma = strchr(start, ',')) != NULL)
+				while((comma = strchr(start, ',')) != NULL)
 				{
 					strncpy(item, start, comma-start);
 					item[comma-start] = '\0';
@@ -569,12 +572,12 @@ bool parseParameter(parameter * & params, const int numparam, const char * pname
 			start = params[i].value;
 			if(nmax > 1)
 			{
-				while ((comma = strchr(start, ',')) != NULL)
+				while((comma = strchr(start, ',')) != NULL)
 				{
 					l = start;
-					while (*l == ' ' || *l == '\t') l++;
+					while(*l == ' ' || *l == '\t') l++;
 					r = comma-1;
-					while ((*r == ' ' || *r == '\t') && r > start) r--;
+					while((*r == ' ' || *r == '\t') && r > start) r--;
 
 					if(r < l)
 					{
@@ -591,9 +594,9 @@ bool parseParameter(parameter * & params, const int numparam, const char * pname
 				}
 			}
 			l = start;
-			while (*l == ' ' || *l == '\t') l++;
+			while(*l == ' ' || *l == '\t') l++;
 			r = l;
-			while (*r != ' ' && *r != '\t' && *r != '\0') r++;
+			while(*r != ' ' && *r != '\t' && *r != '\0') r++;
 			r--;
 
 			if(r < l)
@@ -646,7 +649,7 @@ bool parseFieldSpecifiers(parameter * & params, const int numparam, const char *
 		{
 			pvalue = 0;
 			start = params[i].value;
-			while ((comma = strchr(start, ',')) != NULL)
+			while((comma = strchr(start, ',')) != NULL)
 			{
 				strncpy(item, start, comma-start);
 				for(pos = comma-start; pos > 0; pos--)
@@ -685,7 +688,7 @@ bool parseFieldSpecifiers(parameter * & params, const int numparam, const char *
 
 
 				start = comma+1;
-				while (*start == ' ' || *start == '\t') start++;
+				while(*start == ' ' || *start == '\t') start++;
 			}
 
 			if(strcmp(start, "Phi") == 0 || strcmp(start, "phi") == 0) pvalue |= MASK_PHI;
@@ -1152,24 +1155,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		}
 	}
 
-	if(!parseParameter(params, numparam, "snapshot file base", sim.basename_snapshot))
-		strcpy(sim.basename_snapshot, "snapshot");
-
-	if(!parseParameter(params, numparam, "Pk file base", sim.basename_pk))
-		strcpy(sim.basename_pk, "pk");
-
-	if(!parseParameter(params, numparam, "lightcone file base", sim.basename_lightcone))
-		strcpy(sim.basename_lightcone, "lightcone");
-
-	if(!parseParameter(params, numparam, "output path", sim.output_path))
-		sim.output_path[0] = '\0';
-
-	if(!parseParameter(params, numparam, "hibernation path", sim.restart_path))
-		strcpy(sim.restart_path, sim.output_path);
-
-	if(!parseParameter(params, numparam, "hibernation file base", sim.basename_restart))
-		strcpy(sim.basename_restart, "restart");
-
 	parseParameter(params, numparam, "boxsize", sim.boxsize);
 	if(sim.boxsize <= 0. || !isfinite(sim.boxsize))
 	{
@@ -1310,7 +1295,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		for(sim.Nside[0][1] = 2; sim.Nside[0][1] < sim.numpts; sim.Nside[0][1] *= 2);
 	}
 
-	for(i = 1; i < MAX_OUTPUTS; i++)
+	for(i=1; i<MAX_OUTPUTS; i++)
 	{
 		sim.out_lightcone[i] = sim.out_lightcone[0];
 		sim.Nside[i][0] = sim.Nside[0][0];
@@ -1411,7 +1396,10 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 				}
 				else
 				{
-					for(i = 0; i < 3; i++) sim.lightcone[sim.num_lightcone].vertex[i] /= sim.boxsize;
+					for(i=0; i<3; i++)
+					{
+						sim.lightcone[sim.num_lightcone].vertex[i] /= sim.boxsize;
+					}
 
 					sprintf(par_string, "lightcone %d outputs", sim.num_lightcone);
 					parseFieldSpecifiers(params, numparam, par_string, sim.out_lightcone[sim.num_lightcone]);
@@ -1424,10 +1412,15 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 							COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": lightcone opening half-angle out of bounds, assuming full sky" << endl;
 							sim.lightcone[sim.num_lightcone].opening = -1.;
 						}
-						else sim.lightcone[sim.num_lightcone].opening = cos(sim.lightcone[sim.num_lightcone].opening * M_PI / 180.);
+						else
+						{
+							sim.lightcone[sim.num_lightcone].opening = cos(sim.lightcone[sim.num_lightcone].opening * M_PI / 180.);
+						}
 					}
 					else
+					{
 						sim.lightcone[sim.num_lightcone].opening = -1.;
+					}
 
 					sprintf(par_string, "lightcone %d distance", sim.num_lightcone);
 					i = 2;
@@ -1440,7 +1433,9 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 							qsort((void *) sim.lightcone[sim.num_lightcone].distance, 2, sizeof(double), sort_descending);
 						}
 						else
+						{
 							sim.lightcone[sim.num_lightcone].distance[1] = 0.;
+						}
 					}
 					else
 					{
@@ -1450,7 +1445,9 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 
 					sprintf(par_string, "lightcone %d redshift", sim.num_lightcone);
 					if(!parseParameter(params, numparam, par_string, sim.lightcone[sim.num_lightcone].z))
+					{
 						sim.lightcone[sim.num_lightcone].z = 0.;
+					}
 
 					sprintf(par_string, "lightcone %d direction", sim.num_lightcone);
 					i = 3;
@@ -1610,6 +1607,42 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		{
 			strcpy(sim.basename_generic, "Newton");
 		}
+	}
+
+	if(!parseParameter(params, numparam, "snapshot file base", sim.basename_snapshot))
+	{
+		strcpy(sim.basename_snapshot, sim.basename_generic);
+		strcat(sim.basename_snapshot, "_");
+		strcat(sim.basename_snapshot, "snapshot");
+	}
+	
+	if(!parseParameter(params, numparam, "Pk file base", sim.basename_pk))
+	{
+		strcpy(sim.basename_pk, sim.basename_generic);
+		strcat(sim.basename_pk, "_");
+		strcat(sim.basename_pk, "pk");
+	}
+	
+	if(!parseParameter(params, numparam, "lightcone file base", sim.basename_lightcone))
+	{
+		strcpy(sim.basename_lightcone, sim.basename_generic);
+		strcat(sim.basename_lightcone, "_");
+		strcat(sim.basename_lightcone, "lightcone");
+	}
+	
+	if(!parseParameter(params, numparam, "output path", sim.output_path))
+	{
+		sim.output_path[0] = '\0';
+	}
+	
+	if(!parseParameter(params, numparam, "hibernation path", sim.restart_path))
+	{
+		strcpy(sim.restart_path, sim.output_path);
+	}
+	
+	if(!parseParameter(params, numparam, "hibernation file base", sim.basename_restart))
+	{
+		strcpy(sim.basename_restart, "restart");
 	}
 
 	// parse cosmological parameters
@@ -1802,20 +1835,30 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	}
 
 	// =============================== multigrid ===============================
-	if(!parseParameter(params, numparam, "multigrid n-grids", sim.multigrid_n_grids))
-	{
-		sim.multigrid_n_grids = 1; //  TODO: Must default to 1 otherwise it gives malloc() errors
-	}
-	else if(sim.multigrid_n_grids < 1)
-	{
-		sim.multigrid_n_grids = 1; //  TODO: Must default to 1 otherwise it gives malloc() errors
-		COUT << " /!\\ Wrong multigrid_n_grids specified. Using default: " << sim.multigrid_n_grids << endl;
-	}
 
 	if(!parseParameter(params, numparam, "relaxation method", sim.relaxation_method))
 	{
 		sim.relaxation_method = METHOD_RELAX;
 	}
+	else if(sim.relaxation_method != METHOD_RELAX)
+	{
+		if(!parseParameter(params, numparam, "multigrid n-grids", sim.multigrid_n_grids))
+		{
+			sim.multigrid_n_grids = 1; //  TODO: Must default to 1 otherwise it gives malloc() errors
+		}
+		else if(sim.multigrid_n_grids < 1)
+		{
+			sim.multigrid_n_grids = 1; //  TODO: Must default to 1 otherwise it gives malloc() errors
+			COUT << " /!\\ Wrong multigrid_n_grids specified. Using default: " << sim.multigrid_n_grids << endl;
+		}
+		else if(sim.multigrid_n_grids > (int) (log(sim.numpts) / log(2.) - 1.))
+		{
+			COUT << " /!\\ Warning: asked for multigrid_n_grids = " << sim.multigrid_n_grids << " with sim.numpts = " << sim.numpts << endl;
+			sim.multigrid_n_grids = (int) (log(sim.numpts) / log(2.) - 1.);
+			COUT << "              multigrid_n_grids set to max =  " << sim.multigrid_n_grids << endl;
+		}
+	}
+
 
 	// ========================== f(R) ==========================
 	if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
@@ -1844,10 +1887,14 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		}
 
 		// ========================== f(R) parameters ==========================
+		sim.num_fR_params = MAX_FR_PARAMS;
+
 		if(!parseParameter(params, numparam, "f(R) parameters", sim.fR_params, sim.num_fR_params))
 		{
 			COUT << " /!\\ No f(R) parameters specified. Closing..." << endl;
+#ifdef LATFIELD2_HPP
 			parallel.abortForce();
+#endif
 		}
 
 		// ========================== f(R) model ==========================
@@ -1858,22 +1905,30 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 				if(sim.fR_params[0] <= 0.)
 				{
 					COUT << " The coefficient a of f(R) = a * R^n is <= 0. This leads to a tachyonic instability for the scalaron. Closing...\n";
+#ifdef LATFIELD2_HPP
 					parallel.abortForce();
+#endif
 				}
 				else if(sim.fR_params[1] < 0.)
 				{
 					COUT << " The coefficient n of f(R) = a * R^n is <= 0. Closing...\n";
+#ifdef LATFIELD2_HPP
 					parallel.abortForce();
+#endif
 				}
 				else if(sim.fR_params[1] == 0)
 				{
 					COUT << " The exponent n of f(R) = a*R^n is set to 0, which corresponds to a pure Lambda term. Closing...\n";
+#ifdef LATFIELD2_HPP
 					parallel.abortForce();
+#endif
 				}
 				else if(sim.fR_params[1] == 1. || sim.fR_params[1] == 1)
 				{
 					COUT << " The exponent n of f(R) = a*R^n is set to 1. This is just a redefinition of Newton's constant. Closing...\n";
+#ifdef LATFIELD2_HPP
 					parallel.abortForce();
+#endif
 				}
 				else if(sim.fR_params[1] == 2. || sim.fR_params[1] == 2)
 				{
@@ -1889,17 +1944,23 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 				if(sim.num_fR_params < 3)
 				{
 					COUT << " Not enough parameters for Hu-Sawicki model! Closing...\n";
+#ifdef LATFIELD2_HPP
 					parallel.abortForce();
+#endif
 				}
 				else if(sim.fR_params[0] <= 0)
 				{
 					COUT << " The parameter m2 of Hu-Sawicki model should be strictly positive. Closing...\n";
+#ifdef LATFIELD2_HPP
 					parallel.abortForce();
+#endif
 				}
 				else if(sim.fR_params[2] < 1.)
 				{
 					COUT << " The parameter n of Hu-Sawicki model should be >= 1. Closing...\n";
+#ifdef LATFIELD2_HPP
 					parallel.abortForce();
+#endif
 				}
 
 				sim.fR_model = FR_MODEL_HU_SAWICKI;
@@ -1919,12 +1980,16 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			{
 				COUT << " REWRITE THE FR_MODEL_DELTA STUFF" << endl;
 				sim.fR_model = FR_MODEL_DELTA;
+#ifdef LATFIELD2_HPP
 				parallel.abortForce();
+#endif
 			}
 			else
 			{
 				COUT << " /!\\ f(R) model not recognised. Closing..." << endl;
+#ifdef LATFIELD2_HPP
 				parallel.abortForce();
+#endif
 			}
 
 			// Added parser for Omega_Lambda in f(R) gravity -- Lambda will typically be zero, but can be nonzero
@@ -1936,7 +2001,9 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		else
 		{
 			COUT << " /!\\ No f(R) model specified. Closing..." << endl;
+#ifdef LATFIELD2_HPP
 			parallel.abortForce();
+#endif
 		}
 
 		if(!parseParameter(params, numparam, "f(R) epsilon background", sim.fR_epsilon_bg))
@@ -2177,16 +2244,10 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		}
 	}
 
-	if(!parseParameter(params, numparam, "BACKGROUND_NUMPTS", sim.BACKGROUND_NUMPTS))
-	{
-		sim.BACKGROUND_NUMPTS = -1;
-	}
-
 	if(!parseFieldSpecifiers(params, numparam, "check outputs", sim.out_check))
 	{
 		sim.out_check = 0;
 	}
-
 
 	if(!parseParameter(params, numparam, "CYCLE_INFO_INTERVAL", sim.CYCLE_INFO_INTERVAL))
 	{

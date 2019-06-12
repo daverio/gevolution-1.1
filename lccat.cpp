@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <cmath>
+#include <string.h>
 #include "metadata.hpp"
 #include "parser.hpp"
 
@@ -51,12 +52,12 @@ int main(int argc, char **argv)
 #endif
 
 	double offset = 0.;
-	
+
 	if (argc < 2)
 	{
 		cout << COLORTEXT_WHITE << " LCARS tools: lccat" << COLORTEXT_RESET << endl;
 		cout << " catenates particle light-cone output and generates Gadget-2 binaries" << endl << endl;
-		
+
 		cout << " List of command-line options:" << endl;
 		cout << " -s <filename>       : gevolution settings file of the simulation (mandatory)" << endl;
 		cout << " -c <min>-<max>      : range of simulation cycles for which output should be" << endl;
@@ -107,7 +108,7 @@ int main(int argc, char **argv)
 		cout << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": number of output files not recognized!" << endl;
 		return -1;
 	}
-	
+
 	cout << COLORTEXT_WHITE << " LCARS tools: lccat" << COLORTEXT_RESET << endl << endl << " opening settings file of simulation: " << settingsfile << endl << " parser output:" << endl << endl;
 
 	numparam = loadParameterFile(settingsfile, params);
@@ -157,7 +158,7 @@ int main(int argc, char **argv)
 	else
 	{
 		for (int i = 0; i < sim.num_lightcone; i++) use_lightcone[i] = false;
-		
+
 		char * token = NULL;
 
 		sprintf(filename, "%s", lightconeparam);
@@ -297,7 +298,7 @@ int main(int argc, char **argv)
 	outhdr.npartTotalHW[1] = (uint32_t) (((int64_t) numpart_tot) >> 32);
 	outhdr.mass[1] = hdr.mass[1];
 	outhdr.num_files = numfiles;
-	
+
 	posbatch = (float *) malloc(3 * (outhdr.npart[1] + numfiles) * sizeof(float));
 	velbatch = (float *) malloc(3 * (outhdr.npart[1] + numfiles) * sizeof(float));
 #if GADGET_ID_BYTES == 8
@@ -319,7 +320,7 @@ int main(int argc, char **argv)
 	for (int cycle = min_cycle; cycle <= max_cycle; cycle++)
 	{
 		cout << " cycle " << cycle << " ..." << endl;
-		
+
 		for (int i = 0; i < sim.num_lightcone; i++)
 		{
 			if (!use_lightcone[i]) continue;
@@ -348,7 +349,7 @@ int main(int argc, char **argv)
 					fclose(infile);
 					continue;
 				}
-				
+
 				fread(&blocksize, sizeof(uint32_t), 1, infile);
 				fread(&blocksize, sizeof(uint32_t), 1, infile);
 
@@ -435,14 +436,14 @@ int main(int argc, char **argv)
 							sprintf(ofilename, "%s%s_cdm", sim.output_path, sim.basename_lightcone);
 
 						outfile = fopen(ofilename, "wb");
-	
+
 						if (outfile == NULL)
 						{
 							fclose(infile);
 							cout << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": unable to open file " << ofilename << " for output!" << endl;
 							return -1;
 						}
-	
+
 						blocksize = sizeof(outhdr);
 
 						cout << COLORTEXT_CYAN << " writing" << COLORTEXT_RESET << " output file " << ofilename << " ..." << endl;
@@ -493,7 +494,7 @@ int main(int argc, char **argv)
 						fclose(outfile);
 
 						cout << " output file written, contains " << outhdr.npart[1] << " particles." << endl;
-	
+
 						numpart_write += outhdr.npart[1];
 						numwrite++;
 
@@ -503,7 +504,7 @@ int main(int argc, char **argv)
 						numread = 0;
 					}
 				}
-				
+
 				fclose(infile);
 			}
 		}
@@ -545,4 +546,3 @@ int main(int argc, char **argv)
 
 	return 0;
 }
-

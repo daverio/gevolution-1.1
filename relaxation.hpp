@@ -572,9 +572,6 @@ double relaxation(
 
   COUT << "fin.error = " << error << endl;
 
-  // build_residual(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], rhs[0], err[0], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
-  // check_field(err[0], "residual", numpts3d, sim, "Final Residual");
-
   return error;
 }
 

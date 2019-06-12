@@ -9,6 +9,7 @@
 // Last modified: April 2019
 //
 //////////////////////////
+#include<string.h>
 
 #ifndef METADATA_HEADER
 #define METADATA_HEADER
@@ -289,7 +290,6 @@ struct metadata
 	// ========================== f(R) ==========================
 	// =================== and other changes ====================
 	int CYCLE_INFO_INTERVAL; // Previously fixed: #define CYCLE_INFO_INTERVAL = 10
-	int BACKGROUND_NUMPTS;
 	int fR_model;
 	int num_fR_params;
 	int xi_Hubble;
@@ -325,7 +325,6 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim) // TODO Add lig
 {
 	os << "===== Metadata structure: =====\n";
 	os << "CYCLE_INFO_INTERVAL: " << sim.CYCLE_INFO_INTERVAL << "\n";
-	os << "BACKGROUND_NUMPTS: " << sim.BACKGROUND_NUMPTS << "\n";
 	os << "numpts: " << sim.numpts << "\n";
 	os << "downgrade_factor: " << sim.downgrade_factor << "\n";
 	os << "numpcl: " << sim.numpcl[0];

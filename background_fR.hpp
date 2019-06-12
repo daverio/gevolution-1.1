@@ -344,8 +344,6 @@ double rungekutta_fR_trace(double & a,
 }
 
 
-
-
 void rungekutta_background(
 	double & a,
 	double & Hubble,

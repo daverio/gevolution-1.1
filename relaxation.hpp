@@ -612,6 +612,7 @@ double relaxation_step(
   else
   {
     error = compute_error(phi, xi, xi_old, laplace_xi, deltaR, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim);
+
     return error;
   }
 }
@@ -644,7 +645,7 @@ double single_layer_solver(
   int count = 0;
   double error = 0., previous_error = 1.;
 
-  if(sim.truncate_relaxation)
+  if(sim.truncate_relaxation > 0)
   {
     while(true)
     {
@@ -685,7 +686,6 @@ double single_layer_solver(
     }
   }
 
-  COUT << "(" << count << ") ";
   return error;
 }
 
@@ -755,14 +755,13 @@ double multigrid_solver(
 
     error = compute_error(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], rhs[0], dx[0], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[0], sim);
 
-    // TODO Check if this criterion makes sense -- test more
-    if(3. * error / trunc_error <= 1. || error < sim.relaxation_error)
+    if(error < sim.relaxation_error)
     {
       break;
     }
-
   }
 
+  // COUT << endl << "mg_solver err " << error;
   return error;
 }
 
@@ -1150,11 +1149,6 @@ double gamma_cycle(
     }
 
     error = compute_error(phi[level], xi[level], xi_old[level], laplace_xi[level], deltaR[level], rhs[level], dx[level], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[level], sim);
-
-    // TODO REMOVE
-    // for(int jj=0; jj<level; ++jj) COUT << "     ";
-    // COUT << " level " << level << " - f. error = " << error << endl;
-    // END REMOVE
   }
 
   trunc_error = euclidean_norm(trunc[level], engine, level, numpts3d[level]);

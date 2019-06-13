@@ -125,7 +125,9 @@ void writeSnapshots(metadata & sim, cosmology & cosmo, const double fourpiG, con
 		projection_init(source);
 		scalarProjectionCIC_project(pcls_cdm, source);
 		if(sim.baryon_flag)
+		{
 			scalarProjectionCIC_project(pcls_b, source);
+		}
 		for(i = 0; i < cosmo.num_ncdm; i++)
 		{
 			if(sim.numpcl[1+sim.baryon_flag+i] == 0) continue;
@@ -137,9 +139,13 @@ void writeSnapshots(metadata & sim, cosmology & cosmo, const double fourpiG, con
 	if(sim.out_snapshot & MASK_RBARE)
 	{
 		if(sim.downgrade_factor > 1)
+		{
 			source->saveHDF5_coarseGrain3D(h5filename + filename + "_rhoN.h5", sim.downgrade_factor);
+		}
 		else
+		{
 			source->saveHDF5(h5filename + filename + "_rhoN.h5");
+		}
 	}
 
 	if(sim.out_snapshot & MASK_POT)
@@ -148,9 +154,13 @@ void writeSnapshots(metadata & sim, cosmology & cosmo, const double fourpiG, con
 		solveModifiedPoissonFT(*scalarFT, *scalarFT, fourpiG / a);
 		plan_source->execute(FFT_BACKWARD);
 		if(sim.downgrade_factor > 1)
+		{
 			source->saveHDF5_coarseGrain3D(h5filename + filename + "_psiN.h5", sim.downgrade_factor);
+		}
 		else
+		{
 			source->saveHDF5(h5filename + filename + "_psiN.h5");
+		}
 	}
 
 	if(sim.out_snapshot & MASK_T00)

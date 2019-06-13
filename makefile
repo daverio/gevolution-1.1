@@ -1,7 +1,7 @@
 # programming environment
 COMPILER     := mpic++
-INCLUDE      := -I/home/lorerev/LATfield2/ -I/home/lorerev/Healpix_3.50/include -L/home/lorerev/Healpix_3.50/lib
-LIB          := -lfftw3 -lm -lhdf5 -lgsl -lgslcblas -lchealpix
+INCLUDE      := -I/home/lorerev/LATfield2/ -I/home/lorerev/Healpix_3.50/include -I/home/lorerev/Healpix_3.50/src/C/subs -I/home/lorerev/cfitsio-3.47/include -L/home/lorerev/Healpix_3.50/src/C/subs -L/home/lorerev/Healpix_3.50/lib -L/home/lorerev/cfitsio-3.47/lib64
+LIB          := -lfftw3 -lm -lhdf5 -lgsl -lgslcblas -lcfitsio -lchealpix
 
 # target and source
 EXEC         := fRevolution

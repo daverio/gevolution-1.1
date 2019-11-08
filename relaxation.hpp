@@ -766,7 +766,7 @@ double multigrid_solver(
     }
     else
     {
-      cout<<error<<endl;
+      COUT<<error<<endl;
     }
   }
 

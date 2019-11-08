@@ -1,6 +1,6 @@
 # programming environment
 COMPILER     := mpic++
-INCLUDE      := -I/home/daverio/LATfield2/ 
+INCLUDE      := -I/home/daverio/LATfield2/
 LIB          := -lfftw3 -lm -lhdf5 -lgsl -lgslcblas
 # -lcfitsio -lchealpix
 
@@ -10,8 +10,8 @@ SOURCE       := main.cpp
 HEADERS      := $(wildcard *.hpp)
 
 # mandatory compiler settings (LATfield2)
-DLATFIELD2   := -DFFT3D -DHDF5 -DMULTIGRID -DDEBUG_MULTIGRID
-
+DLATFIELD2   := -DFFT3D -DHDF5 -DMULTIGRID
+#-DDEBUG_MULTIGRID
 # optional compiler settings (LATfield2)
 #DLATFIELD2   += -DEXTERNAL_IO # enables I/O server (use with care)
 #DLATFIELD2   += -DSINGLE      # switches to single precision, use LIB -lfftw3f

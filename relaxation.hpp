@@ -8,7 +8,7 @@
 //          Lorenzo Reverberi (CEICO - Czech Academy of Sciences, Prague)
 //
 //////////////////////////
-
+#include <unistd.h>
 #ifndef RELAXATION_HEADER
 #define RELAXATION_HEADER
 
@@ -17,7 +17,7 @@
 //////////////////////////
 template <class FieldType>
 double euclidean_norm(
-  Field<FieldType> & field,
+  MultiField<FieldType> & field,
   MultiGrid & engine,
   int level,
   long numpts3d)
@@ -33,8 +33,9 @@ double euclidean_norm(
       temp = field(x);
       error += temp * temp;
     }
+    parallel.layer_from_level(level).sum(error);
   }
-  parallel.layer(engine.player(level)).sum(error);
+
   error = sqrt(error) / numpts3d;
 
   return error;
@@ -61,13 +62,13 @@ void restrict_to_level(
 // Prepare the initial guess for the trace equation
 // TODO: Details here
 //////////////////////////
-template <class FieldType>
+template <template<class> class FieldClass, class FieldType>
 int prepare_initial_guess_trace_equation(
-  Field<FieldType> & deltaR,
-  Field<FieldType> & eightpiG_deltaT,
-  Field<FieldType> & xi,
-  Field<FieldType> & laplace_xi,
-  Field<FieldType> & rhs,
+  FieldClass<FieldType> & deltaR,
+  FieldClass<FieldType> & eightpiG_deltaT,
+  FieldClass<FieldType> & xi,
+  FieldClass<FieldType> & laplace_xi,
+  FieldClass<FieldType> & rhs,
   double a,
   double dx,
   double Rbar,
@@ -213,7 +214,7 @@ double update_xi_single(
     resid,
     xi_prev = xi;
 
-  if(isnan(deltaR) || isnan(xi) || Rbar + deltaR <= 0. || fabs(xi) >= 1.E20)
+  if(std::isnan(deltaR) || std::isnan(xi) || Rbar + deltaR <= 0. || fabs(xi) >= 1.E20)
   {
     cout << endl;
     cout << " update_xi_single before" << endl;
@@ -302,7 +303,7 @@ double update_xi_and_deltaR_single(
   dxi = xi; // original value
   temp = update_xi_single(phi, xi, xi_previous_timestep, laplace_xi, deltaR, rhs, a2_over_3, two_Hubble_over_dtau, coeff_laplacian, overrelax, Rbar, fbar, fRbar, sim);
 
-  if(isnan(deltaR) || fabs(xi) >= 1.E20 || deltaR + Rbar <= 0.)
+  if(std::isnan(deltaR) || fabs(xi) >= 1.E20 || deltaR + Rbar <= 0.)
 	{
     cout << endl;
     cout << " update_xi_and_deltaR_single 2" << endl;
@@ -330,7 +331,7 @@ double update_xi_and_deltaR_single(
     }
   }
 
-  if(isnan(xi) || fabs(xi) > 1.E20)
+  if(std::isnan(xi) || fabs(xi) > 1.E20)
   {
     cout << endl;
     cout << " update_xi_and_deltaR after" << endl;
@@ -353,22 +354,23 @@ double update_xi_and_deltaR_single(
 // where Y[xi] := laplacian(xi) - a^2/3 * zeta(xi)
 // TODO: Details here
 //////////////////////////
-template <class FieldType>
+template <template<class> class FieldClass, class FieldType>
 double update_xi_and_deltaR(
-  Field<FieldType> & phi,
-  Field<FieldType> & xi,
-  Field<FieldType> & xi_previous_timestep,
-  Field<FieldType> & laplace_xi,
-  Field<FieldType> & deltaR,
-  Field<FieldType> & eightpiG_deltaT,
-  Field<FieldType> & rhs,
+  FieldClass<FieldType> & phi,
+  FieldClass<FieldType> & xi,
+  FieldClass<FieldType> & xi_previous_timestep,
+  FieldClass<FieldType> & laplace_xi,
+  FieldClass<FieldType> & deltaR,
+  FieldClass<FieldType> & eightpiG_deltaT,
+  FieldClass<FieldType> & rhs,
   double dx,
   double a2_over_3,
   double two_Hubble_over_dtau,
   double Rbar,
   double fbar,
   double fRbar,
-  const metadata & sim)
+  const metadata & sim,
+  int level = -1)
 {
   double temp, resid, coeff_laplacian, overrelax;
 
@@ -383,9 +385,7 @@ double update_xi_and_deltaR(
     {
       update_xi_and_deltaR_single(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, coeff_laplacian, overrelax, Rbar, fbar, fRbar, sim);
     }
-
     build_laplacian(xi, laplace_xi, dx); // TODO: This might be optimised somehow -- only build_laplacian on the Blacks?
-
     for(x.firstBlack(); x.testBlack(); x.nextBlack())
     {
       update_xi_and_deltaR_single(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, coeff_laplacian, overrelax, Rbar, fbar, fRbar, sim);
@@ -397,7 +397,7 @@ double update_xi_and_deltaR(
 
     for(x.first(); x.test(); x.next())
     {
-      if(isnan(xi(x)) || fabs(xi(x)) > 1.E20)
+      if(std::isnan(xi(x)) || fabs(xi(x)) > 1.E20)
       {
         cout << endl;
         cout << " update_xi_and_deltaR before" << endl;
@@ -412,7 +412,7 @@ double update_xi_and_deltaR(
 
       update_xi_and_deltaR_single(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, coeff_laplacian, overrelax, Rbar, fbar, fRbar, sim);
 
-      if(isnan(xi(x)) || fabs(xi(x)) > 1.E20)
+      if(std::isnan(xi(x)) || fabs(xi(x)) > 1.E20)
       {
         cout << endl;
         cout << " update_xi_and_deltaR after xi" << endl;
@@ -430,7 +430,7 @@ double update_xi_and_deltaR(
   build_laplacian(xi, laplace_xi, dx);
 
   // TODO: Why doesn't it work without this (apparently useless) call?
-  temp = compute_error(phi, xi, xi_previous_timestep, laplace_xi, deltaR, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, 1, sim);
+  temp = compute_error(phi, xi, xi_previous_timestep, laplace_xi, deltaR, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, 1, sim, level);
 
   return temp;
 }
@@ -445,14 +445,15 @@ double update_xi_and_deltaR(
 //////////////////////////
 // TODO: Details here
 //////////////////////////
-template <class FieldType>
+
+template <template<class> class FieldClass, class FieldType>
 double compute_error(
-  Field<FieldType> & phi,
-  Field<FieldType> & xi,
-  Field<FieldType> & xi_old,
-  Field<FieldType> & laplace_xi,
-  Field<FieldType> & deltaR,
-  Field<FieldType> & rhs,
+  FieldClass<FieldType> & phi,
+  FieldClass<FieldType> & xi,
+  FieldClass<FieldType> & xi_old,
+  FieldClass<FieldType> & laplace_xi,
+  FieldClass<FieldType> & deltaR,
+  FieldClass<FieldType> & rhs,
   double dx,
   double a2_over_3,
   double two_Hubble_over_dtau,
@@ -460,7 +461,8 @@ double compute_error(
   double fbar,
   double fRbar,
   long numpts3d,
-  const metadata & sim)
+  const metadata & sim,
+  int level = -1)
 {
   double temp, error;
   Site x(xi.lattice());
@@ -473,7 +475,9 @@ double compute_error(
     error += temp*temp;
   }
 
-  parallel.sum(error);
+  if(level==-1) parallel.sum(error);
+  else parallel.layer_from_level(level).sum(error);
+
   error = sqrt(error / numpts3d);
 
   return error;
@@ -483,15 +487,15 @@ double compute_error(
 //////////////////////////
 // TODO Details
 //////////////////////////
-template <class FieldType>
+template <template<class> class FieldClass, class FieldType>
 void build_residual(
-  Field<FieldType> & phi,
-  Field<FieldType> & xi,
-  Field<FieldType> & xi_old,
-  Field<FieldType> & laplace_xi,
-  Field<FieldType> & deltaR,
-  Field<FieldType> & rhs,
-  Field<FieldType> & destination_for_residual,
+  FieldClass<FieldType> & phi,
+  FieldClass<FieldType> & xi,
+  FieldClass<FieldType> & xi_old,
+  FieldClass<FieldType> & laplace_xi,
+  FieldClass<FieldType> & deltaR,
+  FieldClass<FieldType> & rhs,
+  FieldClass<FieldType> & destination_for_residual,
   double a2_over_3,
   double two_Hubble_over_dtau,
   double Rbar,
@@ -580,15 +584,15 @@ double relaxation(
 // Single relaxation step
 // TODO: Details here
 //////////////////////////
-template <class FieldType>
+template <template<class> class FieldClass, class FieldType>
 double relaxation_step(
-  Field<FieldType> & phi,
-  Field<FieldType> & xi,
-  Field<FieldType> & xi_old,
-  Field<FieldType> & laplace_xi,
-  Field<FieldType> & deltaR,
-  Field<FieldType> & eightpiG_deltaT,
-  Field<FieldType> & rhs,
+  FieldClass<FieldType> & phi,
+  FieldClass<FieldType> & xi,
+  FieldClass<FieldType> & xi_old,
+  FieldClass<FieldType> & laplace_xi,
+  FieldClass<FieldType> & deltaR,
+  FieldClass<FieldType> & eightpiG_deltaT,
+  FieldClass<FieldType> & rhs,
   double dx,
   double a2_over_3,
   double two_Hubble_over_dtau,
@@ -596,12 +600,12 @@ double relaxation_step(
   double fbar,
   double fRbar,
   long numpts3d,
-  const metadata & sim)
+  const metadata & sim,
+  int level = -1)
 {
   double error;
   // Attempt new guess
-  error = update_xi_and_deltaR(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
-
+  error = update_xi_and_deltaR(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim,level);
   if(error > FR_WRONG)
   {
     //TODO REMOVE after debugging
@@ -611,8 +615,7 @@ double relaxation_step(
   }
   else
   {
-    error = compute_error(phi, xi, xi_old, laplace_xi, deltaR, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim);
-
+    error = compute_error(phi, xi, xi_old, laplace_xi, deltaR, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim, level);
     return error;
   }
 }
@@ -623,15 +626,15 @@ double relaxation_step(
 // Relaxation solver
 // TODO: Details here
 //////////////////////////
-template <class FieldType>
+template <template<class> class FieldClass, class FieldType>
 double single_layer_solver(
-  Field<FieldType> & phi,
-  Field<FieldType> & xi,
-  Field<FieldType> & xi_old,
-  Field<FieldType> & laplace_xi,
-  Field<FieldType> & deltaR,
-  Field<FieldType> & eightpiG_deltaT,
-  Field<FieldType> & rhs,
+  FieldClass<FieldType> & phi,
+  FieldClass<FieldType> & xi,
+  FieldClass<FieldType> & xi_old,
+  FieldClass<FieldType> & laplace_xi,
+  FieldClass<FieldType> & deltaR,
+  FieldClass<FieldType> & eightpiG_deltaT,
+  FieldClass<FieldType> & rhs,
   double dx,
   double a2_over_3,
   double two_Hubble_over_dtau,
@@ -639,7 +642,8 @@ double single_layer_solver(
   double fbar,
   double fRbar,
   long numpts3d,
-  const metadata & sim
+  const metadata & sim,
+  int level = -1
 )
 {
   int count = 0;
@@ -649,7 +653,7 @@ double single_layer_solver(
   {
     while(true)
     {
-      error = relaxation_step(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim);
+      error = relaxation_step(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim, level);
 
       if(error < sim.relaxation_error)
       {
@@ -677,14 +681,14 @@ double single_layer_solver(
   {
     while(true)
     {
-      error = relaxation_step(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim);
-
+      error = relaxation_step(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim, level);
       if(error < sim.relaxation_error)
       {
         break;
       }
     }
   }
+
 
   return error;
 }
@@ -713,6 +717,7 @@ double multigrid_solver(
   double fRbar,
   const metadata & sim)
 {
+
   int
     max_level = sim.multigrid_n_grids-1;
 
@@ -759,9 +764,14 @@ double multigrid_solver(
     {
       break;
     }
+    else
+    {
+      cout<<error<<endl;
+    }
   }
 
   // COUT << endl << "mg_solver err " << error;
+
   return error;
 }
 
@@ -986,30 +996,26 @@ double gamma_cycle(
     check_fr_wrong;
   int max_level = sim.multigrid_n_grids-1;
 
-
   if(engine.isPartLayer(level))
   {
     if(level) // Not necessary on finest grid? TODO CHECK
     {
       build_laplacian(xi[level], laplace_xi[level], dx[level]);
     }
-
     // TODO REMOVE
     // error = compute_error(xi[level], laplace_xi[level], deltaR[level], rhs[level], dx[level], a2_over_3, Rbar, fbar, fRbar, numpts3d[level], sim);
     // for(int jj=0; jj<level; ++jj) COUT << "     ";
     // COUT << " level " << level << " - i. error = " << error << endl;
     // END REMOVE
-
     for(int j=0; j<sim.pre_smoothing; ++j)
     {
-      check_fr_wrong = update_xi_and_deltaR(phi[level], xi[level], xi_old[level], laplace_xi[level], deltaR[level], eightpiG_deltaT[level], rhs[level], dx[level], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
+      check_fr_wrong = update_xi_and_deltaR(phi[level], xi[level], xi_old[level], laplace_xi[level], deltaR[level], eightpiG_deltaT[level], rhs[level], dx[level], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim,level);
       if(check_fr_wrong > FR_WRONG)
       {
         cout << parallel.rank() << " 1 check_fr_wrong = FR_WRONG in gamma_cycle 2" << endl;
         return FR_WRONG_RETURN;
       }
     }
-
     build_residual(phi[level], xi[level], xi_old[level], laplace_xi[level], deltaR[level], rhs[level], temp[level], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
   }
 
@@ -1050,7 +1056,6 @@ double gamma_cycle(
       cout << parallel.rank() << " 2 check_fr_wrong = FR_WRONG in gamma_cycle 2" << endl;
       return FR_WRONG_RETURN;
     }
-
     build_laplacian(xi[level+1], laplace_xi[level+1], dx[level+1]);
     build_residual(phi[level+1], xi[level+1], xi_old[level+1], laplace_xi[level+1], deltaR[level+1], rhs[level+1], trunc[level+1], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
     subtract_fields(trunc[level+1], temp[level+1], trunc[level+1]);
@@ -1062,7 +1067,7 @@ double gamma_cycle(
   {
     if(engine.isPartLayer(max_level))
     {
-      error = single_layer_solver(phi[max_level], xi[max_level], xi_old[max_level], laplace_xi[max_level], deltaR[max_level], eightpiG_deltaT[max_level], rhs[max_level], dx[level], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[max_level], sim);
+      error = single_layer_solver(phi[max_level], xi[max_level], xi_old[max_level], laplace_xi[max_level], deltaR[max_level], eightpiG_deltaT[max_level], rhs[max_level], dx[level], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[max_level], sim,max_level);
     }
   }
   else
@@ -1108,6 +1113,7 @@ double gamma_cycle(
   }
 
   engine.prolong(temp, trunc, level+1);
+
   if(engine.isPartLayer(level))
   {
     if(sim.multigrid_restrict_mode == RESTRICT_XI)
@@ -1137,18 +1143,18 @@ double gamma_cycle(
 
     build_laplacian(xi[level], laplace_xi[level], dx[level]);
 
-    // TODO In place of post-smoothing: requires that error be smaller than relaxation_error at each layer
+    // TODO In place of post-smoothing: requires that error be smaller than relaxation_error at each layer, NO post smoothing is mandatory in multigrid!
+
     for(int j=0; j<sim.post_smoothing; ++j)
     {
-      check_fr_wrong = update_xi_and_deltaR(phi[level], xi[level], xi_old[level], laplace_xi[level], deltaR[level], eightpiG_deltaT[level], rhs[level], dx[level], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
+      check_fr_wrong = update_xi_and_deltaR(phi[level], xi[level], xi_old[level], laplace_xi[level], deltaR[level], eightpiG_deltaT[level], rhs[level], dx[level], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim,level);
       if(check_fr_wrong > FR_WRONG)
       {
         cout << parallel.rank() << " 1 check_fr_wrong = FR_WRONG in gamma_cycle 2" << endl;
         return FR_WRONG_RETURN;
       }
     }
-
-    error = compute_error(phi[level], xi[level], xi_old[level], laplace_xi[level], deltaR[level], rhs[level], dx[level], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[level], sim);
+    error = compute_error(phi[level], xi[level], xi_old[level], laplace_xi[level], deltaR[level], rhs[level], dx[level], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[level], sim,level);
   }
 
   trunc_error = euclidean_norm(trunc[level], engine, level, numpts3d[level]);

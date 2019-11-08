@@ -1,7 +1,8 @@
 # programming environment
 COMPILER     := mpic++
-INCLUDE      := -I/home/lorerev/LATfield2/ -I/home/lorerev/Healpix_3.50/include -I/home/lorerev/Healpix_3.50/src/C/subs -I/home/lorerev/cfitsio-3.47/include -L/home/lorerev/Healpix_3.50/src/C/subs -L/home/lorerev/Healpix_3.50/lib -L/home/lorerev/cfitsio-3.47/lib64
-LIB          := -lfftw3 -lm -lhdf5 -lgsl -lgslcblas -lcfitsio -lchealpix
+INCLUDE      := -I/home/daverio/LATfield2/ 
+LIB          := -lfftw3 -lm -lhdf5 -lgsl -lgslcblas
+# -lcfitsio -lchealpix
 
 # target and source
 EXEC         := fRevolution
@@ -9,7 +10,7 @@ SOURCE       := main.cpp
 HEADERS      := $(wildcard *.hpp)
 
 # mandatory compiler settings (LATfield2)
-DLATFIELD2   := -DFFT3D -DHDF5 -DMULTIGRID
+DLATFIELD2   := -DFFT3D -DHDF5 -DMULTIGRID -DDEBUG_MULTIGRID
 
 # optional compiler settings (LATfield2)
 #DLATFIELD2   += -DEXTERNAL_IO # enables I/O server (use with care)
@@ -24,7 +25,7 @@ DGEVOLUTION  += -DORIGINALMETRIC
 #DGEVOLUTION  += -DCOLORTERMINAL
 #DGEVOLUTION  += -DCHECK_B
 #DGEVOLUTION  += -DHAVE_CLASS    # requires LIB -lclass
-DGEVOLUTION  += -DHAVE_HEALPIX  # requires LIB -lchealpix
+#DGEVOLUTION  += -DHAVE_HEALPIX  # requires LIB -lchealpix
 
 # further compiler options
 OPT          := -O3 -std=c++11

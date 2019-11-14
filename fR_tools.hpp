@@ -1682,10 +1682,10 @@ double convert_xi_to_deltaR(
 /////////////////////////////////////////////////
 // Builds laplacian from field
 /////////////////////////////////////////////////
-template <class FieldType>
+template <template<class> class FieldClass, class FieldType>
 void build_laplacian(
-  Field<FieldType> & field,
-  Field<FieldType> & laplacian,
+  FieldClass<FieldType> & field,
+  FieldClass<FieldType> & laplacian,
   double dx)
 {
 	double dx2 = dx*dx;

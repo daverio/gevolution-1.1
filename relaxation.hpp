@@ -213,7 +213,7 @@ double update_xi_single(
     resid,
     xi_prev = xi;
 
-  if(isnan(deltaR) || isnan(xi) || Rbar + deltaR <= 0. || fabs(xi) >= 1.E20)
+  if(std::isnan(deltaR) || std::isnan(xi) || Rbar + deltaR <= 0. || fabs(xi) >= 1.E20)
   {
     cout << endl;
     cout << " update_xi_single before" << endl;
@@ -302,7 +302,7 @@ double update_xi_and_deltaR_single(
   dxi = xi; // original value
   temp = update_xi_single(phi, xi, xi_previous_timestep, laplace_xi, deltaR, rhs, a2_over_3, two_Hubble_over_dtau, coeff_laplacian, overrelax, Rbar, fbar, fRbar, sim);
 
-  if(isnan(deltaR) || fabs(xi) >= 1.E20 || deltaR + Rbar <= 0.)
+  if(std::isnan(deltaR) || fabs(xi) >= 1.E20 || deltaR + Rbar <= 0.)
 	{
     cout << endl;
     cout << " update_xi_and_deltaR_single 2" << endl;
@@ -330,7 +330,7 @@ double update_xi_and_deltaR_single(
     }
   }
 
-  if(isnan(xi) || fabs(xi) > 1.E20)
+  if(std::isnan(xi) || fabs(xi) > 1.E20)
   {
     cout << endl;
     cout << " update_xi_and_deltaR after" << endl;
@@ -397,7 +397,7 @@ double update_xi_and_deltaR(
 
     for(x.first(); x.test(); x.next())
     {
-      if(isnan(xi(x)) || fabs(xi(x)) > 1.E20)
+      if(std::isnan(xi(x)) || fabs(xi(x)) > 1.E20)
       {
         cout << endl;
         cout << " update_xi_and_deltaR before" << endl;
@@ -412,7 +412,7 @@ double update_xi_and_deltaR(
 
       update_xi_and_deltaR_single(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, coeff_laplacian, overrelax, Rbar, fbar, fRbar, sim);
 
-      if(isnan(xi(x)) || fabs(xi(x)) > 1.E20)
+      if(std::isnan(xi(x)) || fabs(xi(x)) > 1.E20)
       {
         cout << endl;
         cout << " update_xi_and_deltaR after xi" << endl;

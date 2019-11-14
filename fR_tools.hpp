@@ -104,7 +104,7 @@ Real f(
       output = - m2 * c1 / (c2 + 1. / pow(R/m2, n));
     }
 
-    if(isnan(output))
+    if(std::isnan(output))
     {
       cout << " f(R) Evaluated to NaN (code " << code << ")" << endl
       << " R = " << R << endl;
@@ -118,7 +118,7 @@ Real f(
 		Rpow = pow(R, delta);
 		output = R * (a * Rpow - 1.);
 
-		if(isnan(output))
+		if(std::isnan(output))
 		{
 			cout
 			<< " f(R) Evaluated to NaN (code " << code << ")" << endl
@@ -157,7 +157,7 @@ Real fR(
 	{
     output = 2. * sim.fR_params[0] * R;
 
-		if(isnan(output))
+		if(std::isnan(output))
 		{
 			cout << " fR Evaluated to NaN (code " << code << ")" << endl
 			<< " R = " << R << ", fR = " << output << endl;
@@ -173,7 +173,7 @@ Real fR(
 
 		output = a * n * Rpow;
 
-		if(isnan(output))
+		if(std::isnan(output))
 		{
 			cout << " fR Evaluated to NaN (code " << code << ")" << endl
 			     << " R = " << R << ", R^(n-1) = " << Rpow << ", fR = " << output << endl;
@@ -201,7 +201,7 @@ Real fR(
 			output = - c1 * n * pow(R/m2, n-1.) / output / output;
 		}
 
-		if(isnan(output))
+		if(std::isnan(output))
 		{
 			cout << " fR Evaluated to NaN (code " << code << ")" << endl;
 			cout << " R = " << R << ", (R/m2)^n = " << Rpow << ", fR = " << output << endl;
@@ -215,7 +215,7 @@ Real fR(
 		Rpow = pow(R, delta);
 		output = a * (1. + delta) * Rpow - 1.;
 
-    if(isnan(output))
+    if(std::isnan(output))
 		{
 			cout << " fR Evaluated to NaN (code " << code << ")" << endl
 			     << " R = " << R << ", R^delta = " << Rpow << ", fR = " << output << endl;
@@ -252,7 +252,7 @@ Real fRR(
   if(sim.fR_model == FR_MODEL_R2)
   {
 		output = 2. * sim.fR_params[0];
-		if(isnan(output))
+		if(std::isnan(output))
 		{
 			cout << " fRR Evaluated to NaN (code " << code << ")" << endl
 			<< " R = " << R << ", fRR = " << output << endl;
@@ -268,7 +268,7 @@ Real fRR(
 
 		output = a * n * (n - 1.) * Rpow;
 
-		if(isnan(output))
+		if(std::isnan(output))
 		{
 			cout << " fRR Evaluated to NaN (code " << code << ")" << endl
 					 << " R = " << R << ", R^(n-2) = " << Rpow << ", fRR = " << output << endl;
@@ -302,7 +302,7 @@ Real fRR(
       }
 		}
 
-		if(isnan(output))
+		if(std::isnan(output))
 		{
 			cout << " fRR Evaluated to NaN (code " << code << ")" << endl
 			     << " R = " << R << ", (R/m2)^n = " << Rpow << ", fRR = " << output << ", n = " << n << endl;
@@ -316,7 +316,7 @@ Real fRR(
 		Rpow = pow(R, delta - 1.);
 		output = a * delta * (delta + 1.) * Rpow;
 
-		if(isnan(output))
+		if(std::isnan(output))
 		{
 			cout << " fRR Evaluated to NaN (code " << code << ")" << endl
 			     << " R = " << R << ", R^(delta-1) = " << Rpow << ", fRR = " << output << endl;
@@ -364,7 +364,7 @@ Real fRRR(
     Rpow = pow(R, n) / R / R / R;
 		output = a * n * (n - 1.) * (n - 2.) * Rpow;
 
-		if(isnan(output))
+		if(std::isnan(output))
 		{
 			cout << " fRRR Evaluated to NaN (code " << code << ")" << endl
 			<< " R = " << R << ", R^(n-3) = " << Rpow << ", fRRR = " << output << endl;
@@ -400,7 +400,7 @@ Real fRRR(
       output = - c1 * n * Rpow * (2. - 3. * n + n * n + (4. - 4. * n * n) * Rpow + (2. + 3. * n + n * n) * Rpow * Rpow) * output * output / R_over_m2;
 		}
 
-		if(isnan(output))
+		if(std::isnan(output))
 		{
 			cout << " fRRR Evaluated to NaN (code " << code << ")" << endl
 			     << " R = " << R << ", (R/m2)^n = " << Rpow << ", fRRR = " << output << endl;
@@ -415,7 +415,7 @@ Real fRRR(
 		Rpow = pow(R, delta - 2.);
 		output = a * delta * (delta * delta - 1.) * Rpow;
 
-		if(isnan(output))
+		if(std::isnan(output))
 		{
 			cout << " fRRR Evaluated to NaN (code " << code << ")" << endl
 			<< " R = " << R << ", R(delta-2) = " << Rpow << ", fRRR = " << output << endl;
@@ -443,7 +443,7 @@ bool xi_allowed(
 	const metadata & sim
 )
 {
-	if(isnan(xi) || fabs(xi) >= 1.E20)
+	if(std::isnan(xi) || fabs(xi) >= 1.E20)
 	{
 		return false;
 	}
@@ -1117,7 +1117,7 @@ double compute_max_fRR(
 
 	parallel.max(max);
 
-	if(!max || isnan(max))
+	if(!max || std::isnan(max))
 	{
 		cout << "Something went wrong in computing max_fRR. Closing...\n";
 		parallel.abortForce();
@@ -1534,7 +1534,7 @@ double convert_xi_to_deltaR_single(
   int count,
 			count_n = 1;
 
-	if(fabs(xi) >= 1.E20 || isnan(xi))
+	if(fabs(xi) >= 1.E20 || std::isnan(xi))
 	{
 		cout << endl;
 		cout << " convert_xi_to_deltaR_single before deltaR = " << deltaR << endl;
@@ -1558,7 +1558,7 @@ double convert_xi_to_deltaR_single(
 			R_temp = - c1 / fr;
 			R_temp = m2 * (sqrt(R_temp) - 1.) / c2;
 
-      if(isnan(R_temp) || R_temp < 0.)
+      if(std::isnan(R_temp) || R_temp < 0.)
 			{
 				cout << endl;
 				cout << " convert_xi_to_deltaR_single HS = " << endl;
@@ -1628,7 +1628,7 @@ double convert_xi_to_deltaR_single(
 
 	deltaR = R_temp - Rbar;
 
-	if(isnan(deltaR) || R_temp <= 0.)
+	if(std::isnan(deltaR) || R_temp <= 0.)
 	{
 		cout << " convert_xi_to_deltaR_single END" << endl;
 		cout << " deltaR = " << deltaR << endl;
@@ -1668,7 +1668,7 @@ double convert_xi_to_deltaR(
 
   parallel.max(max_fRR);
 
-	if(max_fRR and !isnan(max_fRR))
+	if(max_fRR and !std::isnan(max_fRR))
 	{
 		return max_fRR;
 	}

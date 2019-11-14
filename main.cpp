@@ -256,9 +256,9 @@ int main(int argc, char **argv)
 		COUT << " Dimensions of coarsest grid: " << sim.numpts/pow(2,sim.multigrid_n_grids-1) << " x " << sim.numpts/pow(2,sim.multigrid_n_grids-1) << " x " << sim.numpts/pow(2,sim.multigrid_n_grids-1) << endl;
 	}
 
-	Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> pcls_cdm;
-	Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> pcls_b;
-	Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> pcls_ncdm[MAX_PCL_SPECIES-2];
+	Particles_gevolution<part_simple, part_simple_info, part_simple_dataType> pcls_cdm;
+	Particles_gevolution<part_simple, part_simple_info, part_simple_dataType> pcls_b;
+	Particles_gevolution<part_simple, part_simple_info, part_simple_dataType> pcls_ncdm[MAX_PCL_SPECIES-2];
 	Field<Real> * update_cdm_fields[3];
 	Field<Real> * update_b_fields[3];
 	Field<Real> * update_ncdm_fields[3];
@@ -294,7 +294,7 @@ int main(int argc, char **argv)
 	Field<Real> residual;
 	Field<Real> err;
 
-	//========================================== MultiFields
+	//========================================== MultiFields ==========================================
 	MultiField<Real> * mg_deltaR;
 	MultiField<Real> * mg_eightpiG_deltaT;
 	MultiField<Real> * mg_phi;

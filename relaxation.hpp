@@ -383,11 +383,37 @@ double update_xi_and_deltaR(
 
     for(x.firstRed(); x.testRed(); x.nextRed())
     {
+      if(std::isnan(xi(x)) || fabs(xi(x)) > 1.E20)
+      {
+        cout << endl;
+        cout << " update_xi_and_deltaR before" << endl;
+        cout << " xi = " << xi(x) << endl;
+        cout << " dxi = " << laplace_xi(x) << endl;
+        cout << " Rbar = " << Rbar << endl;
+        cout << " deltaR = " << deltaR(x) << endl;
+        cout << " R = " << Rbar + deltaR(x) << endl;
+        cout << endl;
+        parallel.abortForce();
+      }
+
       update_xi_and_deltaR_single(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, coeff_laplacian, overrelax, Rbar, fbar, fRbar, sim);
     }
     build_laplacian(xi, laplace_xi, dx); // TODO: This might be optimised somehow -- only build_laplacian on the Blacks?
     for(x.firstBlack(); x.testBlack(); x.nextBlack())
     {
+      if(std::isnan(xi(x)) || fabs(xi(x)) > 1.E20)
+      {
+        cout << endl;
+        cout << " update_xi_and_deltaR before" << endl;
+        cout << " xi = " << xi(x) << endl;
+        cout << " dxi = " << laplace_xi(x) << endl;
+        cout << " Rbar = " << Rbar << endl;
+        cout << " deltaR = " << deltaR(x) << endl;
+        cout << " R = " << Rbar + deltaR(x) << endl;
+        cout << endl;
+        parallel.abortForce();
+      }
+
       update_xi_and_deltaR_single(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, coeff_laplacian, overrelax, Rbar, fbar, fRbar, sim);
     }
   }

@@ -1,6 +1,6 @@
 # programming environment
 COMPILER     := mpic++
-INCLUDE      := -I/home/daverio/LATfield2/
+INCLUDE      := -I../LATfield2/
 LIB          := -lfftw3 -lm -lhdf5 -lgsl -lgslcblas
 # -lcfitsio -lchealpix
 

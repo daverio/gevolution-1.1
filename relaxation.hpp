@@ -462,7 +462,8 @@ double compute_error(
   double fRbar,
   long numpts3d,
   const metadata & sim,
-  int level = -1)
+  int level
+)
 {
   double temp, error;
   Site x(xi.lattice());
@@ -475,7 +476,7 @@ double compute_error(
     error += temp*temp;
   }
 
-  if(level==-1) parallel.sum(error);
+  if(level == 0) parallel.sum(error);
   else parallel.layer_from_level(level).sum(error);
 
   error = sqrt(error / numpts3d);
@@ -549,9 +550,9 @@ double relaxation(
   double a2_over_3 = a*a/3.;
   int max_level = sim.multigrid_n_grids - 1; // TODO Not really needed, just for clarity
 
-  COUT << " z = " << 1./a - 1. << " -- " << flush;
-  error = compute_error(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], rhs[0], dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim);
-  COUT << "in.error = " << error << " -- " << flush;
+  COUT << left << " z = " << setw(8) << 1./a - 1. << right << " -- " << flush;
+  error = compute_error(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], rhs[0], dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim, 0);
+  COUT << "in.error = " << error << endl;
 
   if(sim.relaxation_method == METHOD_RELAX)
   {
@@ -574,7 +575,7 @@ double relaxation(
   }
   // END REMOVE
 
-  COUT << "fin.error = " << error << endl;
+  COUT << "                fin.error = " << error << endl;
 
   return error;
 }
@@ -605,7 +606,7 @@ double relaxation_step(
 {
   double error;
   // Attempt new guess
-  error = update_xi_and_deltaR(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim,level);
+  error = update_xi_and_deltaR(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim, level);
   if(error > FR_WRONG)
   {
     //TODO REMOVE after debugging
@@ -758,7 +759,7 @@ double multigrid_solver(
 
     convert_xi_to_deltaR(deltaR[0], xi[0], Rbar, fRbar, sim);
 
-    error = compute_error(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], rhs[0], dx[0], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[0], sim);
+    error = compute_error(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], rhs[0], dx[0], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[0], sim, 0);
 
     if(error < sim.relaxation_error)
     {
@@ -766,7 +767,7 @@ double multigrid_solver(
     }
     else
     {
-      COUT<<error<<endl;
+      COUT << "             interm.error = " << error << endl;
     }
   }
 
@@ -833,6 +834,7 @@ double FMG_solver(
     {
       copy_field(eightpiG_deltaT[max_level], rhs[max_level], a2_over_3);
     }
+
     copy_field(eightpiG_deltaT[0], rhs[0], a2_over_3);
 
     // build initial guess on coarsest grid -- xi and deltaR should be consistent
@@ -848,7 +850,12 @@ double FMG_solver(
     // Compute initial error
     // TODO: remove after debugging
     build_laplacian(xi[0], laplace_xi[0], dx[0]);
-    error = compute_error(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], rhs[0], dx[0], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[0], sim);
+    error = compute_error(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], rhs[0], dx[0], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[0], sim, 0);
+
+    // TODO remove
+    cout << " FMG initial error = " << error << endl;
+    COUT << endl;
+    // END remove
 
     // solve problem on coarsest grid
     if(engine.isPartLayer(max_level))
@@ -884,7 +891,12 @@ double FMG_solver(
           return FR_WRONG_RETURN;
         }
 
-        error = compute_error(phi[max_level], xi[max_level], xi_old[max_level], laplace_xi[max_level], deltaR[max_level], rhs[max_level], dx[max_level], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[max_level], sim);
+        error = compute_error(phi[max_level], xi[max_level], xi_old[max_level], laplace_xi[max_level], deltaR[max_level], rhs[max_level], dx[max_level], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[max_level], sim, max_level);
+
+        // TODO remove
+        cout << " FMG " << max_level << " = " << error << endl;
+        COUT << endl;
+        // END remove
 
         if(error < sim.relaxation_error)
         {
@@ -914,6 +926,13 @@ double FMG_solver(
       for(j=0; j<sim.multigrid_n_cycles; ++j)
       {
         check_fr_wrong = gamma_cycle(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, temp, trunc, engine, dx, a2_over_3, two_Hubble_over_dtau, numpts3d, Rbar, fbar, fRbar, sim, i);
+
+        error = compute_error(phi[i], xi[i], xi_old[i], laplace_xi[i], deltaR[i], rhs[i], dx[i], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[i], sim, i);
+
+        // TODO remove
+        cout << " FMG " << i << " = " << error << endl;
+        COUT << endl;
+        // END remove
 
         if(check_fr_wrong > FR_WRONG)
         {
@@ -953,7 +972,12 @@ double FMG_solver(
     build_laplacian(xi[0], laplace_xi[0], dx[0]);
     copy_field(eightpiG_deltaT[0], rhs[0], a2_over_3);
 
-    error = compute_error(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], rhs[0], dx[0], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[0], sim);
+    error = compute_error(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], rhs[0], dx[0], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[0], sim, 0);
+
+    // TODO remove
+    cout << " FMG " << 0 << " = " << error << endl;
+    COUT << endl;
+    // END remove
 
     if(error < sim.relaxation_error)
     {
@@ -1002,11 +1026,7 @@ double gamma_cycle(
     {
       build_laplacian(xi[level], laplace_xi[level], dx[level]);
     }
-    // TODO REMOVE
-    // error = compute_error(xi[level], laplace_xi[level], deltaR[level], rhs[level], dx[level], a2_over_3, Rbar, fbar, fRbar, numpts3d[level], sim);
-    // for(int jj=0; jj<level; ++jj) COUT << "     ";
-    // COUT << " level " << level << " - i. error = " << error << endl;
-    // END REMOVE
+
     for(int j=0; j<sim.pre_smoothing; ++j)
     {
       check_fr_wrong = update_xi_and_deltaR(phi[level], xi[level], xi_old[level], laplace_xi[level], deltaR[level], eightpiG_deltaT[level], rhs[level], dx[level], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim,level);
@@ -1154,7 +1174,8 @@ double gamma_cycle(
         return FR_WRONG_RETURN;
       }
     }
-    error = compute_error(phi[level], xi[level], xi_old[level], laplace_xi[level], deltaR[level], rhs[level], dx[level], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[level], sim,level);
+
+    error = compute_error(phi[level], xi[level], xi_old[level], laplace_xi[level], deltaR[level], rhs[level], dx[level], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[level], sim, level);
   }
 
   trunc_error = euclidean_norm(trunc[level], engine, level, numpts3d[level]);

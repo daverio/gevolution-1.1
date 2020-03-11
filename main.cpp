@@ -444,6 +444,7 @@ int main(int argc, char **argv)
 	//========================================== Setup Background quantities and initial timesteps
 	if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 	{
+		COUT<<"setting background quantities for fR"<<endl;
 		if(ic.generator != ICGEN_READ_FROM_DISK) fR_details(cosmo, &sim, fourpiG);
 
 		Rbar = R_initial_fR(a, fourpiG, cosmo);
@@ -452,6 +453,10 @@ int main(int argc, char **argv)
 		fRRbar = fRR(Rbar, sim, 102);
 		Hubble = H_initial_fR(a, Hconf(a, fourpiG, cosmo), Rbar, fbar, fRbar,	6. * fourpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * fRRbar / a / a / a); // TODO: Check Omega_m term
 		dot_Rbar = dot_R_initial_fR(a, Hubble, fourpiG, cosmo, sim);
+
+		// NB: in Newtonian f(R), consider only delta_rho instead of full T_mn
+
+		output_background_data(tau, a, Hubble, dtau_old, Rbar, dot_Rbar, cosmo, T00_hom, T00_hom_rescaled_a3, fbar, fRbar, fRRbar, sim.modified_gravity_flag);
 	}
 	else
 	{

@@ -144,10 +144,13 @@ Real fR(
   const metadata & sim,
   int code)
 {
+
+
+
 	double output = 0.,
 				 Rpow;
 
-  if(R <= 0.)
+  if(R <= 0. || isnan(R))
   {
     cout << " R = " << R << " in fR (code " << code << ")." << endl;
     return FR_WRONG_RETURN;
@@ -203,7 +206,7 @@ Real fR(
 
 		if(std::isnan(output))
 		{
-			cout << " fR Evaluated to NaN (code " << code << ")" << endl;
+			cout << "UH fR Evaluated to NaN (code " << code << ")" << endl;
 			cout << " R = " << R << ", (R/m2)^n = " << Rpow << ", fR = " << output << endl;
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
@@ -1464,6 +1467,7 @@ double convert_deltaR_to_xi(
 	{
 		for(x.first(); x.test(); x.next())
 		{
+			if(isnan(deltaR(x)))cout<<"deltaR(x) is nan!"<<endl;
 			temp = fR(Rbar + deltaR(x), sim, 832);
 			//TODO REMOVE after debugging
 			if(temp > FR_WRONG)
@@ -1500,7 +1504,7 @@ double convert_deltaR_to_xi_single(
 	else
 	{
     double fR_temp;
-    fR_temp = fR(Rbar + deltaR, sim, 832);
+    fR_temp = fR(Rbar + deltaR, sim, 8321);
     //TODO REMOVE after debugging
     if(fR_temp > FR_WRONG)
     {

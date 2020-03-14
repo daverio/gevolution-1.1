@@ -114,6 +114,7 @@ int main(int argc, char **argv)
 	FILE * outfile;
 	char filename[2*PARAM_MAX_LENGTH+24];
 	string bgfilename;
+	string h5filename;
 	char * settingsfile = NULL;
 	char * precisionfile = NULL;
 	parameter * params = NULL;
@@ -237,6 +238,12 @@ int main(int argc, char **argv)
 	{
 		numparam = 0;
 	}
+
+	h5filename.reserve(2*PARAM_MAX_LENGTH);
+	h5filename.assign(sim.output_path);
+	h5filename += sim.basename_generic;
+	h5filename += "_";
+	h5filename += sim.basename_snapshot;
 
 	box[0] = sim.numpts;
 	box[1] = sim.numpts;
@@ -1002,9 +1009,9 @@ int main(int argc, char **argv)
 			}
 		}
 
-		//==========================================================================================================//
-		//============================================ lightcone output ============================================
-		//==========================================================================================================//
+		//==========================================================================//
+		//============================ lightcone output ============================
+		//==========================================================================//
 		if(sim.num_lightcone > 0)
 		{
 			writeLightcones(sim, cosmo, fourpiG, a, tau, dtau, dtau_old, maxvel[0], cycle, (string) sim.output_path + sim.basename_lightcone, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &chi, &Bi, &Sij, &BiFT, &SijFT, &plan_Bi, &plan_Sij, done_hij, IDbacklog);
@@ -1019,14 +1026,14 @@ int main(int argc, char **argv)
 		ref_time = MPI_Wtime();
 #endif
 
-		//==========================================================================================================//
-		//============================================ snapshot output =============================================
-		//==========================================================================================================//
+		//==========================================================================//
+		//============================ snapshot output =============================
+		//==========================================================================//
 		if(snapcount < sim.num_snapshot && 1. / a < sim.z_snapshot[snapcount] + 1.)
 		{
 			COUT << COLORTEXT_CYAN << " writing snapshot" << COLORTEXT_RESET << " at z = " << ((1./a) - 1.) <<  " (cycle " << cycle << "), tau/boxsize = " << tau << endl;
 
-			writeSnapshots(sim, cosmo, fourpiG, a, dtau_old, done_hij, snapcount, (string) sim.output_path + sim.basename_snapshot, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij
+			writeSnapshots(sim, cosmo, fourpiG, a, dtau_old, done_hij, snapcount, h5filename, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &phi_ddot, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_chi, &plan_Bi, &plan_source, &plan_Sij
 #ifdef CHECK_B
 				, &Bi_check, &BiFT_check, &plan_Bi_check
 #endif
@@ -1043,18 +1050,18 @@ int main(int argc, char **argv)
 		ref_time = MPI_Wtime();
 #endif
 
-		//==========================================================================================================//
-		//============================================= power spectra ==============================================
-		//==========================================================================================================//
+		//==========================================================================//
+		//============================= power spectra ==============================
+		//==========================================================================//
 		if(pkcount < sim.num_pk && 1. / a < sim.z_pk[pkcount] + 1.)
 		{
 			COUT << COLORTEXT_CYAN << " writing power spectra" << COLORTEXT_RESET << " at z = " << ((1./a) - 1.) <<  " (cycle " << cycle << "), tau/boxsize = " << tau << endl;
 
-			writeSpectra(sim, cosmo, fourpiG, a, pkcount,
+			writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle,
 #ifdef HAVE_CLASS
 				class_background, class_perturbs, class_spectra, ic,
 #endif
-				&pcls_cdm, &pcls_b, pcls_ncdm, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij
+				&pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &phi_ddot, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_phi_ddot, &plan_phi_effective, &plan_chi, &plan_Bi, &plan_source, &plan_Sij
 #ifdef CHECK_B
 				, &Bi_check, &BiFT_check, &plan_Bi_check
 #endif
@@ -1084,31 +1091,31 @@ int main(int argc, char **argv)
 			numsteps_bg = 2;
 		}
 
-#ifdef EXACT_OUTPUT_REDSHIFTS
-		tmpa = a;
-		tmpHubble = Hubble;
-		tmpRbar = Rbar;
-		tmpdot_Rbar = dot_Rbar;
-
-		rungekutta_background(tmpa, tmpHubble, tmpRbar, tmpdot_Rbar, fourpiG, cosmo, 0.5 * dtau, sim, dtau / numsteps_bg, numsteps_bg / 2);
-		rungekutta_background(tmpa, tmpHubble, tmpRbar, tmpdot_Rbar, fourpiG, cosmo, 0.5 * dtau, sim, dtau / numsteps_bg, numsteps_bg / 2);
-
-		if(pkcount < sim.num_pk && 1. / tmpa < sim.z_pk[pkcount] + 1.)
-		{
-			writeSpectra(sim, cosmo, fourpiG, a, pkcount,
-#ifdef HAVE_CLASS
-				class_background, class_perturbs, class_spectra, ic,
-#endif
-				&pcls_cdm, &pcls_b, pcls_ncdm, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij
-#ifdef CHECK_B
-				, &Bi_check, &BiFT_check, &plan_Bi_check
-#endif
-#ifdef VELOCITY
-				, &vi, &viFT, &plan_vi
-#endif
-			);
-		}
-#endif // EXACT_OUTPUT_REDSHIFTS
+// #ifdef EXACT_OUTPUT_REDSHIFTS
+// 		tmpa = a;
+// 		tmpHubble = Hubble;
+// 		tmpRbar = Rbar;
+// 		tmpdot_Rbar = dot_Rbar;
+//
+// 		rungekutta_background(tmpa, tmpHubble, tmpRbar, tmpdot_Rbar, fourpiG, cosmo, 0.5 * dtau, sim, dtau / numsteps_bg, numsteps_bg / 2);
+// 		rungekutta_background(tmpa, tmpHubble, tmpRbar, tmpdot_Rbar, fourpiG, cosmo, 0.5 * dtau, sim, dtau / numsteps_bg, numsteps_bg / 2);
+//
+// 		if(pkcount < sim.num_pk && 1. / tmpa < sim.z_pk[pkcount] + 1.)
+// 		{
+// 			writeSpectra(sim, cosmo, fourpiG, a, pkcount, cycle,
+// #ifdef HAVE_CLASS
+// 				class_background, class_perturbs, class_spectra, ic,
+// #endif
+// 				&pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &phi_ddot, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_phi_ddot, &plan_phi_effective, &plan_chi, &plan_Bi, &plan_source, &plan_Sij
+// #ifdef CHECK_B
+// 				, &Bi_check, &BiFT_check, &plan_Bi_check
+// #endif
+// #ifdef VELOCITY
+// 				, &vi, &viFT, &plan_vi
+// #endif
+// 			);
+// 		}
+// #endif // EXACT_OUTPUT_REDSHIFTS
 
 #ifdef BENCHMARK
 		spectra_output_time += MPI_Wtime() - ref_time;

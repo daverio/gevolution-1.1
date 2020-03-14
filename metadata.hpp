@@ -14,6 +14,10 @@
 #ifndef METADATA_HEADER
 #define METADATA_HEADER
 
+#ifndef FREVOLUTION_VERSION
+#define FREVOLUTION_VERSION 1.0
+#endif
+
 #ifndef MAX_OUTPUTS
 #define MAX_OUTPUTS 32
 #endif
@@ -24,6 +28,10 @@
 
 #ifndef PARAM_MAX_LINESIZE
 #define PARAM_MAX_LINESIZE 1024
+#endif
+
+#ifndef METRICFILE_LENGTH
+#define METRICFILE_LENGTH 20
 #endif
 
 #ifndef MAX_INTERSECTS
@@ -167,7 +175,9 @@
 #endif
 #endif
 
-
+// Hibernation particle save mode
+#define HIB_SAVE_HDF5 0
+#define HIB_SAVE_GADGET2 1
 
 // color escape sequences for terminal highlighting (enable with -DCOLORTERMINAL)
 #ifdef COLORTERMINAL
@@ -290,6 +300,7 @@ struct metadata
 	// ========================== f(R) ==========================
 	// =================== and other changes ====================
 	int CYCLE_INFO_INTERVAL; // Previously fixed: #define CYCLE_INFO_INTERVAL = 10
+	int hibernation_save_mode;
 	int fR_model;
 	int num_fR_params;
 	int xi_Hubble;
@@ -423,7 +434,7 @@ struct icsettings
 	char pclfile[MAX_PCL_SPECIES][PARAM_MAX_LENGTH];
 	char pkfile[PARAM_MAX_LENGTH];
 	char tkfile[PARAM_MAX_LENGTH];
-	char metricfile[3][PARAM_MAX_LENGTH];
+	char metricfile[METRICFILE_LENGTH][PARAM_MAX_LENGTH];
 	double restart_tau;
 	double restart_dtau;
 	double restart_version;
@@ -433,6 +444,16 @@ struct icsettings
 	double A_s;
 	double n_s;
 	double k_pivot;
+
+	// f(R) restart
+	double restart_dtau_old;
+	double restart_dtau_old_2;
+	double restart_dtau_osci;
+	double restart_dtau_bg;
+	double restart_a;
+	double restart_Hubble;
+	double restart_Rbar;
+	double restart_dot_Rbar;
 };
 
 struct cosmology
@@ -490,19 +511,6 @@ std::ostream& operator<< (std::ostream& os, const cosmology& cosmo)
 
 	return os;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 #endif

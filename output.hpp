@@ -59,7 +59,44 @@ using namespace std;
 //
 //////////////////////////
 
-void writeSnapshots(metadata & sim, cosmology & cosmo, const double fourpiG, gadget2_header & hdr, const double a, const int snapcount, string h5filename, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm, Field<Real> * phi, Field<Real> * deltaR, Field<Real> * eightpiG_deltaT, Field<Real> * xi, Field<Real> * laplace_xi, Field<Real> * zeta, Field<Real> * phi_ddot, Field<Real> * chi, Field<Real> * Bi, Field<Real> * source, Field<Real> * Sij, Field<Cplx> * scalarFT, Field<Cplx> * BiFT, Field<Cplx> * SijFT, PlanFFT<Cplx> * plan_phi, PlanFFT<Cplx> * plan_deltaR, PlanFFT<Cplx> * plan_eightpiG_deltaT, PlanFFT<Cplx> * plan_xi, PlanFFT<Cplx> * plan_laplace_xi, PlanFFT<Cplx> * plan_zeta, PlanFFT<Cplx> * plan_chi, PlanFFT<Cplx> * plan_Bi, PlanFFT<Cplx> * plan_source, PlanFFT<Cplx> * plan_Sij, Field<Real> * Bi_check = NULL, Field<Cplx> * BiFT_check = NULL, PlanFFT<Cplx> * plan_Bi_check = NULL)
+void writeSnapshots(
+	metadata & sim,
+	cosmology & cosmo,
+	const double fourpiG,
+	gadget2_header & hdr,
+	const double a,
+	const int snapcount,
+	string h5filename,
+	Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm,
+	Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b,
+	Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm,
+	Field<Real> * phi,
+	Field<Real> * deltaR,
+	Field<Real> * eightpiG_deltaT,
+	Field<Real> * xi,
+	Field<Real> * laplace_xi,
+	Field<Real> * zeta,
+	Field<Real> * phi_ddot,
+	Field<Real> * chi,
+	Field<Real> * Bi,
+	Field<Real> * source,
+	Field<Real> * Sij,
+	Field<Cplx> * scalarFT,
+	Field<Cplx> * BiFT,
+	Field<Cplx> * SijFT,
+	PlanFFT<Cplx> * plan_phi,
+	PlanFFT<Cplx> * plan_deltaR,
+	PlanFFT<Cplx> * plan_eightpiG_deltaT,
+	PlanFFT<Cplx> * plan_xi,
+	PlanFFT<Cplx> * plan_laplace_xi,
+	PlanFFT<Cplx> * plan_zeta,
+	PlanFFT<Cplx> * plan_chi,
+	PlanFFT<Cplx> * plan_Bi,
+	PlanFFT<Cplx> * plan_source,
+	PlanFFT<Cplx> * plan_Sij,
+	Field<Real> * Bi_check = NULL,
+	Field<Cplx> * BiFT_check = NULL,
+	PlanFFT<Cplx> * plan_Bi_check = NULL)
 {
 	char filename[3*PARAM_MAX_LENGTH+40];
 	char buffer[64];

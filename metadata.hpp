@@ -156,7 +156,6 @@
 #define RESTRICT_XI 1
 #define RESTRICT_DELTAR 2
 
-
 // Relaxation error
 #define RELAXATION_ERROR_DEFAULT 1.E-5
 
@@ -258,7 +257,6 @@ struct metadata
 	double boxsize;
 	double wallclocklimit;
 	double z_in;
-	double z_check; // TODO: Remove after debugging
 	double z_snapshot[MAX_OUTPUTS];
 	double z_pk[MAX_OUTPUTS];
 	double z_restart[MAX_OUTPUTS];
@@ -334,7 +332,6 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim)
 	os << "boxsize: " << sim.boxsize << "\n";
 	os << "wallclocklimit: " << sim.wallclocklimit << "\n";
 	os << "z_in: " << sim.z_in << "\n";
-	os << "z_check: " << sim.z_check << "\n";
 	os << "z_snapshot: " << sim.z_snapshot[0];
 
 	for(int i=1; i<MAX_OUTPUTS; i++) os << " , " << sim.z_snapshot[i];

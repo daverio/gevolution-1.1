@@ -103,13 +103,11 @@ int main(int argc, char **argv)
 	int io_group_size = 0;
 
 	int i, j, g, cycle = 0, snapcount = 0, pkcount = 0, restartcount = 0, usedparams, numparam = 0, numsteps, numsteps_bg, numspecies;
-	int temr; // TODO REMOVE AFTER DEBUGGING
 	int numsteps_ncdm[MAX_PCL_SPECIES-2];
 	long numpts3d;
 	int box[3];
 	double dtau, dtau_old, dtau_old_2, dtau_osci, dtau_bg, dx, tau, a, fourpiG, tau_Lambda, tmp, start_time;
 	double dtau_print, tau_print;
-	double error; // TODO Remove after debugging
 	double maxvel[MAX_PCL_SPECIES];
 	char filename[2*PARAM_MAX_LENGTH+24];
 	string bgfilename;
@@ -397,7 +395,7 @@ int main(int argc, char **argv)
 		}
 
 
-		//=========================================== Full evolution -- Background + Perturbations ===========================================//
+		//============== Full evolution -- Background + Perturbations ==============//
 
 #ifdef HAVE_CLASS
 		background class_background;
@@ -419,11 +417,11 @@ int main(int argc, char **argv)
 		Lattice latFT;
 		latFT.initializeRealFFT(lat,0);
 
-		MultiGrid mg_engine;
-		mg_engine.initialize(&lat, sim.multigrid_n_grids, 4);
 
 		if(sim.multigrid_or_not)
 		{
+			MultiGrid mg_engine;
+			mg_engine.initialize(&lat, sim.multigrid_n_grids, 4);
 			sim.multigrid_n_grids = mg_engine.nl();
 			COUT << " Initialized multigrid with " << sim.multigrid_n_grids << " layers." << endl;
 			COUT << " Dimensions of coarsest grid: " << sim.numpts/pow(2,sim.multigrid_n_grids-1) << " x " << sim.numpts/pow(2,sim.multigrid_n_grids-1) << " x " << sim.numpts/pow(2,sim.multigrid_n_grids-1) << endl;

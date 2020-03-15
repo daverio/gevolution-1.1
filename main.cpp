@@ -417,6 +417,8 @@ int main(int argc, char **argv)
 		Lattice latFT;
 		latFT.initializeRealFFT(lat,0);
 
+		MultiGrid mg_engine;
+		mg_engine.initialize(&lat, sim.multigrid_n_grids, 4);
 
 		if(sim.multigrid_or_not)
 		{

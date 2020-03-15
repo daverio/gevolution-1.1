@@ -319,7 +319,6 @@ void writeRestartSettings_fR(metadata & sim,
 		fprintf(outfile, "lcdm background             = %d\n", sim.lcdm_background);
 		fprintf(outfile, "switch to f(R) redshift     = %f\n", sim.z_switch_fR_background);
 		fprintf(outfile, "quasi-static                = %d\n", sim.quasi_static);
-		fprintf(outfile, "check redshift              = %f\n", sim.z_check);
 
 		fprintf(outfile, "\n#==================== Multigrid and relaxation ====================#\n");
 		fprintf(outfile, "relaxation method          = %d\n", sim.relaxation_method);

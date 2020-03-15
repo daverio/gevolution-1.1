@@ -1913,7 +1913,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		}
 	}
 
-	parseParameter(params, numparam, "check redshift", sim.z_check);
 	parseFieldSpecifiers(params, numparam, "snapshot outputs", sim.out_snapshot);
 	parseFieldSpecifiers(params, numparam, "Pk outputs", sim.out_pk);
 	parseFieldSpecifiers(params, numparam, "check outputs", sim.out_check);

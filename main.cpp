@@ -116,7 +116,7 @@ int main(int argc, char **argv)
 	double T00_hom;
 	double phi_hom;
 
-	//================================== f(R) ==================================//
+	//////////////////////////////////// f(R) ////////////////////////////////////
 	double Hubble;
 	double Rbar;
 	double dot_Rbar;
@@ -273,7 +273,7 @@ int main(int argc, char **argv)
 	Field<Cplx> SijFT;
 	Field<Cplx> BiFT;
 
-	//========================= additional f(R) fields =========================//
+	/////////////////////////// additional f(R) fields ///////////////////////////
 	Field<Real> Bi_old;
 	Field<Cplx> Bi_oldFT;
 	Field<Real> xi;
@@ -293,7 +293,7 @@ int main(int argc, char **argv)
 	Field<Real> residual;
 	Field<Real> err;
 
-	//=============================== MultiFields ==============================//
+	//////////////////////////////// MultiFields ////////////////////////////////
 	MultiField<Real> * mg_deltaR;
 	MultiField<Real> * mg_eightpiG_deltaT;
 	MultiField<Real> * mg_phi;
@@ -440,7 +440,7 @@ int main(int argc, char **argv)
 	tau = particleHorizon(a, fourpiG, cosmo);
 	numsteps_bg = 1;
 
-	//============ Setup Background quantities and initial timesteps ===========//
+	///////////// Setup Background quantities and initial timesteps /////////////
 	if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 	{
 		COUT<<"setting background quantities for fR"<<endl;
@@ -452,9 +452,6 @@ int main(int argc, char **argv)
 		fRRbar = fRR(Rbar, sim, 102);
 		Hubble = H_initial_fR(a, Hconf(a, fourpiG, cosmo), Rbar, fbar, fRbar,	6. * fourpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * fRRbar / a / a / a); // TODO: Check Omega_m term
 		dot_Rbar = dot_R_initial_fR(a, Hubble, fourpiG, cosmo, sim);
-
-		// NB: in Newtonian f(R), consider only delta_rho instead of full T_mn
-
 		output_background_data(tau, a, Hubble, dtau_old, Rbar, dot_Rbar, cosmo, T00_hom, T00_hom_rescaled_a3, fbar, fRbar, fRRbar, sim.modified_gravity_flag);
 	}
 	else
@@ -477,7 +474,7 @@ int main(int argc, char **argv)
 	dtau_old = dtau_old_2 = dtau_print = 0.;
 	tau_print = tau;
 
-	//=================== Start writing the background file ====================//
+	///////////////////// Start writing the background file /////////////////////
 	bgfilename.reserve(2*PARAM_MAX_LENGTH + 24);
 	bgfilename.assign(sim.output_path);
 	bgfilename += sim.basename_generic;
@@ -508,7 +505,7 @@ int main(int argc, char **argv)
 		bgoutfile.close();
 	}
 
-	//======================= Generate initial conditions ======================//
+	//////////////////////// Generate initial conditions ////////////////////////
 	if(ic.generator == ICGEN_BASIC)
 	{
 		generateIC_basic(sim, ic, cosmo, fourpiG, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, params, numparam); // generates ICs on the fly
@@ -592,7 +589,7 @@ int main(int argc, char **argv)
 	if(numparam > 0) free(params);
 #endif
 
-	//================================ Main Loop ===============================//
+	///////////////////////////////// Main Loop /////////////////////////////////
 	while(true)
 	{
 #ifdef BENCHMARK
@@ -744,9 +741,7 @@ int main(int argc, char **argv)
 		}
 
 
-		//========================================================================//
-		//======================== EVOLVE deltaR, zeta, xi =======================//
-		//========================================================================//
+		///////////////////////// EVOLVE deltaR, zeta, xi /////////////////////////
 		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 		{
 			if(sim.fR_model == FR_MODEL_R2) // R + R^2 can be solved with FFT
@@ -785,9 +780,7 @@ int main(int argc, char **argv)
 			build_laplacian(xi, laplace_xi, dx);
 		}
 
-		//========================================================================//
-		//============================== EVOLVE phi ==============================//
-		//========================================================================//
+		//////////////////////////////// EVOLVE phi ////////////////////////////////
 		// GR and relativistic f(R)
 		if(sim.relativistic_flag)
 		{
@@ -881,9 +874,7 @@ int main(int argc, char **argv)
 		phi_dot.updateHalo();
 		phi.updateHalo(); // communicate halo values
 
-		//========================================================================//
-		//============================== EVOLVE chi ==============================//
-		//========================================================================//
+		//////////////////////////////// EVOLVE chi ////////////////////////////////
 		copy_field(chi, chi_dot); // Before evolving chi
 
 		// prepare nonlinear source for additional equations
@@ -935,9 +926,7 @@ int main(int argc, char **argv)
 			chi_dot.updateHalo();
 		}
 
-		//========================================================================//
-		//=============================== EVOLVE Bi ==============================//
-		//========================================================================//
+		//////////////////////////////// EVOLVE Bi ////////////////////////////////
 
 		if(sim.vector_flag == VECTOR_ELLIPTIC) // solve B using elliptic constraint; TODO: check for f(R) -- should be the same
 		{
@@ -1010,9 +999,7 @@ int main(int argc, char **argv)
 			}
 		}
 
-		//========================================================================//
-		//=========================== lightcone output ===========================//
-		//========================================================================//
+		///////////////////////////// lightcone output /////////////////////////////
 		if(sim.num_lightcone > 0)
 		{
 			writeLightcones(sim, cosmo, fourpiG, a, tau, dtau, dtau_old, maxvel[0], cycle, (string) sim.output_path + sim.basename_lightcone, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &chi, &Bi, &Sij, &BiFT, &SijFT, &plan_Bi, &plan_Sij, done_hij, IDbacklog);
@@ -1027,9 +1014,7 @@ int main(int argc, char **argv)
 		ref_time = MPI_Wtime();
 #endif
 
-		//========================================================================//
-		//=========================== snapshot output ============================//
-		//========================================================================//
+		///////////////////////////// snapshot output /////////////////////////////
 		if(snapcount < sim.num_snapshot && 1. / a < sim.z_snapshot[snapcount] + 1.)
 		{
 			COUT << COLORTEXT_CYAN << " writing snapshot" << COLORTEXT_RESET << " at z = " << ((1./a) - 1.) <<  " (cycle " << cycle << "), tau/boxsize = " << tau << endl;
@@ -1051,9 +1036,7 @@ int main(int argc, char **argv)
 		ref_time = MPI_Wtime();
 #endif
 
-		//========================================================================//
-		//============================ power spectra =============================//
-		//========================================================================//
+		////////////////////////////// power spectra //////////////////////////////
 		if(pkcount < sim.num_pk && 1. / a < sim.z_pk[pkcount] + 1.)
 		{
 			COUT << COLORTEXT_CYAN << " writing power spectra" << COLORTEXT_RESET << " at z = " << ((1./a) - 1.) <<  " (cycle " << cycle << "), tau/boxsize = " << tau << endl;
@@ -1240,14 +1223,7 @@ int main(int argc, char **argv)
 				ref2_time = MPI_Wtime();
 #endif
 
-				if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
-				{
-					rungekutta_background(tmpa, tmpHubble, tmpRbar, tmpdot_Rbar, fourpiG, cosmo, 0.5 * dtau / numsteps_ncdm[i], sim, dtau / (numsteps_bg * numsteps_bg_ncdm[i]), numsteps_bg * numsteps_ncdm[i] / 2);
-				}
-				else
-				{
-					rungekutta4bg(tmpa, fourpiG, cosmo, 0.5 * dtau / numsteps_ncdm[i]);
-				}
+				rungekutta_background(tmpa, tmpHubble, tmpRbar, tmpdot_Rbar, fourpiG, cosmo, 0.5 * dtau / numsteps_ncdm[i], sim, dtau / (numsteps_bg * numsteps_bg_ncdm[i]), numsteps_bg * numsteps_ncdm[i] / 2);
 
 				f_params[0] = tmpa;
 				f_params[1] = tmpa * tmpa * sim.numpts;
@@ -1266,14 +1242,7 @@ int main(int argc, char **argv)
 				ref2_time = MPI_Wtime();
 #endif
 
-				if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
-				{
-					rungekutta_background(tmpa, tmpHubble, tmpRbar, tmpdot_Rbar, fourpiG, cosmo, 0.5 * dtau / numsteps_ncdm[i], sim, dtau / (numsteps_bg * numsteps_bg_ncdm[i]), numsteps_bg * numsteps_ncdm[i] / 2);
-				}
-				else
-				{
-					rungekutta4bg(tmpa, fourpiG, cosmo, 0.5 * dtau / numsteps_ncdm[i]);
-				}
+				rungekutta_background(tmpa, tmpHubble, tmpRbar, tmpdot_Rbar, fourpiG, cosmo, 0.5 * dtau / numsteps_ncdm[i], sim, dtau / (numsteps_bg * numsteps_bg_ncdm[i]), numsteps_bg * numsteps_ncdm[i] / 2);
 			}
 		}
 

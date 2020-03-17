@@ -136,7 +136,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 	temp1 = (double *) malloc(tk_d1->size * sizeof(double));
 	temp2 = (double *) malloc(tk_d1->size * sizeof(double));
 
-	for (i = 0; i < tk_d1->size; i++)
+	for(i = 0; i < tk_d1->size; i++)
 	{
 		temp1[i] = -tk_d1->y[i] * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 		temp2[i] = (tk_d2->y[i] - tk_d1->y[i]) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
@@ -150,13 +150,13 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 
 	generateCICKernel(*source);
 
-	for (p = 0; p < cosmo.num_ncdm; p++)
+	for(p = 0; p < cosmo.num_ncdm; p++)
 	{
-		if (ic.numtile[((sim.baryon_flag == 1) ? 2 : 1)+p] < 1) continue;
+		if(ic.numtile[((sim.baryon_flag == 1) ? 2 : 1)+p] < 1) continue;
 
 		loadHomogeneousTemplate(ic.pclfile[((sim.baryon_flag == 1) ? 2 : 1)+p], sim.numpcl[((sim.baryon_flag == 1) ? 2 : 1)+p], pcldata);
 
-		if (pcldata == NULL)
+		if(pcldata == NULL)
 		{
 			COUT << " error: particle data was empty!" << endl;
 			parallel.abortForce();
@@ -165,7 +165,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 		sprintf(ncdm_name, "ncdm[%d]", p);
 		loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_t1, ncdm_name, sim.boxsize, ic.z_ic, cosmo.h);
 
-		if (tk_d1 == NULL || tk_t1 == NULL)
+		if(tk_d1 == NULL || tk_t1 == NULL)
 		{
 			COUT << " error: ncdm transfer function was empty! (species " << p << ")" << endl;
 			parallel.abortForce();
@@ -173,7 +173,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 
 		rescale = pow(cosmo.Omega_g * cosmo.h * cosmo.h / C_PLANCK_LAW, 0.25) * cosmo.T_ncdm[p] * C_BOLTZMANN_CST / cosmo.m_ncdm[p];
 
-		for (i = 0; i < tk_d1->size; i++)
+		for(i = 0; i < tk_d1->size; i++)
 		{
 			temp1[i] = -3. * phispline->y[i] - 0.75 * tk_d1->y[i] * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 			temp2[i] = -0.25 * tk_d1->y[i] * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) * tk_d1->x[i]);
@@ -184,7 +184,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 		gsl_spline_init(tk_d1, phispline->x, temp1, phispline->size);
 		gsl_spline_init(tk_d2, phispline->x, temp2, phispline->size);
 
-		for (i = 0; i < tk_t1->size; i++)
+		for(i = 0; i < tk_t1->size; i++)
 			temp2[i] = -4.2018325 * rescale * tk_t1->y[i] * M_PI * sqrt(Pk_primordial(tk_t1->x[i] * cosmo.h / sim.boxsize, ic) / tk_t1->x[i]) / tk_t1->x[i];
 		gsl_spline_free(tk_t1);
 		tk_t1 = gsl_spline_alloc(gsl_interp_cspline, phispline->size);
@@ -242,19 +242,19 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 
 	do
 	{
-	    if (cycle > 0 && (1. / a < ic.z_relax + 1. || 1. / a <= sim.z_in + 1.))
+	    if(cycle > 0 && (1. / a < ic.z_relax + 1. || 1. / a <= sim.z_in + 1.))
 	    {
-			if (relax_cycles == 0) // initialize cold species
+			if(relax_cycles == 0) // initialize cold species
 			{
 				loadHomogeneousTemplate(ic.pclfile[0], sim.numpcl[0], pcldata);
 
-				if (pcldata == NULL)
+				if(pcldata == NULL)
 				{
 					COUT << " error: particle data was empty!" << endl;
 					parallel.abortForce();
 				}
 
-				if (ic.flags & ICFLAG_CORRECT_DISPLACEMENT)
+				if(ic.flags & ICFLAG_CORRECT_DISPLACEMENT)
 					generateCICKernel(*source, sim.numpcl[0], pcldata, ic.numtile[0]);
 				else
 					generateCICKernel(*source);
@@ -263,7 +263,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 
 				loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_d2, NULL, sim.boxsize, (1. / a) - 1., cosmo.h);
 
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp1[i] = -tk_d1->y[i] * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 
 				phispline2 = gsl_spline_alloc(gsl_interp_cspline, tk_d1->size);
@@ -273,20 +273,20 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 
 				loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_t1, "cdm", sim.boxsize, (1. / a) - 1., cosmo.h);
 
-				if (sim.baryon_flag > 0)
+				if(sim.baryon_flag > 0)
 				{
 					loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d2, tk_t2, "b", sim.boxsize, (1. / a) - 1., cosmo.h);
 
-					if (tk_d2->size != tk_d1->size)
+					if(tk_d2->size != tk_d1->size)
 					{
 						COUT << " error: baryon transfer function line number mismatch!" << endl;
 						parallel.abortForce();
 					}
 				}
 
-				if (sim.baryon_flag == 2)
+				if(sim.baryon_flag == 2)
 				{
-					for (i = 0; i < tk_d1->size; i++)
+					for(i = 0; i < tk_d1->size; i++)
 					{
 						temp1[i] = -3. * phispline2->y[i] - ((cosmo.Omega_cdm * tk_d1->y[i] + cosmo.Omega_b * tk_d2->y[i]) / (cosmo.Omega_cdm + cosmo.Omega_b)) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 						temp2[i] = -a * ((cosmo.Omega_cdm * tk_t1->y[i] + cosmo.Omega_b * tk_t2->y[i]) / (cosmo.Omega_cdm + cosmo.Omega_b)) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
@@ -301,11 +301,11 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 					gsl_spline_free(tk_t2);
 				}
 
-				if (sim.baryon_flag == 3)
+				if(sim.baryon_flag == 3)
 				{
-					if (8. * cosmo.Omega_b / (cosmo.Omega_cdm + cosmo.Omega_b) > 1.)
+					if(8. * cosmo.Omega_b / (cosmo.Omega_cdm + cosmo.Omega_b) > 1.)
 					{
-						for (i = 0; i < tk_d1->size; i++)
+						for(i = 0; i < tk_d1->size; i++)
 						{
 							temp1[i] = -3. * phispline2->y[i] - ((8. * cosmo.Omega_cdm * tk_d1->y[i] + (7. * cosmo.Omega_b - cosmo.Omega_cdm) * tk_d2->y[i]) / (cosmo.Omega_cdm + cosmo.Omega_b) / 7.) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 							temp2[i] = -a * ((8. * cosmo.Omega_cdm * tk_t1->y[i] + (7. * cosmo.Omega_b - cosmo.Omega_cdm) * tk_t2->y[i]) / (cosmo.Omega_cdm + cosmo.Omega_b) / 7.) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
@@ -319,7 +319,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 					}
 					else
 					{
-						for (i = 0; i < tk_d1->size; i++)
+						for(i = 0; i < tk_d1->size; i++)
 						{
 							temp1[i] = -3. * phispline2->y[i] - (((cosmo.Omega_cdm - 7. * cosmo.Omega_b) * tk_d1->y[i] + 8. * cosmo.Omega_b * tk_d2->y[i]) / (cosmo.Omega_cdm + cosmo.Omega_b)) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 							temp2[i] = -a * (((cosmo.Omega_cdm - 7. * cosmo.Omega_b) * tk_t1->y[i] + 8. * cosmo.Omega_b * tk_t2->y[i]) / (cosmo.Omega_cdm + cosmo.Omega_b)) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
@@ -333,9 +333,9 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 					}
 				}
 
-				if (sim.baryon_flag == 1 || (sim.baryon_flag == 3 && 8. * cosmo.Omega_b / (cosmo.Omega_cdm + cosmo.Omega_b) > 1.))
+				if(sim.baryon_flag == 1 || (sim.baryon_flag == 3 && 8. * cosmo.Omega_b / (cosmo.Omega_cdm + cosmo.Omega_b) > 1.))
 				{
-					for (i = 0; i < tk_d1->size; i++)
+					for(i = 0; i < tk_d1->size; i++)
 					{
 						temp1[i] = -3. * phispline2->y[i] - tk_d2->y[i] * M_PI * sqrt(Pk_primordial(tk_d2->x[i] * cosmo.h / sim.boxsize, ic) / tk_d2->x[i]) / tk_d2->x[i];
 						temp2[i] = -a * tk_t2->y[i] * M_PI * sqrt(Pk_primordial(tk_d2->x[i] * cosmo.h / sim.boxsize, ic) / tk_d2->x[i]) / tk_d2->x[i];
@@ -348,9 +348,9 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 					gsl_spline_init(tk_t2, tk_d1->x, temp2, tk_d1->size);
 				}
 
-				if (sim.baryon_flag < 2 || (sim.baryon_flag == 3 && 8. * cosmo.Omega_b / (cosmo.Omega_cdm + cosmo.Omega_b) <= 1.))
+				if(sim.baryon_flag < 2 || (sim.baryon_flag == 3 && 8. * cosmo.Omega_b / (cosmo.Omega_cdm + cosmo.Omega_b) <= 1.))
 				{
-					for (i = 0; i < tk_d1->size; i++)
+					for(i = 0; i < tk_d1->size; i++)
 					{
 						temp1[i] = -3. * phispline2->y[i] - tk_d1->y[i] * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 						temp2[i] = -a * tk_t1->y[i] * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
@@ -365,7 +365,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 
 				gsl_spline_free(phispline2);
 
-				if ((sim.baryon_flag == 1 && !(ic.flags & ICFLAG_CORRECT_DISPLACEMENT)) || sim.baryon_flag == 3)
+				if((sim.baryon_flag == 1 && !(ic.flags & ICFLAG_CORRECT_DISPLACEMENT)) || sim.baryon_flag == 3)
 				{
 					generateDisplacementField(*scalarFT, 0., tk_d2, (unsigned int) ic.seed, ic.flags & ICFLAG_KSPHERE);
 					gsl_spline_free(tk_d2);
@@ -381,7 +381,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 				phi->updateHalo();
 
 				strcpy(pcls_cdm_info.type_name, "part_simple");
-				if (sim.baryon_flag == 1)
+				if(sim.baryon_flag == 1)
 					pcls_cdm_info.mass = cosmo.Omega_cdm / (Real) (sim.numpcl[0]*(long)ic.numtile[0]*(long)ic.numtile[0]*(long)ic.numtile[0]);
 				else
 					pcls_cdm_info.mass = (cosmo.Omega_cdm + cosmo.Omega_b) / (Real) (sim.numpcl[0]*(long)ic.numtile[0]*(long)ic.numtile[0]*(long)ic.numtile[0]);
@@ -391,7 +391,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 
 				initializeParticlePositions(sim.numpcl[0], pcldata, ic.numtile[0], *pcls_cdm);
 				i = MAX;
-				if (sim.baryon_flag == 3)
+				if(sim.baryon_flag == 3)
 					pcls_cdm->moveParticles(displace_pcls_ic_basic, 1., ic_fields, 2, NULL, &max_displacement, &i, 1);
 				else
 					pcls_cdm->moveParticles(displace_pcls_ic_basic, 1., &phi, 1, NULL, &max_displacement, &i, 1);
@@ -402,17 +402,17 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 
 				free(pcldata);
 
-				if (sim.baryon_flag == 1)
+				if(sim.baryon_flag == 1)
 				{
 					loadHomogeneousTemplate(ic.pclfile[1], sim.numpcl[1], pcldata);
 
-					if (pcldata == NULL)
+					if(pcldata == NULL)
 					{
 						COUT << " error: particle data was empty!" << endl;
 						parallel.abortForce();
 					}
 
-					if (ic.flags & ICFLAG_CORRECT_DISPLACEMENT)
+					if(ic.flags & ICFLAG_CORRECT_DISPLACEMENT)
 					{
 						generateCICKernel(*chi, sim.numpcl[1], pcldata, ic.numtile[1]);
 						plan_chi->execute(FFT_FORWARD);
@@ -439,12 +439,12 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 					free(pcldata);
 				}
 
-				if (ic.flags & ICFLAG_CORRECT_DISPLACEMENT)
+				if(ic.flags & ICFLAG_CORRECT_DISPLACEMENT)
 					generateCICKernel(*source);
 
 				plan_source->execute(FFT_FORWARD);
 
-				if (sim.baryon_flag == 1 || sim.baryon_flag == 3)
+				if(sim.baryon_flag == 1 || sim.baryon_flag == 3)
 				{
 					generateDisplacementField(*scalarFT, 0., tk_t2, (unsigned int) ic.seed, ic.flags & ICFLAG_KSPHERE, 0);
 					plan_chi->execute(FFT_BACKWARD);
@@ -458,29 +458,29 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 				phi->updateHalo();
 				gsl_spline_free(tk_t1);
 
-				if (sim.baryon_flag == 3)
+				if(sim.baryon_flag == 3)
 					maxvel[0] = pcls_cdm->updateVel(initialize_q_ic_basic, 1., ic_fields, 2) / a;
 				else
 					maxvel[0] = pcls_cdm->updateVel(initialize_q_ic_basic, 1., &phi, 1) / a;
 
-				if (sim.baryon_flag == 1)
+				if(sim.baryon_flag == 1)
 					maxvel[1] = pcls_b->updateVel(initialize_q_ic_basic, 1., &chi, 1) / a;
 
-				if (sim.baryon_flag > 1) sim.baryon_flag = 0;
+				if(sim.baryon_flag > 1) sim.baryon_flag = 0;
 
 				generateRealization(*scalarFT, 0., phispline, (unsigned int) ic.seed, ic.flags & ICFLAG_KSPHERE, 0);
 				plan_phi->execute(FFT_BACKWARD);
 				phi->updateHalo();
 
-				if (1. / a <= sim.z_in + 1.)
+				if(1. / a <= sim.z_in + 1.)
 				{
 					generateRealization(*scalarFT, 0., chispline, (unsigned int) ic.seed, ic.flags & ICFLAG_KSPHERE, 0);
 					plan_chi->execute(FFT_BACKWARD);
 					chi->updateHalo();
 
-					for (p = 0; p < cosmo.num_ncdm; p++)
+					for(p = 0; p < cosmo.num_ncdm; p++)
 					{
-						if (ic.numtile[1+sim.baryon_flag+p] < 1) maxvel[1+sim.baryon_flag+p] = 0;
+						if(ic.numtile[1+sim.baryon_flag+p] < 1) maxvel[1+sim.baryon_flag+p] = 0;
 						else maxvel[1+sim.baryon_flag+p] = pcls_ncdm[p].updateVel(update_q, dtau_old / 2., ic_fields, 2, &a);
 					}
 
@@ -489,46 +489,46 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 				}
 			}
 
-			for (i = 0; i < phispline->size; i++)
+			for(i = 0; i < phispline->size; i++)
 				temp1[i] = 0.;
 
-			if (cosmo.Omega_g > 0)
+			if(cosmo.Omega_g > 0)
 			{
 				loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_t1, "g", sim.boxsize, ic.z_ic, cosmo.h);
 
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp1[i] -= tk_d1->y[i] * cosmo.Omega_g * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i] / a;
 
 				gsl_spline_free(tk_d1);
 				gsl_spline_free(tk_t1);
 			}
 
-			if (cosmo.Omega_ur > 0)
+			if(cosmo.Omega_ur > 0)
 			{
 				loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_t1, "ur", sim.boxsize, ic.z_ic, cosmo.h);
 
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp1[i] -= tk_d1->y[i] * cosmo.Omega_ur * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i] / a;
 
 				gsl_spline_free(tk_d1);
 				gsl_spline_free(tk_t1);
 			}
 
-			for (p = 0; p < cosmo.num_ncdm; p++)
+			for(p = 0; p < cosmo.num_ncdm; p++)
 			{
 				sprintf(ncdm_name, "ncdm[%d]", p);
 				loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_t1, ncdm_name, sim.boxsize, ic.z_ic, cosmo.h);
 
 				rescale = bg_ncdm(a, cosmo, p);
 
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp1[i] -= tk_d1->y[i] * rescale * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 
 				gsl_spline_free(tk_d1);
 				gsl_spline_free(tk_t1);
 			}
 
-			if (cosmo.num_ncdm > 0 || cosmo.Omega_rad > 0)
+			if(cosmo.num_ncdm > 0 || cosmo.Omega_rad > 0)
 			{
 				tk_d1 = gsl_spline_alloc(gsl_interp_cspline, phispline->size);
 				gsl_spline_init(tk_d1, phispline->x, temp1, phispline->size);
@@ -538,10 +538,10 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 			}
 
 			projection_init(source);
-			if (cosmo.num_ncdm > 0 || cosmo.Omega_rad > 0)
+			if(cosmo.num_ncdm > 0 || cosmo.Omega_rad > 0)
 				plan_source->execute(FFT_BACKWARD);
 	        	projection_T00_project(pcls_cdm, source, a, phi);
-			if (sim.baryon_flag)
+			if(sim.baryon_flag)
 				projection_T00_project(pcls_b, source, a, phi);
 			projection_T00_comm(source);
 
@@ -555,7 +555,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 
 		loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_d2, NULL, sim.boxsize, (1. / a) - 1., cosmo.h);
 
-		for (i = 0; i < tk_d1->size; i++)
+		for(i = 0; i < tk_d1->size; i++)
 		{
 			temp1[i] = -tk_d1->y[i] * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 			temp2[i] = (tk_d2->y[i] - tk_d1->y[i]) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
@@ -572,7 +572,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 		generateRealization(*scalarFT, 0., phispline, (unsigned int) ic.seed, ic.flags & ICFLAG_KSPHERE, 0);
 		plan_phi->execute(FFT_BACKWARD);
 
-		if (relax_cycles == 1)
+		if(relax_cycles == 1)
 	    {
 	    	plan_phi->execute(FFT_FORWARD);
 			extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, false, KTYPE_LINEAR);
@@ -584,14 +584,14 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 			writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI, filename, "power spectrum of phi", a);
 		}
 
-	    if (relax_cycles > 0)
+	    if(relax_cycles > 0)
 	    {
-	        for (x.first(); x.test(); x.next())     // interpolate between linear and nonlinear solution
+	        for(x.first(); x.test(); x.next())     // interpolate between linear and nonlinear solution
 	            (*phi)(x) = (((1. / (sim.z_in + 1.)) - a) * (*phi)(x) + (a - (1. / (ic.z_relax + 1.))) * (*chi)(x)) / ((1. / (sim.z_in + 1.)) - (1. / (ic.z_relax + 1.)));
 		}
 		phi->updateHalo();
 
-		if (cycle == 0)
+		if(cycle == 0)
 		{
 			sprintf(filename, "_ICinit_phi.h5");
 			phi->saveHDF5(h5filename + filename);
@@ -605,11 +605,11 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 		generateRealization(*scalarFT, 0., chispline, (unsigned int) ic.seed, ic.flags & ICFLAG_KSPHERE, 0);
 		plan_chi->execute(FFT_BACKWARD);
 
-		if (relax_cycles > 0)
+		if(relax_cycles > 0)
 	    {
 			projection_init(Sij);
 	        projection_Tij_project(pcls_cdm, Sij, a, phi);
-			if (sim.baryon_flag)
+			if(sim.baryon_flag)
 				projection_Tij_project(pcls_b, Sij, a, phi);
 	        projection_Tij_comm(Sij);
 
@@ -618,36 +618,36 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
             projectFTscalar(*SijFT, *scalarFT);
             plan_source->execute(FFT_BACKWARD);	     // nonlinear chi temporarily stored in source
 
-			for (x.first(); x.test(); x.next())     // interpolate between linear and nonlinear solution
+			for(x.first(); x.test(); x.next())     // interpolate between linear and nonlinear solution
 	            (*chi)(x) += (a - (1. / (ic.z_relax + 1.))) * (*source)(x) / ((1. / (sim.z_in + 1.)) - (1. / (ic.z_relax + 1.)));
 	    }
 		chi->updateHalo();
 
-		if (relax_cycles > 0)
+		if(relax_cycles > 0)
 		{
 	    	maxvel[0] = pcls_cdm->updateVel(update_q, (dtau + dtau_old) / 2., ic_fields, 1, &a);
-			if (sim.baryon_flag)
+			if(sim.baryon_flag)
 				maxvel[1] = pcls_b->updateVel(update_q, (dtau + dtau_old) / 2., ic_fields, 1, &a);
 		}
 
-	    for (p = 0; p < cosmo.num_ncdm; p++)
+	    for(p = 0; p < cosmo.num_ncdm; p++)
 		{
-			if (ic.numtile[((sim.baryon_flag == 1) ? 2 : 1)+p] < 1)	maxvel[((sim.baryon_flag == 1) ? 2 : 1)+p] = 0;
+			if(ic.numtile[((sim.baryon_flag == 1) ? 2 : 1)+p] < 1)	maxvel[((sim.baryon_flag == 1) ? 2 : 1)+p] = 0;
 			else maxvel[((sim.baryon_flag == 1) ? 2 : 1)+p] = pcls_ncdm[p].updateVel(update_q, (dtau + dtau_old) / 2., ic_fields, 2, &a);
 		}
 
 		rungekutta4bg(a, fourpiG, cosmo, 0.5 * dtau);
 
-		if (relax_cycles > 0)
+		if(relax_cycles > 0)
 		{
 	    	pcls_cdm->moveParticles(update_pos, dtau, ic_fields, 0, &a);
-			if (sim.baryon_flag)
+			if(sim.baryon_flag)
 				pcls_b->moveParticles(update_pos, dtau, ic_fields, 0, &a);
 		}
 
-	    for (p = 0; p < cosmo.num_ncdm; p++)
+	    for(p = 0; p < cosmo.num_ncdm; p++)
 		{
-			if (ic.numtile[((sim.baryon_flag == 1) ? 2 : 1)+p] < 1) continue;
+			if(ic.numtile[((sim.baryon_flag == 1) ? 2 : 1)+p] < 1) continue;
 		        pcls_ncdm[p].moveParticles(update_pos, dtau, ic_fields, 2, &a);
 		}
 
@@ -656,27 +656,27 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 
 	    dtau_old = dtau;
 
-		if (relax_cycles > 0 && ic.Cf > sim.Cf)
+		if(relax_cycles > 0 && ic.Cf > sim.Cf)
 	        dtau = (((1. / (sim.z_in + 1.)) - a) * ic.Cf * dx + (a - (1. / (ic.z_relax + 1.))) * ((sim.Cf * dx < sim.steplimit / Hconf(a, fourpiG, cosmo)) ? (sim.Cf * dx) : (sim.steplimit / Hconf(a, fourpiG, cosmo)))) / ((1. / (sim.z_in + 1.)) - (1. / (ic.z_relax + 1.)));
-		else if (relax_cycles > 0 && ic.Cf * dx > sim.steplimit / Hconf(a, fourpiG, cosmo))
+		else if(relax_cycles > 0 && ic.Cf * dx > sim.steplimit / Hconf(a, fourpiG, cosmo))
 	        dtau = (((1. / (sim.z_in + 1.)) - a) * ic.Cf * dx + (a - (1. / (ic.z_relax + 1.))) * sim.steplimit / Hconf(a, fourpiG, cosmo)) / ((1. / (sim.z_in + 1.)) - (1. / (ic.z_relax + 1.)));
 		else
 			dtau = ic.Cf * dx;
 
 	    cycle++;
 	}
-	while (1. / a > sim.z_in + 1. || relax_cycles == 0);
+	while(1. / a > sim.z_in + 1. || relax_cycles == 0);
 
 	COUT << " needed " << cycle << " steps and " << relax_cycles << " nonlinear relaxation operations." << endl;
 
-	if (sim.relativistic_flag == 0)
+	if(sim.relativistic_flag == 0)
 	{
 		COUT << " gravity theory = Newton: computing gauge transformation..." << endl;
 
 		loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_t1, "tot", sim.boxsize, (1. / a) - 1., cosmo.h);
 		loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d2, tk_t2, NULL, sim.boxsize, (1. / a) - 1., cosmo.h);
 
-		for (i = 0; i < tk_d2->size; i++)
+		for(i = 0; i < tk_d2->size; i++)
 			temp1[i] = -tk_d2->y[i] * M_PI * sqrt(Pk_primordial(tk_d2->x[i] * cosmo.h / sim.boxsize, ic) / tk_d2->x[i]) / tk_d2->x[i];
 		gsl_spline_free(phispline);
 		phispline = gsl_spline_alloc(gsl_interp_cspline, tk_d2->size);
@@ -686,7 +686,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 
 		rescale = 3. * Hconf(a, fourpiG, cosmo)  * M_PI;
 
-		for (i = 0; i < tk_d1->size; i++)
+		for(i = 0; i < tk_d1->size; i++)
 			temp1[i] = 3. * phispline->y[i] - rescale * tk_t1->y[i] * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i] / tk_d1->x[i] / tk_d1->x[i];
 
 		gsl_spline_free(tk_d1);
@@ -694,7 +694,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 		tk_d1 = gsl_spline_alloc(gsl_interp_cspline, phispline->size);
 		gsl_spline_init(tk_d1, phispline->x, temp1, phispline->size);
 
-		if (ic.flags & ICFLAG_CORRECT_DISPLACEMENT)
+		if(ic.flags & ICFLAG_CORRECT_DISPLACEMENT)
 		{
 			loadHomogeneousTemplate(ic.pclfile[0], tmp, pcldata);
 			generateCICKernel(*source, tmp, pcldata, ic.numtile[0]);
@@ -710,9 +710,9 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 		i = MAX;
 		pcls_cdm->moveParticles(displace_pcls_ic_basic, 1., &source, 1, NULL, &max_displacement, &i, 1);
 		COUT << " Poisson gauge -> N-body gauge, cdm particles maximum displacement = " << max_displacement * sim.numpts << " lattice units." << endl;
-		if (sim.baryon_flag)
+		if(sim.baryon_flag)
 		{
-			if (ic.flags & ICFLAG_CORRECT_DISPLACEMENT)
+			if(ic.flags & ICFLAG_CORRECT_DISPLACEMENT)
 			{
 				loadHomogeneousTemplate(ic.pclfile[1], tmp, pcldata);
 				generateCICKernel(*source, tmp, pcldata, ic.numtile[1]);
@@ -725,7 +725,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 			pcls_b->moveParticles(displace_pcls_ic_basic, 1., &source, 1, NULL, &max_displacement, &i, 1);
 			COUT << " Poisson gauge -> N-body gauge, baryon particles maximum displacement = " << max_displacement * sim.numpts << " lattice units." << endl;
 		}
-		if (cosmo.num_ncdm > 0 && ic.flags & ICFLAG_CORRECT_DISPLACEMENT)
+		if(cosmo.num_ncdm > 0 && ic.flags & ICFLAG_CORRECT_DISPLACEMENT)
 		{
 			generateCICKernel(*source);
 			plan_source->execute(FFT_FORWARD);
@@ -733,16 +733,16 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 			plan_source->execute(FFT_BACKWARD);
 			source->updateHalo();
 		}
-		for (p = 0; p < cosmo.num_ncdm; p++)
+		for(p = 0; p < cosmo.num_ncdm; p++)
 		{
-			if (ic.numtile[((sim.baryon_flag == 1) ? 2 : 1)+p] < 1) continue;
+			if(ic.numtile[((sim.baryon_flag == 1) ? 2 : 1)+p] < 1) continue;
 			pcls_ncdm[p].moveParticles(displace_pcls_ic_basic, 1., &source, 1, NULL, &max_displacement, &i, 1);
 			COUT << " Poisson gauge -> N-body gauge, ncdm species " << p+1 << " maximum displacement = " << max_displacement * sim.numpts << " lattice units." << endl;
 		}
 
 		loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d2, tk_t2, NULL, sim.boxsize, (1. / (0.99 * a)) - 1., cosmo.h);
 
-		for (i = 0; i < tk_d2->size; i++)
+		for(i = 0; i < tk_d2->size; i++)
 			temp1[i] = -tk_d2->y[i] * M_PI * sqrt(Pk_primordial(tk_d2->x[i] * cosmo.h / sim.boxsize, ic) / tk_d2->x[i]) / tk_d2->x[i];
 		phispline2 = gsl_spline_alloc(gsl_interp_cspline, tk_d2->size);
 		gsl_spline_init(phispline2, tk_d2->x, temp1, tk_d2->size);
@@ -754,7 +754,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 		rescale = 3. * Hconf(0.99 * a, fourpiG, cosmo) * M_PI;
 		mean_q = -99.5 * Hconf(0.995 * a, fourpiG, cosmo);
 
-		for (i = 0; i < tk_d2->size; i++)
+		for(i = 0; i < tk_d2->size; i++)
 			temp1[i] = mean_q * (tk_d1->y[i] - (3. * phispline2->y[i] - rescale * tk_t2->y[i] * sqrt(Pk_primordial(tk_d2->x[i] * cosmo.h / sim.boxsize, ic) / tk_d2->x[i]) / tk_d2->x[i] / tk_d2->x[i] / tk_d2->x[i]));
 		gsl_spline_free(tk_d2);
 		gsl_spline_free(tk_t2);
@@ -773,15 +773,15 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 		COUT << " Poisson gauge -> N-body gauge, cdm particles maximum velocity: " << maxvel[0] << " -> ";
 		maxvel[0] = pcls_cdm->updateVel(update_q_Newton, 1., &source, 1, &a);
 		COUT << maxvel[0] << endl;
-		if (sim.baryon_flag)
+		if(sim.baryon_flag)
 		{
 			COUT << " Poisson gauge -> N-body gauge, baryon particles maximum velocity: " << maxvel[1] << " -> ";
 			maxvel[1] = pcls_b->updateVel(update_q_Newton, 1., &source, 1, &a);
 			COUT << maxvel[1] << endl;
 		}
-		for (p = 0; p < cosmo.num_ncdm; p++)
+		for(p = 0; p < cosmo.num_ncdm; p++)
 		{
-			if (ic.numtile[((sim.baryon_flag == 1) ? 2 : 1)+p] < 1)
+			if(ic.numtile[((sim.baryon_flag == 1) ? 2 : 1)+p] < 1)
 			{
 				maxvel[p+1+sim.baryon_flag] = 0;
 				continue;
@@ -793,9 +793,9 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 
 		projection_init(source);
 		scalarProjectionCIC_project(pcls_cdm, source);
-		for (p = 0; p < cosmo.num_ncdm; p++)
+		for(p = 0; p < cosmo.num_ncdm; p++)
 		{
-			if (ic.numtile[((sim.baryon_flag == 1) ? 2 : 1)+p] < 1) continue;
+			if(ic.numtile[((sim.baryon_flag == 1) ? 2 : 1)+p] < 1) continue;
 			scalarProjectionCIC_project(pcls_ncdm+p, source);
 		}
 		projection_T00_comm(source);
@@ -805,19 +805,19 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 		phi->updateHalo();
 	}
 
-	if (spectra_free(&class_spectra) == _FAILURE_)
+	if(spectra_free(&class_spectra) == _FAILURE_)
 	{
 		COUT << " error: calling spectra_free from CLASS library failed!" << endl << " following error message was passed: " << class_spectra.error_message << endl;
 		parallel.abortForce();
 	}
 
-	if (perturb_free(&class_perturbs) == _FAILURE_)
+	if(perturb_free(&class_perturbs) == _FAILURE_)
 	{
 		COUT << " error: calling perturb_free from CLASS library failed!" << endl << " following error message was passed: " << class_perturbs.error_message << endl;
 		parallel.abortForce();
 	}
 
-	if (background_free(&class_background) == _FAILURE_)
+	if(background_free(&class_background) == _FAILURE_)
 	{
 		COUT << " error: calling background_free from CLASS library failed!" << endl << " following error message was passed: " << class_background.error_message << endl;
 		parallel.abortForce();
@@ -836,7 +836,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 
 	projection_init(Bi);
 	projection_T0i_project(pcls_cdm, Bi, phi);
-	if (sim.baryon_flag)
+	if(sim.baryon_flag)
 		projection_T0i_project(pcls_b, Bi, phi);
 	projection_T0i_comm(Bi);
 	plan_Bi->execute(FFT_FORWARD);

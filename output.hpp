@@ -115,56 +115,32 @@ void writeSnapshots(
 	sprintf(filename, "%03d", snapcount);
 
 #ifdef EXTERNAL_IO
-	while (ioserver.openOstream()== OSTREAM_FAIL);
+	while(ioserver.openOstream()== OSTREAM_FAIL);
 
 	if(sim.out_snapshot & MASK_PCLS)
 	{
 		pcls_cdm->saveHDF5_server_open(h5filename + filename + "_cdm");
-		if(sim.baryon_flag)
-			pcls_b->saveHDF5_server_open(h5filename + filename + "_b");
-		for (i = 0; i < cosmo.num_ncdm; i++)
+		if(sim.baryon_flag) pcls_b->saveHDF5_server_open(h5filename + filename + "_b");
+		for(i=0; i<cosmo.num_ncdm; i++)
 		{
 			sprintf(buffer, "_ncdm%d", i);
 			pcls_ncdm[i].saveHDF5_server_open(h5filename + filename + buffer);
 		}
 	}
 
-	if(sim.out_snapshot & MASK_T00)
-		source->saveHDF5_server_open(h5filename + filename + "_T00");
-
-	if(sim.out_snapshot & MASK_B)
-		Bi->saveHDF5_server_open(h5filename + filename + "_B");
-
-	if(sim.out_snapshot & MASK_PHI)
-		phi->saveHDF5_server_open(h5filename + filename + "_phi");
-
-	if(sim.out_snapshot & MASK_XI)
-		xi->saveHDF5_server_open(h5filename + filename + "_xi");
-
-	if(sim.out_snapshot & MASK_LAPLACE_XI)
-			laplace_xi->saveHDF5_server_open(h5filename + filename + "_laplace_xi");
-
-	if(sim.out_snapshot & MASK_PHI_DDOT)
-			phi_ddot->saveHDF5_server_open(h5filename + filename + "_phi_ddot");
-
-	if(sim.out_snapshot & MASK_ZETA)
-		zeta->saveHDF5_server_open(h5filename + filename + "_zeta");
-
-	if(sim.out_snapshot & MASK_DELTAR)
-		deltaR->saveHDF5_server_open(h5filename + filename + "_deltaR");
-
-	if(sim.out_snapshot & MASK_DELTAT)
-		deltaR->saveHDF5_server_open(h5filename + filename + "_eightpiG_deltaT");
-
-	if(sim.out_snapshot & MASK_CHI)
-		chi->saveHDF5_server_open(h5filename + filename + "_chi");
-
-	if(sim.out_snapshot & MASK_HIJ)
-		Sij->saveHDF5_server_open(h5filename + filename + "_hij");
-
+	if(sim.out_snapshot & MASK_T00) source->saveHDF5_server_open(h5filename + filename + "_T00");
+	if(sim.out_snapshot & MASK_B) Bi->saveHDF5_server_open(h5filename + filename + "_B");
+	if(sim.out_snapshot & MASK_PHI) phi->saveHDF5_server_open(h5filename + filename + "_phi");
+	if(sim.out_snapshot & MASK_XI) xi->saveHDF5_server_open(h5filename + filename + "_xi");
+	if(sim.out_snapshot & MASK_LAPLACE_XI) laplace_xi->saveHDF5_server_open(h5filename + filename + "_laplace_xi");
+  if(sim.out_snapshot & MASK_PHI_DDOT) phi_ddot->saveHDF5_server_open(h5filename + filename + "_phi_ddot");
+	if(sim.out_snapshot & MASK_ZETA) zeta->saveHDF5_server_open(h5filename + filename + "_zeta");
+	if(sim.out_snapshot & MASK_DELTAR) deltaR->saveHDF5_server_open(h5filename + filename + "_deltaR");
+	if(sim.out_snapshot & MASK_DELTAT) deltaR->saveHDF5_server_open(h5filename + filename + "_eightpiG_deltaT");
+	if(sim.out_snapshot & MASK_CHI) chi->saveHDF5_server_open(h5filename + filename + "_chi");
+	if(sim.out_snapshot & MASK_HIJ) Sij->saveHDF5_server_open(h5filename + filename + "_hij");
 #ifdef CHECK_B
-	if(sim.out_snapshot & MASK_B)
-		Bi_check->saveHDF5_server_open(h5filename + filename + "_B_check");
+	if(sim.out_snapshot & MASK_B) Bi_check->saveHDF5_server_open(h5filename + filename + "_B_check");
 #endif
 #endif
 
@@ -172,19 +148,15 @@ void writeSnapshots(
 	{
 		projection_init(source);
 		scalarProjectionCIC_project(pcls_cdm, source);
-		if(sim.baryon_flag)
-			scalarProjectionCIC_project(pcls_b, source);
-		for (i = 0; i < cosmo.num_ncdm; i++)
-			scalarProjectionCIC_project(pcls_ncdm+i, source);
+		if(sim.baryon_flag) scalarProjectionCIC_project(pcls_b, source);
+		for(i=0; i<cosmo.num_ncdm; i++) scalarProjectionCIC_project(pcls_ncdm+i, source);
 		scalarProjectionCIC_comm(source);
 	}
 
 	if(sim.out_snapshot & MASK_RBARE)
 	{
-		if(sim.downgrade_factor > 1)
-			source->saveHDF5_coarseGrain3D(h5filename + filename + "_rhoN.h5", sim.downgrade_factor);
-		else
-			source->saveHDF5(h5filename + filename + "_rhoN.h5");
+		if(sim.downgrade_factor > 1) source->saveHDF5_coarseGrain3D(h5filename + filename + "_rhoN.h5", sim.downgrade_factor);
+		else source->saveHDF5(h5filename + filename + "_rhoN.h5");
 	}
 
 	if(sim.out_snapshot & MASK_POT)
@@ -192,10 +164,8 @@ void writeSnapshots(
 		plan_source->execute(FFT_FORWARD);
 		solveModifiedPoissonFT(*scalarFT, *scalarFT, fourpiG / a);
 		plan_source->execute(FFT_BACKWARD);
-		if(sim.downgrade_factor > 1)
-			source->saveHDF5_coarseGrain3D(h5filename + filename + "_psiN.h5", sim.downgrade_factor);
-		else
-			source->saveHDF5(h5filename + filename + "_psiN.h5");
+		if(sim.downgrade_factor > 1) source->saveHDF5_coarseGrain3D(h5filename + filename + "_psiN.h5", sim.downgrade_factor);
+		else source->saveHDF5(h5filename + filename + "_psiN.h5");
 	}
 
 	if(sim.out_snapshot & MASK_T00)
@@ -204,18 +174,14 @@ void writeSnapshots(
 		if(sim.relativistic_flag > 0)
 		{
 			projection_T00_project(pcls_cdm, source, a, phi);
-			if(sim.baryon_flag)
-				projection_T00_project(pcls_b, source, a, phi);
-			for (i = 0; i < cosmo.num_ncdm; i++)
-				projection_T00_project(pcls_ncdm+i, source, a, phi);
+			if(sim.baryon_flag) projection_T00_project(pcls_b, source, a, phi);
+			for(i=0; i<cosmo.num_ncdm; i++) projection_T00_project(pcls_ncdm+i, source, a, phi);
 		}
 		else
 		{
 			scalarProjectionCIC_project(pcls_cdm, source);
-			if(sim.baryon_flag)
-				scalarProjectionCIC_project(pcls_b, source);
-			for (i = 0; i < cosmo.num_ncdm; i++)
-				scalarProjectionCIC_project(pcls_ncdm+i, source);
+			if(sim.baryon_flag) scalarProjectionCIC_project(pcls_b, source);
+			for(i=0; i<cosmo.num_ncdm; i++) scalarProjectionCIC_project(pcls_ncdm+i, source);
 		}
 		projection_T00_comm(source);
 #ifdef EXTERNAL_IO
@@ -234,7 +200,7 @@ void writeSnapshots(
 		{
 			plan_Bi->execute(FFT_BACKWARD);
 		}
-		for (x.first(); x.test(); x.next())
+		for(x.first(); x.test(); x.next())
 		{
 			(*Bi)(x,0) /= a * a * sim.numpts;
 			(*Bi)(x,1) /= a * a * sim.numpts;
@@ -420,7 +386,7 @@ void writeSnapshots(
 		{
 			projection_Tij_project(pcls_b, Sij, a, phi);
 		}
-		for (i = 0; i < cosmo.num_ncdm; i++)
+		for(i=0; i<cosmo.num_ncdm; i++)
 		{
 			projection_Tij_project(pcls_ncdm+i, Sij, a, phi);
 		}
@@ -441,25 +407,12 @@ void writeSnapshots(
 	{
 		projection_init(Bi);
 		projection_T0i_project(pcls_cdm, Bi, phi);
-		if(sim.baryon_flag)
-		{
-			projection_T0i_project(pcls_b, Bi, phi);
-		}
-		for (i = 0; i < cosmo.num_ncdm; i++)
-		{
-			projection_T0i_project(pcls_ncdm+i, Bi, phi);
-		}
-
+		if(sim.baryon_flag) projection_T0i_project(pcls_b, Bi, phi);
+		for(i=0; i<cosmo.num_ncdm; i++) projection_T0i_project(pcls_ncdm+i, Bi, phi);
 		projection_T0i_comm(Bi);
 
-		if(sim.downgrade_factor > 1)
-		{
-			Bi->saveHDF5_coarseGrain3D(h5filename + filename + "_p.h5", sim.downgrade_factor);
-		}
-		else
-		{
-			Bi->saveHDF5(h5filename + filename + "_p.h5");
-		}
+		if(sim.downgrade_factor > 1) Bi->saveHDF5_coarseGrain3D(h5filename + filename + "_p.h5", sim.downgrade_factor);
+		else Bi->saveHDF5(h5filename + filename + "_p.h5");
 
 		if(sim.relativistic_flag > 0)
 		{
@@ -475,22 +428,15 @@ void writeSnapshots(
 		{
 			projection_init(Bi_check);
 			projection_T0i_project(pcls_cdm, Bi_check, phi);
-			if(sim.baryon_flag)
-			{
-				projection_T0i_project(pcls_b, Bi_check, phi);
-			}
-			for (i = 0; i < cosmo.num_ncdm; i++)
-			{
-				projection_T0i_project(pcls_ncdm+i, Bi_check, phi);
-			}
-
+			if(sim.baryon_flag) projection_T0i_project(pcls_b, Bi_check, phi);
+			for(i=0; i<cosmo.num_ncdm; i++) projection_T0i_project(pcls_ncdm+i, Bi_check, phi);
 			projection_T0i_comm(Bi_check);
 			plan_Bi_check->execute(FFT_FORWARD);
 			projectFTvector(*BiFT_check, *BiFT_check, fourpiG / (double) sim.numpts / (double) sim.numpts);
 		}
 		plan_Bi_check->execute(FFT_BACKWARD);
 
-		for (x.first(); x.test(); x.next())
+		for(x.first(); x.test(); x.next())
 		{
 			(*Bi_check)(x,0) /= a * a * sim.numpts;
 			(*Bi_check)(x,1) /= a * a * sim.numpts;
@@ -499,14 +445,8 @@ void writeSnapshots(
 #ifdef EXTERNAL_IO
 		Bi_check->saveHDF5_server_write(NUMBER_OF_IO_FILES);
 #else
-		if(sim.downgrade_factor > 1)
-		{
-			Bi_check->saveHDF5_coarseGrain3D(h5filename + filename + "_B_check.h5", sim.downgrade_factor);
-		}
-		else
-		{
-			Bi_check->saveHDF5(h5filename + filename + "_B_check.h5");
-		}
+		if(sim.downgrade_factor > 1) Bi_check->saveHDF5_coarseGrain3D(h5filename + filename + "_B_check.h5", sim.downgrade_factor);
+		else Bi_check->saveHDF5(h5filename + filename + "_B_check.h5");
 #endif
 	}
 #endif
@@ -526,9 +466,9 @@ void writeSnapshots(
 		hdr.flag_feedback = 0;
 		hdr.flag_age = 0;
 		hdr.flag_metals = 0;
-		for(i = 0; i < 256 - 6 * 4 - 6 * 8 - 2 * 8 - 2 * 4 - 6 * 4 - 2 * 4 - 4 * 8 - 2 * 4 - 6 * 4; i++)
+		for(i=0; i<256 - 6 * 4 - 6 * 8 - 2 * 8 - 2 * 4 - 6 * 4 - 2 * 4 - 4 * 8 - 2 * 4 - 6 * 4; i++)
 		hdr.fill[i] = 0;
-		for(i = 0; i < 6; i++)
+		for(i=0; i<6; i++)
 		{
 			hdr.npart[i] = 0;
 			hdr.npartTotal[i] = 0;
@@ -577,7 +517,7 @@ void writeSnapshots(
 			pcls_b->saveGadget2(h5filename + filename + "_b", hdr, sim.tracer_factor[1], dtau_pos, dtau_pos + 0.5 * dtau_old, phi);
 		}
 
-		for(i = 0; i < cosmo.num_ncdm; i++)
+		for(i=0; i<cosmo.num_ncdm; i++)
 		{
 			if(sim.numpcl[1+sim.baryon_flag+i] == 0 || sim.tracer_factor[i+1+sim.baryon_flag] == 0) continue;
 			sprintf(buffer, "_ncdm%d", i);
@@ -598,15 +538,12 @@ void writeSnapshots(
 	{
 #ifdef EXTERNAL_IO
 		pcls_cdm->saveHDF5_server_write();
-		if(sim.baryon_flag)
-			pcls_b->saveHDF5_server_write();
-		for (i = 0; i < cosmo.num_ncdm; i++)
-			pcls_ncdm[i].saveHDF5_server_write();
+		if(sim.baryon_flag) pcls_b->saveHDF5_server_write();
+		for(i=0; i<cosmo.num_ncdm; i++) pcls_ncdm[i].saveHDF5_server_write();
 #else
 		pcls_cdm->saveHDF5(h5filename + filename + "_cdm", 1);
-		if(sim.baryon_flag)
-			pcls_b->saveHDF5(h5filename + filename + "_b", 1);
-		for (i = 0; i < cosmo.num_ncdm; i++)
+		if(sim.baryon_flag) pcls_b->saveHDF5(h5filename + filename + "_b", 1);
+		for(i=0; i<cosmo.num_ncdm; i++)
 		{
 			sprintf(buffer, "_ncdm%d", i);
 			pcls_ncdm[i].saveHDF5(h5filename + filename + buffer, 1);
@@ -724,11 +661,8 @@ void writeLightcones(
 	int io_group_size;
 	long pixcount = 0;
 
-	for(j = 0; j < 9*LIGHTCONE_MAX_FIELDS; j++)
-		pixbuf[j/9][j%9] = NULL;
-
-	for(j = 0; j < LIGHTCONE_MAX_FIELDS; j++)
-		outbuf[j] = NULL;
+	for(j=0; j<9*LIGHTCONE_MAX_FIELDS; j++) pixbuf[j/9][j%9] = NULL;
+	for(j=0; j<LIGHTCONE_MAX_FIELDS; j++) outbuf[j] = NULL;
 #endif
 
 	done_hij = 0;
@@ -736,21 +670,14 @@ void writeLightcones(
 	domain[0] = -0.5;
 	domain[1] = phi->lattice().coordSkip()[1] - 0.5;
 	domain[2] = phi->lattice().coordSkip()[0] - 0.5;
-	for(i = 0; i < 3; i++)
-		domain[i+3] = domain[i] + phi->lattice().sizeLocal(i) + 1.;
-
-	for(i = 0; i < 6; i++)
-		domain[i] /= (double) sim.numpts;
-
-	for(i = 0; i < sim.num_lightcone; i++)
+	for(i=0; i<3; i++) domain[i+3] = domain[i] + phi->lattice().sizeLocal(i) + 1.;
+	for(i=0; i<6; i++) domain[i] /= (double) sim.numpts;
+	for(i=0; i<sim.num_lightcone; i++)
 	{
 		if(parallel.isRoot())
 		{
-			if(sim.num_lightcone > 1)
-				sprintf(filename, "%s%s%d_info.dat", sim.output_path, sim.basename_lightcone, i);
-			else
-				sprintf(filename, "%s%s_info.dat", sim.output_path, sim.basename_lightcone);
-
+			if(sim.num_lightcone > 1) sprintf(filename, "%s%s%d_info.dat", sim.output_path, sim.basename_lightcone, i);
+			else sprintf(filename, "%s%s_info.dat", sim.output_path, sim.basename_lightcone);
 			outfile = fopen(filename, "a");
 			if(outfile == NULL)
 			{
@@ -848,24 +775,19 @@ void writeLightcones(
 			bytes = 0;
 			bytes2 = 0;
 
-			for(j = 0; j < 9; j++)
-				pixbuf_reserve[j] = PIXBUFFER;
-
+			for(j=0; j<9; j++) pixbuf_reserve[j] = PIXBUFFER;
 			if(sim.out_lightcone[i] & MASK_PHI)
 			{
-				for(j = 0; j < 9; j++)
-					pixbuf[LIGHTCONE_PHI_OFFSET][j] = (Real *) malloc(sizeof(Real) * PIXBUFFER);
+				for(j=0; j<9; j++) pixbuf[LIGHTCONE_PHI_OFFSET][j] = (Real *) malloc(sizeof(Real) * PIXBUFFER);
 			}
-
 			if(sim.out_lightcone[i] & MASK_CHI)
 			{
-				for(j = 0; j < 9; j++)
-					pixbuf[LIGHTCONE_CHI_OFFSET][j] = (Real *) malloc(sizeof(Real) * PIXBUFFER);
+				for(j=0; j<9; j++) pixbuf[LIGHTCONE_CHI_OFFSET][j] = (Real *) malloc(sizeof(Real) * PIXBUFFER);
 			}
 
 			if(sim.out_lightcone[i] & MASK_B)
 			{
-				for(j = 0; j < 9; j++)
+				for(j=0; j<9; j++)
 				{
 					pixbuf[LIGHTCONE_B_OFFSET][j] = (Real *) malloc(sizeof(Real) * PIXBUFFER);
 					pixbuf[LIGHTCONE_B_OFFSET+1][j] = (Real *) malloc(sizeof(Real) * PIXBUFFER);
@@ -875,7 +797,7 @@ void writeLightcones(
 
 			if(sim.out_lightcone[i] & MASK_HIJ)
 			{
-				for(j = 0; j < 9; j++)
+				for(j=0; j<9; j++)
 				{
 					pixbuf[LIGHTCONE_HIJ_OFFSET][j] = (Real *) malloc(sizeof(Real) * PIXBUFFER);
 					pixbuf[LIGHTCONE_HIJ_OFFSET+1][j] = (Real *) malloc(sizeof(Real) * PIXBUFFER);
@@ -952,25 +874,31 @@ void writeLightcones(
 				pixbatch_size[1].push_back((pixbatch_size[0].back() * (pixbatch_size[0].back()+1) + (2*pixbatch_size[0].back() - 1 - p%pixbatch_size[0].back()) * (p%pixbatch_size[0].back())) / 2);
 				pixbatch_size[2].push_back(((p%pixbatch_size[0].back() + 1) * (p%pixbatch_size[0].back())) / 2);
 				pixbatch_size[0].back() *= pixbatch_size[0].back();
-				for(p = 0; p < 3; p++)
+				for(p=0; p<3; p++)
 				{
 					if(pixbatch_delim[p].back() <= maphdr.Nside_ring)
+					{
 						pixbatch_delim[p].back() = 2 * pixbatch_delim[p].back() * (pixbatch_delim[p].back()+1);
+					}
 					else if(pixbatch_delim[p].back() <= 3 * maphdr.Nside_ring)
+					{
 						pixbatch_delim[p].back() = 2 * maphdr.Nside_ring * (maphdr.Nside_ring+1) + (pixbatch_delim[p].back()-maphdr.Nside_ring) * 4 * maphdr.Nside_ring;
+					}
 					else if(pixbatch_delim[p].back() < 4 * maphdr.Nside_ring)
+					{
 						pixbatch_delim[p].back() = 12 * maphdr.Nside_ring * maphdr.Nside_ring - 2 * (4 * maphdr.Nside_ring - 1 - pixbatch_delim[p].back()) * (4 * maphdr.Nside_ring - pixbatch_delim[p].back());
+					}
 					else
+					{
 						pixbatch_delim[p].back() = 12 * maphdr.Nside_ring * maphdr.Nside_ring;
+					}
 				}
 
-				if(pixbatch_size[1].back() == pixbatch_size[0].back())
-					pixbatch_delim[0].back() = pixbatch_delim[1].back();
+				if(pixbatch_size[1].back() == pixbatch_size[0].back()) pixbatch_delim[0].back() = pixbatch_delim[1].back();
 
-				for(j = 0; j < 9; j++)
-					pixbuf_size[j] = 0;
+				for(j=0; j<9; j++) pixbuf_size[j] = 0;
 
-				for(p = 0; p < pixbatch_delim[2].back(); p++)
+				for(p=0; p<pixbatch_delim[2].back(); p++)
 				{
 					pix2vec_ring64(maphdr.Nside_ring, p, w);
 
@@ -1220,7 +1148,7 @@ void writeLightcones(
 				} // p-loop
 
 				p = 0;
-				for(j = 0; j < 3; j++)
+				for(j=0; j<3; j++)
 				{
 					if(pixbuf_size[3*j]+pixbuf_size[3*j+1]+pixbuf_size[3*j+2] > p) p = pixbuf_size[3*j]+pixbuf_size[3*j+1]+pixbuf_size[3*j+2];
 				}
@@ -1229,7 +1157,7 @@ void writeLightcones(
 				{
 					commbuf = (Real *) malloc(sizeof(Real) * p);
 
-					for(j = 0; j < LIGHTCONE_MAX_FIELDS; j++)
+					for(j=0; j<LIGHTCONE_MAX_FIELDS; j++)
 					{
 						if(pixbuf[j][0] != NULL)
 						{
@@ -1380,7 +1308,7 @@ void writeLightcones(
 
 				if(io_group_size == 0 && parallel.rank() == ((shell - shell_inner) * parallel.size() / (shell_outer + 1 - shell_inner)))
 				{
-					for(j = 0; j < LIGHTCONE_MAX_FIELDS; j++)
+					for(j=0; j<LIGHTCONE_MAX_FIELDS; j++)
 					{
 						if(pixbuf[j][0] != NULL)
 						{
@@ -1469,7 +1397,7 @@ void writeLightcones(
 						q += pixbatch_delim[2].back() / io_group_size;
 					}
 
-					for(j = 0; j < LIGHTCONE_MAX_FIELDS; j++)
+					for(j=0; j<LIGHTCONE_MAX_FIELDS; j++)
 					{
 						if(pixbuf[j][0] != NULL)
 						{
@@ -1524,7 +1452,7 @@ void writeLightcones(
 							if(io_group_size > 0 && pixbatch_delim[2].back() >= io_group_size && pixbatch_id[pix] / (pixbatch_delim[2].back() / io_group_size) < io_group_size)
 							{
 								for(n = 1; pix+n < pixbatch_id.size() && pixbatch_id[pix+n] == pixbatch_id[pix+n-1]+1 && pixbatch_id[pix+n] < pixbatch_delim[pixbatch_type].back() && (pixbatch_id[pix+n] / (pixbatch_delim[2].back() / io_group_size) == pixbatch_id[pix] / (pixbatch_delim[2].back() / io_group_size) || pixbatch_id[pix] / (pixbatch_delim[2].back() / io_group_size) == io_group_size-1); n++);
-								for(j = 0; j < LIGHTCONE_MAX_FIELDS; j++)
+								for(j=0; j<LIGHTCONE_MAX_FIELDS; j++)
 								{
 									if(pixbuf[j][4] != NULL && pixbatch_size[pixbatch_type].back() > 0)
 										parallel.send<Real>(pixbuf[j][4]+pix2, n*pixbatch_size[pixbatch_type].back(), (pixbatch_id[pix] / (pixbatch_delim[2].back() / io_group_size)) + ((shell - shell_inner) * parallel.size() + shell_outer - shell_inner) / (shell_outer + 1 - shell_inner));
@@ -1533,7 +1461,7 @@ void writeLightcones(
 							else
 							{
 								for(n = 1; pix+n < pixbatch_id.size() && pixbatch_id[pix+n] == pixbatch_id[pix+n-1]+1 && pixbatch_id[pix+n] < pixbatch_delim[pixbatch_type].back(); n++);
-								for(j = 0; j < LIGHTCONE_MAX_FIELDS; j++)
+								for(j=0; j<LIGHTCONE_MAX_FIELDS; j++)
 								{
 									if(pixbuf[j][4] != NULL && pixbatch_size[pixbatch_type].back() > 0)
 										parallel.send<Real>(pixbuf[j][4]+pix2, n*pixbatch_size[pixbatch_type].back(), (io_group_size ? io_group_size - 1 : 0) + ((shell - shell_inner) * parallel.size() + (io_group_size ? shell_outer - shell_inner : 0)) / (shell_outer + 1 - shell_inner));
@@ -1559,7 +1487,7 @@ void writeLightcones(
 								cerr << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": proc#" << parallel.rank() << " pixel batch index mismatch! expecting " << p2 << " but ID list says " << pixbatch_id[pix] << "!" << endl;
 								exit(-99);
 							}
-							for(j = 0; j < LIGHTCONE_MAX_FIELDS; j++)
+							for(j=0; j<LIGHTCONE_MAX_FIELDS; j++)
 							{
 								if(pixbuf[j][4] != NULL && pixbatch_size[pixbatch_type].back() > 0)
 									memcpy((void *) (outbuf[j]+offset2), (void *) (pixbuf[j][4]+pix2), n*pixbatch_size[pixbatch_type].back()*maphdr.precision);
@@ -1569,7 +1497,7 @@ void writeLightcones(
 						}
 						else
 						{
-							for(j = 0; j < LIGHTCONE_MAX_FIELDS; j++)
+							for(j=0; j<LIGHTCONE_MAX_FIELDS; j++)
 							{
 								if(outbuf[j] != NULL && pixbatch_size[pixbatch_type].back() > 0)
 									parallel.receive<Real>((Real *) (outbuf[j]+offset2), n*pixbatch_size[pixbatch_type].back(), sender_proc[p2-p]);
@@ -1610,7 +1538,7 @@ void writeLightcones(
 					if(p > 0 && pixbatch_delim[2].back() >= p && pixbatch_id[pix] / (pixbatch_delim[2].back() / p) < p)
 					{
 						for(n = 1; pix+n < pixbatch_id.size() && pixbatch_id[pix+n] == pixbatch_id[pix+n-1]+1 && pixbatch_id[pix+n] < pixbatch_delim[pixbatch_type].back() && (pixbatch_id[pix+n] / (pixbatch_delim[2].back() / p) == pixbatch_id[pix] / (pixbatch_delim[2].back() / p) || pixbatch_id[pix] / (pixbatch_delim[2].back() / p) == p-1); n++);
-						for(j = 0; j < LIGHTCONE_MAX_FIELDS; j++)
+						for(j=0; j<LIGHTCONE_MAX_FIELDS; j++)
 						{
 							if(pixbuf[j][4] != NULL && pixbatch_size[pixbatch_type].back() > 0)
 								parallel.send<Real>(pixbuf[j][4]+pix2, n*pixbatch_size[pixbatch_type].back(), (pixbatch_id[pix] / (pixbatch_delim[2].back() / p)) + ((shell - shell_inner) * parallel.size() + (io_group_size ? shell_outer - shell_inner : 0)) / (shell_outer + 1 - shell_inner));
@@ -1619,7 +1547,7 @@ void writeLightcones(
 					else
 					{
 						for(n = 1; pix+n < pixbatch_id.size() && pixbatch_id[pix+n] == pixbatch_id[pix+n-1]+1 && pixbatch_id[pix+n] < pixbatch_delim[pixbatch_type].back(); n++);
-						for(j = 0; j < LIGHTCONE_MAX_FIELDS; j++)
+						for(j=0; j<LIGHTCONE_MAX_FIELDS; j++)
 						{
 							if(pixbuf[j][4] != NULL && pixbatch_size[pixbatch_type].back() > 0)
 								parallel.send<Real>(pixbuf[j][4]+pix2, n*pixbatch_size[pixbatch_type].back(), (p ? p - 1 : 0) + ((shell - shell_inner) * parallel.size() + (p ? shell_outer - shell_inner : 0)) / (shell_outer + 1 - shell_inner));
@@ -1688,7 +1616,7 @@ void writeLightcones(
 				MPI_File_close(&mapfile);
 			}
 
-			for(j = 0; j < 3; j++)
+			for(j=0; j<3; j++)
 			{
 				pixbatch_size[j].clear();
 				pixbatch_delim[j].clear();
@@ -1696,7 +1624,7 @@ void writeLightcones(
 
 			offset.clear();
 
-			for(j = 0; j < 9*LIGHTCONE_MAX_FIELDS; j++)
+			for(j=0; j<9*LIGHTCONE_MAX_FIELDS; j++)
 			{
 				if(pixbuf[j/9][j%9] != NULL)
 				{
@@ -1705,7 +1633,7 @@ void writeLightcones(
 				}
 			}
 
-			for(j = 0; j < LIGHTCONE_MAX_FIELDS; j++)
+			for(j=0; j<LIGHTCONE_MAX_FIELDS; j++)
 			{
 				if(outbuf[j] != NULL)
 				{
@@ -1732,9 +1660,9 @@ void writeLightcones(
 			hdr.flag_feedback = 0;
 			hdr.flag_age = 0;
 			hdr.flag_metals = 0;
-			for(p = 0; p < 256 - 6 * 4 - 6 * 8 - 2 * 8 - 2 * 4 - 6 * 4 - 2 * 4 - 4 * 8 - 2 * 4 - 6 * 4; p++)
+			for(p=0; p<256 - 6 * 4 - 6 * 8 - 2 * 8 - 2 * 4 - 6 * 4 - 2 * 4 - 4 * 8 - 2 * 4 - 6 * 4; p++)
 				hdr.fill[p] = 0;
-			for(p = 0; p < 6; p++)
+			for(p=0; p<6; p++)
 			{
 				hdr.npart[p] = 0;
 				hdr.npartTotal[p] = 0;
@@ -1764,7 +1692,7 @@ void writeLightcones(
 				pcls_b->saveGadget2(h5filename + filename + "_b", hdr, sim.lightcone[i], d - tau, dtau, dtau_old, vertex, n, IDbacklog[1], IDprelog[1], phi, sim.tracer_factor[1]);
 			}
 
-			for(p = 0; p < cosmo.num_ncdm; p++)
+			for(p=0; p<cosmo.num_ncdm; p++)
 			{
 				if(sim.numpcl[1+sim.baryon_flag+p] == 0 || sim.tracer_factor[p+1+sim.baryon_flag] == 0) continue;
 				sprintf(buffer, "_ncdm%d", p);
@@ -2023,9 +1951,15 @@ void writeSpectra(
 		projection_init(source);
 		scalarProjectionCIC_project(pcls_cdm, source);
 		if(sim.baryon_flag)
+		{
 			scalarProjectionCIC_project(pcls_b, source);
-		for (i = 0; i < cosmo.num_ncdm; i++)
+		}
+
+		for(i=0; i<cosmo.num_ncdm; i++)
+		{
 			scalarProjectionCIC_project(pcls_ncdm+i, source);
+		}
+
 		scalarProjectionCIC_comm(source);
 		plan_source->execute(FFT_FORWARD);
 
@@ -2080,9 +2014,12 @@ void writeSpectra(
 				// store k-space information for cross-spectra using SijFT as temporary array
 				if(sim.out_pk & MASK_XSPEC)
 				{
-					for (kFT.first(); kFT.test(); kFT.next())
+					for(kFT.first(); kFT.test(); kFT.next())
+					{
 						(*SijFT)(kFT, 0) = (*scalarFT)(kFT);
+					}
 				}
+
 				projection_init(source);
 				scalarProjectionCIC_project(pcls_b, source);
 				scalarProjectionCIC_comm(source);
@@ -2098,7 +2035,8 @@ void writeSpectra(
 				}
 			}
 			Omega_ncdm = 0.;
-			for (i = 0; i < cosmo.num_ncdm; i++)
+
+			for(i=0; i<cosmo.num_ncdm; i++)
 			{
 				projection_init(source);
 				scalarProjectionCIC_project(pcls_ncdm+i, source);
@@ -2112,16 +2050,20 @@ void writeSpectra(
 				// store k-space information for cross-spectra using SijFT as temporary array
 				if(cosmo.num_ncdm > 1 && i < 6)
 				{
-					for (kFT.first(); kFT.test(); kFT.next())
+					for(kFT.first(); kFT.test(); kFT.next())
+					{
 						(*SijFT)(kFT, i) = (*scalarFT)(kFT);
+					}
 				}
 			}
 			if(cosmo.num_ncdm > 1 && cosmo.num_ncdm <= 7)
 			{
-				for (kFT.first(); kFT.test(); kFT.next())
+				for(kFT.first(); kFT.test(); kFT.next())
 				{
-					for (i = 0; i < cosmo.num_ncdm-1; i++)
+					for(i=0; i<cosmo.num_ncdm-1; i++)
+					{
 						(*scalarFT)(kFT) += (*SijFT)(kFT, i);
+					}
 				}
 				extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR);
 				sprintf(filename, "%s%s_%s%03d_ncdm.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
@@ -2129,9 +2071,9 @@ void writeSpectra(
 			}
 			if(cosmo.num_ncdm > 1)
 			{
-				for (i = 0; i < cosmo.num_ncdm-1 && i < 5; i++)
+				for(i=0; i<cosmo.num_ncdm-1 && i < 5; i++)
 				{
-					for (j = i+1; j < cosmo.num_ncdm && j < 6; j++)
+					for(j = i+1; j < cosmo.num_ncdm && j < 6; j++)
 					{
 						if(sim.out_pk & MASK_XSPEC || (i == 0 && j == 1) || (i == 2 && j == 3) || (i == 4 && j == 5))
 						{
@@ -2223,15 +2165,18 @@ void writeSpectra(
 		projection_init(Sij);
 		projection_Tij_project(pcls_cdm, Sij, a, phi);
 		if(sim.baryon_flag)
+		{
 			projection_Tij_project(pcls_b, Sij, a, phi);
-		for (i = 0; i < cosmo.num_ncdm; i++)
+		}
+		for(i=0; i<cosmo.num_ncdm; i++)
+		{
 			projection_Tij_project(pcls_ncdm+i, Sij, a, phi);
-		projection_Tij_comm(Sij);
+		}
 
+		projection_Tij_comm(Sij);
 		prepareFTsource<Real>(*phi, *Sij, *Sij, 2. * fourpiG / (double) sim.numpts / (double) sim.numpts / a);
 		plan_Sij->execute(FFT_FORWARD);
 		projectFTtensor(*SijFT, *SijFT);
-
 		extractPowerSpectrum(*SijFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, false, KTYPE_LINEAR);
 		sprintf(filename, "%s%s_%s%03d_hij.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 		writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, 2. * M_PI * M_PI, filename, "power spectrum of hij", a, cycle);
@@ -2242,11 +2187,15 @@ void writeSpectra(
 		projection_init(source);
 		projection_T00_project(pcls_cdm, source, a, phi);
 		if(sim.baryon_flag)
+		{
 			projection_T00_project(pcls_b, source, a, phi);
-		for (i = 0; i < cosmo.num_ncdm; i++)
+		}
+		for(i=0; i<cosmo.num_ncdm; i++)
+		{
 			projection_T00_project(pcls_ncdm+i, source, a, phi);
-		projection_T00_comm(source);
+		}
 
+		projection_T00_comm(source);
 		plan_source->execute(FFT_FORWARD);
 		extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR);
 
@@ -2284,8 +2233,10 @@ void writeSpectra(
 				// store k-space information for cross-spectra using SijFT as temporary array
 				if(sim.out_pk & MASK_XSPEC)
 				{
-					for (kFT.first(); kFT.test(); kFT.next())
+					for(kFT.first(); kFT.test(); kFT.next())
+					{
 						(*SijFT)(kFT, 0) = (*scalarFT)(kFT);
+					}
 				}
 				projection_init(source);
 				projection_T00_project(pcls_b, source, a, phi);
@@ -2309,7 +2260,7 @@ void writeSpectra(
 					writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * cosmo.Omega_b * cosmo.Omega_cdm, filename, "cross power spectrum of delta for cdm x baryons", a, cycle);
 				}
 			}
-			for (i = 0; i < cosmo.num_ncdm; i++)
+			for(i=0; i<cosmo.num_ncdm; i++)
 			{
 				projection_init(source);
 				projection_T00_project(pcls_ncdm+i, source, a, phi);
@@ -2331,16 +2282,20 @@ void writeSpectra(
 				// store k-space information for cross-spectra using SijFT as temporary array
 				if(cosmo.num_ncdm > 1 && i < 6)
 				{
-					for (kFT.first(); kFT.test(); kFT.next())
+					for(kFT.first(); kFT.test(); kFT.next())
+					{
 						(*SijFT)(kFT, i) = (*scalarFT)(kFT);
+					}
 				}
 			}
 			if(cosmo.num_ncdm > 1 && cosmo.num_ncdm <= 7)
 			{
-				for (kFT.first(); kFT.test(); kFT.next())
+				for(kFT.first(); kFT.test(); kFT.next())
 				{
-					for (i = 0; i < cosmo.num_ncdm-1; i++)
+					for(i=0; i<cosmo.num_ncdm-1; i++)
+					{
 						(*scalarFT)(kFT) += (*SijFT)(kFT, i);
+					}
 				}
 				extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR);
 				if(sim.out_pk & MASK_T00)
@@ -2356,9 +2311,9 @@ void writeSpectra(
 			}
 			if(cosmo.num_ncdm > 1)
 			{
-				for (i = 0; i < cosmo.num_ncdm-1 && i < 5; i++)
+				for(i=0; i<cosmo.num_ncdm-1 && i < 5; i++)
 				{
-					for (j = i+1; j < cosmo.num_ncdm && j < 6; j++)
+					for(j = i+1; j < cosmo.num_ncdm && j < 6; j++)
 					{
 						if(sim.out_pk & MASK_XSPEC || (i == 0 && j == 1) || (i == 2 && j == 3) || (i == 4 && j == 5))
 						{
@@ -2394,9 +2349,14 @@ void writeSpectra(
 			projection_init(Bi_check);
 			projection_T0i_project(pcls_cdm, Bi_check, phi);
 			if(sim.baryon_flag)
+			{
 				projection_T0i_project(pcls_b, Bi_check, phi);
-			for (i = 0; i < cosmo.num_ncdm; i++)
+			}
+			for(i=0; i<cosmo.num_ncdm; i++)
+			{
 				projection_T0i_project(pcls_ncdm+i, Bi_check, phi);
+			}
+
 			projection_T0i_comm(Bi_check);
 			plan_Bi_check->execute(FFT_FORWARD);
 			projectFTvector(*BiFT_check, *BiFT_check, fourpiG / (double) sim.numpts / (double) sim.numpts);

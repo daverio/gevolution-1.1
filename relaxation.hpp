@@ -75,34 +75,17 @@ int prepare_initial_guess_trace_equation(
   double fRbar,
   const metadata & sim)
 {
-  if(sim.fR_model == FR_MODEL_HU_SAWICKI)
-  {
-    erase_field(xi);
-    erase_field(deltaR);
-    erase_field(laplace_xi);
-  }
-  else if(sim.fR_model == FR_MODEL_RN || sim.fR_model == FR_MODEL_DELTA)
-  {
-    erase_field(xi);
-    erase_field(deltaR);
-    erase_field(laplace_xi);
-
-    // copy_field(eightpiG_deltaT, deltaR, -1.);
-    // convert_deltaR_to_xi(deltaR, xi, Rbar, fRbar, sim);
-    // build_laplacian(xi, laplace_xi, dx);
-  }
-
+  // For the moment, simply set fields to zero (except the source term rhs)
+  erase_field(xi);
+  erase_field(deltaR);
+  erase_field(laplace_xi);
   copy_field(eightpiG_deltaT, rhs, a*a/3.);
-
   return 0;
 }
 
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-//                       ROUTINES AND TOOLS FOR xi
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-// TODO Details?
+////////////////////////////////////////////////////////////
+///////////////// ROUTINES AND TOOLS FOR xi ////////////////
+////////////////////////////////////////////////////////////
 
 //////////////////////////
 // Residual Y
@@ -398,7 +381,9 @@ double update_xi_and_deltaR(
 
       update_xi_and_deltaR_single(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, coeff_laplacian, overrelax, Rbar, fbar, fRbar, sim);
     }
+
     build_laplacian(xi, laplace_xi, dx); // TODO: This might be optimised somehow -- only build_laplacian on the Blacks?
+
     for(x.firstBlack(); x.testBlack(); x.nextBlack())
     {
       if(std::isnan(xi(x)) || fabs(xi(x)) > 1.E20)
@@ -462,15 +447,9 @@ double update_xi_and_deltaR(
 }
 
 
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-//                        OTHER TOOLS AND ROUTINES
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-
-//////////////////////////
-// TODO: Details here
-//////////////////////////
+//////////////////////////////////////////////////
+//////////// OTHER TOOLS AND ROUTINES ////////////
+//////////////////////////////////////////////////
 
 template <template<class> class FieldClass, class FieldType>
 double compute_error(
@@ -502,8 +481,14 @@ double compute_error(
     error += temp*temp;
   }
 
-  if(level == 0) parallel.sum(error);
-  else parallel.layer_from_level(level).sum(error);
+  if(level == 0)
+  {
+    parallel.sum(error);
+  }
+  else
+  {
+    parallel.layer_from_level(level).sum(error);
+  }
 
   error = sqrt(error / numpts3d);
 
@@ -540,11 +525,9 @@ void build_residual(
   return;
 }
 
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-//                                SOLVERS
-//////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////
+///////////////////// SOLVERS /////////////////////
+///////////////////////////////////////////////////
 
 //////////////////////////
 // Relaxation solver
@@ -628,11 +611,13 @@ double relaxation_step(
   double fRbar,
   long numpts3d,
   const metadata & sim,
-  int level = -1)
+  int level = -1
+)
 {
   double error;
   // Attempt new guess
   error = update_xi_and_deltaR(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim, level);
+
   if(error > FR_WRONG)
   {
     //TODO REMOVE after debugging
@@ -709,13 +694,13 @@ double single_layer_solver(
     while(true)
     {
       error = relaxation_step(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim, level);
+
       if(error < sim.relaxation_error)
       {
         break;
       }
     }
   }
-
 
   return error;
 }
@@ -745,19 +730,17 @@ double multigrid_solver(
   const metadata & sim)
 {
 
-  int
-    max_level = sim.multigrid_n_grids-1;
-
+  int max_level = sim.multigrid_n_grids-1;
+  long numpts3d[sim.multigrid_n_grids];
   double
     dx[sim.multigrid_n_grids],
     error = 0.,
     trunc_error = 0.,
     previous_error = 0.;
 
-  long numpts3d[sim.multigrid_n_grids];
-
   numpts3d[0] = (long) sim.numpts * sim.numpts * sim.numpts;
   dx[0] = DX;
+
   for(int i=1; i<sim.multigrid_n_grids; ++i)
   {
     numpts3d[i] = (long) numpts3d[i-1] / 8;
@@ -772,7 +755,6 @@ double multigrid_solver(
   while(true)
   {
     previous_error = error;
-
     trunc_error = gamma_cycle(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, temp, trunc, engine, dx, a2_over_3, two_Hubble_over_dtau, numpts3d, Rbar, fbar, fRbar, sim, 0);
 
     if(trunc_error > FR_WRONG)
@@ -784,7 +766,6 @@ double multigrid_solver(
     }
 
     convert_xi_to_deltaR(deltaR[0], xi[0], Rbar, fRbar, sim);
-
     error = compute_error(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], rhs[0], dx[0], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[0], sim, 0);
 
     if(error < sim.relaxation_error)
@@ -796,8 +777,6 @@ double multigrid_solver(
       COUT << "             interm.error = " << error << endl;
     }
   }
-
-  // COUT << endl << "mg_solver err " << error;
 
   return error;
 }
@@ -878,11 +857,6 @@ double FMG_solver(
     build_laplacian(xi[0], laplace_xi[0], dx[0]);
     error = compute_error(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], rhs[0], dx[0], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[0], sim, 0);
 
-    // TODO remove
-    cout << " FMG initial error = " << error << endl;
-    COUT << endl;
-    // END remove
-
     // solve problem on coarsest grid
     if(engine.isPartLayer(max_level))
     {
@@ -919,11 +893,6 @@ double FMG_solver(
 
         error = compute_error(phi[max_level], xi[max_level], xi_old[max_level], laplace_xi[max_level], deltaR[max_level], rhs[max_level], dx[max_level], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[max_level], sim, max_level);
 
-        // TODO remove
-        cout << " FMG " << max_level << " = " << error << endl;
-        COUT << endl;
-        // END remove
-
         if(error < sim.relaxation_error)
         {
           break;
@@ -952,13 +921,6 @@ double FMG_solver(
       for(j=0; j<sim.multigrid_n_cycles; ++j)
       {
         check_fr_wrong = gamma_cycle(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, temp, trunc, engine, dx, a2_over_3, two_Hubble_over_dtau, numpts3d, Rbar, fbar, fRbar, sim, i);
-
-        error = compute_error(phi[i], xi[i], xi_old[i], laplace_xi[i], deltaR[i], rhs[i], dx[i], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[i], sim, i);
-
-        // TODO remove
-        cout << " FMG " << i << " = " << error << endl;
-        COUT << endl;
-        // END remove
 
         if(check_fr_wrong > FR_WRONG)
         {
@@ -999,11 +961,6 @@ double FMG_solver(
     copy_field(eightpiG_deltaT[0], rhs[0], a2_over_3);
 
     error = compute_error(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], rhs[0], dx[0], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[0], sim, 0);
-
-    // TODO remove
-    cout << " FMG " << 0 << " = " << error << endl;
-    COUT << endl;
-    // END remove
 
     if(error < sim.relaxation_error)
     {
@@ -1062,6 +1019,7 @@ double gamma_cycle(
         return FR_WRONG_RETURN;
       }
     }
+
     build_residual(phi[level], xi[level], xi_old[level], laplace_xi[level], deltaR[level], rhs[level], temp[level], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
   }
 
@@ -1102,6 +1060,7 @@ double gamma_cycle(
       cout << parallel.rank() << " 2 check_fr_wrong = FR_WRONG in gamma_cycle 2" << endl;
       return FR_WRONG_RETURN;
     }
+
     build_laplacian(xi[level+1], laplace_xi[level+1], dx[level+1]);
     build_residual(phi[level+1], xi[level+1], xi_old[level+1], laplace_xi[level+1], deltaR[level+1], rhs[level+1], trunc[level+1], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
     subtract_fields(trunc[level+1], temp[level+1], trunc[level+1]);
@@ -1188,8 +1147,6 @@ double gamma_cycle(
     }
 
     build_laplacian(xi[level], laplace_xi[level], dx[level]);
-
-    // TODO In place of post-smoothing: requires that error be smaller than relaxation_error at each layer, NO post smoothing is mandatory in multigrid!
 
     for(int j=0; j<sim.post_smoothing; ++j)
     {

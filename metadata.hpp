@@ -73,7 +73,7 @@
 #define ICFLAG_KSPHERE              2
 
 
-//========================== f(R) Stuff ==========================
+////////////////////////////////// f(R) Stuff //////////////////////////////////
 #ifndef MAX_FR_PARAMS
 #define MAX_FR_PARAMS 8
 #endif
@@ -102,26 +102,26 @@
 #define FR_WRONG 1.E+30
 #define FR_WRONG_RETURN 2. * FR_WRONG
 
-//========================== Multigrid ==========================
+////////////////////////////////// Multigrid //////////////////////////////////
 #define MULTIGRID_SHAPE_V 1
 #define MULTIGRID_SHAPE_W 2
 #define PRE_SMOOTHING_DEFAULT 5
 #define POST_SMOOTHING_DEFAULT 5
 
-//========================== Relaxation methods ==========================
+////////////////////////////// Relaxation methods //////////////////////////////
 #define METHOD_RELAX 1
 #define METHOD_MULTIGRID 2
 #define METHOD_FMG 3
 
-//========================== Restrict/prolong u or deltaR ==========================
+///////////////////////// Restrict/prolong u or deltaR /////////////////////////
 #define RESTRICT_XI 1
 #define RESTRICT_DELTAR 2
 
-//========================== Relaxation error ==========================
+/////////////////////////////// Relaxation error ///////////////////////////////
 #define RELAXATION_ERROR_DEFAULT 1.E-5
 
 
-// Identifiers for IC generator modules
+///////////////////// Identifiers for IC generator modules /////////////////////
 #define ICGEN_BASIC                 0
 #define ICGEN_READ_FROM_DISK        1
 #ifdef ICGEN_PREVOLUTION
@@ -140,14 +140,14 @@
 #define VECTOR_PARABOLIC            0
 #define VECTOR_ELLIPTIC             1
 
-// Physical constants
+////////////////////////////// Physical constants //////////////////////////////
 #define C_PLANCK_LAW      4.48147e-7    // omega_g / (T_cmb [K])^4
 #define C_BOLTZMANN_CST   8.61733e-5    // Boltzmann constant [eV/K]
 #define C_SPEED_OF_LIGHT  2997.92458    // speed of light [100 km/s]
 #define C_RHO_CRIT        2.77459457e11 // critical density [M_sun h^2 / Mpc^3]
 #define C_FD_NORM         1.80308535    // Integral[q*q/(exp(q)+1), 0, infinity]
 
-// default physical parameters (used in parser.hpp)
+/////////////// default physical parameters (used in parser.hpp) ///////////////
 #define P_HUBBLE          0.67556       // default value for h
 #define P_T_NCDM          0.71611       // default value for T_ncdm
 #define P_NCDM_MASS_OMEGA 93.14         // m_ncdm / omega_ncdm [eV]
@@ -175,7 +175,7 @@
 #endif
 #endif
 
-// Hibernation particle save mode
+//////////////////////// Hibernation particle save mode ////////////////////////
 #define HIB_SAVE_HDF5 0
 #define HIB_SAVE_GADGET2 1
 
@@ -297,8 +297,8 @@ struct metadata
 	char restart_path[PARAM_MAX_LENGTH];
 	char basename_restart[PARAM_MAX_LENGTH];
 
-	// ========================== f(R) ==========================
-	// =================== and other changes ====================
+	//////////////////////////////////// f(R) ////////////////////////////////////
+	///////////////////////////// and other changes //////////////////////////////
 	int CYCLE_INFO_INTERVAL; // Previously fixed: #define CYCLE_INFO_INTERVAL = 10
 	int hibernation_save_mode;
 	int fR_model;
@@ -396,7 +396,6 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim) // TODO Add lig
 	os << "\n";
 
 	os << "z_restart: " << sim.z_restart[0];
-
 	for(int i=1; i<MAX_OUTPUTS; i++) os << " , " << sim.z_restart[i];
 	os << "\n";
 
@@ -493,7 +492,6 @@ std::ostream& operator<< (std::ostream& os, const cosmology& cosmo)
 	os << "\n";
 
 	os << "h: " << cosmo.h << "\n";
-
 	os << "m_ncdm: " << cosmo.m_ncdm[0];
 	for(int i=1; i<MAX_PCL_SPECIES-2; i++) os << " , " << cosmo.m_ncdm[i];
 	os << "\n";

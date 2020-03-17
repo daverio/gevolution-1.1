@@ -62,7 +62,7 @@ void displace_pcls_ic_basic(double coeff, double lat_resolution, part_simple * p
 	int i;
 	Real gradxi[3] = {0, 0, 0};
 
-	if (nfield > 1 && (*part).ID % 8 == 0)
+	if(nfield > 1 && (*part).ID % 8 == 0)
 		i = 1;
 	else
 		i = 0;
@@ -84,10 +84,10 @@ void displace_pcls_ic_basic(double coeff, double lat_resolution, part_simple * p
 	gradxi[1] /= lat_resolution;
 	gradxi[2] /= lat_resolution;
 
-	if (noutputs > 0)
+	if(noutputs > 0)
 		*outputs = coeff * sqrt(gradxi[0]*gradxi[0] + gradxi[1]*gradxi[1] + gradxi[2]*gradxi[2]);
 
-	for (i = 0; i < 3; i++) (*part).pos[i] += coeff*gradxi[i];
+	for(i = 0; i < 3; i++) (*part).pos[i] += coeff*gradxi[i];
 }
 
 
@@ -121,7 +121,7 @@ Real initialize_q_ic_basic(double coeff, double lat_resolution, part_simple * pa
 	Real gradPhi[3] = {0, 0, 0};
 	Real v2 = 0.;
 
-	if (nfield > 1 && (*part).ID % 8 == 0)
+	if(nfield > 1 && (*part).ID % 8 == 0)
 		i = 1;
 	else
 		i = 0;
@@ -143,7 +143,7 @@ Real initialize_q_ic_basic(double coeff, double lat_resolution, part_simple * pa
 	gradPhi[1] /= lat_resolution;
 	gradPhi[2] /= lat_resolution;
 
-	for (i = 0 ; i < 3; i++)
+	for(i = 0 ; i < 3; i++)
 	{
 		(*part).vel[i] = -gradPhi[i] * coeff;
 		v2 += (*part).vel[i] * (*part).vel[i];
@@ -192,7 +192,7 @@ void loadHomogeneousTemplate(const char * filename, long & numpart, float * & pa
 {
 	int i;
 
-	if (parallel.grid_rank()[0] == 0) // read file
+	if(parallel.grid_rank()[0] == 0) // read file
 	{
 		FILE * templatefile;
 		int blocksize1, blocksize2, num_read;
@@ -200,14 +200,14 @@ void loadHomogeneousTemplate(const char * filename, long & numpart, float * & pa
 
 		templatefile = fopen(filename, "r");
 
-		if (templatefile == NULL)
+		if(templatefile == NULL)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadHomogeneousTemplate! Unable to open template file " << filename << "." << endl;
 			parallel.abortForce();
 		}
 
 		fread(&blocksize1, sizeof(int), 1, templatefile);
-		if (blocksize1 != sizeof(filehdr))
+		if(blocksize1 != sizeof(filehdr))
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadHomogeneousTemplate! Unknown template file format - header not recognized." << endl;
 			fclose(templatefile);
@@ -215,7 +215,7 @@ void loadHomogeneousTemplate(const char * filename, long & numpart, float * & pa
 		}
 		fread(&filehdr, sizeof(filehdr), 1, templatefile);
 		fread(&blocksize2, sizeof(int), 1, templatefile);
-		if (blocksize1 != blocksize2)
+		if(blocksize1 != blocksize2)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadHomogeneousTemplate! Unknown template file format - block size mismatch while reading header." << endl;
 			fclose(templatefile);
@@ -223,19 +223,19 @@ void loadHomogeneousTemplate(const char * filename, long & numpart, float * & pa
 		}
 
 		// analyze header for compatibility
-		if (filehdr.num_files != 1)
+		if(filehdr.num_files != 1)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadHomogeneousTemplate! Multiple input files (" << filehdr.num_files << ") currently not supported." << endl;
 			fclose(templatefile);
 			parallel.abortForce();
 		}
-		if (filehdr.BoxSize <= 0.)
+		if(filehdr.BoxSize <= 0.)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadHomogeneousTemplate! BoxSize = " << filehdr.BoxSize << " not allowed." << endl;
 			fclose(templatefile);
 			parallel.abortForce();
 		}
-		if (filehdr.npart[1] <= 0)
+		if(filehdr.npart[1] <= 0)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadHomogeneousTemplate! No particles declared." << endl;
 			fclose(templatefile);
@@ -243,7 +243,7 @@ void loadHomogeneousTemplate(const char * filename, long & numpart, float * & pa
 		}
 
 		partdata = (float *) malloc(3 * sizeof(float) * filehdr.npart[1]);
-		if (partdata == NULL)
+		if(partdata == NULL)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadHomogeneousTemplate! Memory error." << endl;
 			fclose(templatefile);
@@ -251,9 +251,9 @@ void loadHomogeneousTemplate(const char * filename, long & numpart, float * & pa
 		}
 
 		fread(&blocksize1, sizeof(int), 1, templatefile);
-		if (filehdr.npart[0] > 0)
+		if(filehdr.npart[0] > 0)
 		{
-			if (fseek(templatefile, 3 * sizeof(float) * filehdr.npart[0], SEEK_CUR))
+			if(fseek(templatefile, 3 * sizeof(float) * filehdr.npart[0], SEEK_CUR))
 			{
 				cerr << " proc#" << parallel.rank() << ": error in loadHomogeneousTemplate! Unsuccesful attempt to skip gas particles (" << filehdr.npart[0] << ")." << endl;
 				fclose(templatefile);
@@ -261,17 +261,17 @@ void loadHomogeneousTemplate(const char * filename, long & numpart, float * & pa
 			}
 		}
 		num_read = fread(partdata, sizeof(float), 3 * filehdr.npart[1], templatefile);
-		if (num_read != 3 * filehdr.npart[1])
+		if(num_read != 3 * filehdr.npart[1])
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadHomogeneousTemplate! Unable to read particle data." << endl;
 			fclose(templatefile);
 			parallel.abortForce();
 		}
-		for (i = 2; i < 6; i++)
+		for(i = 2; i < 6; i++)
 		{
-			if (filehdr.npart[i] > 0)
+			if(filehdr.npart[i] > 0)
 			{
-				if (fseek(templatefile, 3 * sizeof(float) * filehdr.npart[i], SEEK_CUR))
+				if(fseek(templatefile, 3 * sizeof(float) * filehdr.npart[i], SEEK_CUR))
 				{
 					cerr << " proc#" << parallel.rank() << ": error in loadHomogeneousTemplate! Unsuccesful attempt to skip particles (" << filehdr.npart[i] << ")." << endl;
 					parallel.abortForce();
@@ -279,7 +279,7 @@ void loadHomogeneousTemplate(const char * filename, long & numpart, float * & pa
 			}
 		}
 		fread(&blocksize2, sizeof(int), 1, templatefile);
-		if (blocksize1 != blocksize2)
+		if(blocksize1 != blocksize2)
 			{
 			cerr << " proc#" << parallel.rank() << ": error in loadHomogeneousTemplate! Unknown template file format - block size mismatch while reading particles." << endl;
 			fclose(templatefile);
@@ -289,10 +289,10 @@ void loadHomogeneousTemplate(const char * filename, long & numpart, float * & pa
 		fclose(templatefile);
 
 		// reformat and check particle data
-		for (i = 0; i < 3 * filehdr.npart[1]; i++)
+		for(i = 0; i < 3 * filehdr.npart[1]; i++)
 		{
 			partdata[i] /= filehdr.BoxSize;
-			if (partdata[i] < 0. || partdata[i] > 1.)
+			if(partdata[i] < 0. || partdata[i] > 1.)
 			{
 				cerr << " proc#" << parallel.rank() << ": error in loadHomogeneousTemplate! Particle data corrupted." << endl;
 				parallel.abortForce();
@@ -306,14 +306,14 @@ void loadHomogeneousTemplate(const char * filename, long & numpart, float * & pa
 	{
 		parallel.broadcast_dim0<long>(numpart, 0);
 
-		if (numpart <= 0)
+		if(numpart <= 0)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadHomogeneousTemplate! Communication error." << endl;
 			parallel.abortForce();
 		}
 
 		partdata = (float *) malloc(3 * sizeof(float) * numpart);
-		if (partdata == NULL)
+		if(partdata == NULL)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadHomogeneousTemplate! Memory error." << endl;
 			parallel.abortForce();
@@ -346,7 +346,7 @@ void loadPowerSpectrum(const char * filename, gsl_spline * & pkspline, const dou
 	double * k;
 	double * pk;
 
-	if (parallel.grid_rank()[0] == 0) // read file
+	if(parallel.grid_rank()[0] == 0) // read file
 	{
 		FILE * pkfile;
 		char line[MAX_LINESIZE];
@@ -356,26 +356,26 @@ void loadPowerSpectrum(const char * filename, gsl_spline * & pkspline, const dou
 
 		pkfile = fopen(filename, "r");
 
-		if (pkfile == NULL)
+		if(pkfile == NULL)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadPowerSpectrum! Unable to open file " << filename << "." << endl;
 			parallel.abortForce();
 		}
 
-		while (!feof(pkfile) && !ferror(pkfile))
+		while(!feof(pkfile) && !ferror(pkfile))
 		{
 			fgets(line, MAX_LINESIZE, pkfile);
-			if (line[MAX_LINESIZE-1] != 0)
+			if(line[MAX_LINESIZE-1] != 0)
 			{
 				cerr << " proc#" << parallel.rank() << ": error in loadPowerSpectrum! Character limit (" << (MAX_LINESIZE-1) << "/line) exceeded in file " << filename << "." << endl;
 				fclose(pkfile);
 				parallel.abortForce();
 			}
 
-			if (sscanf(line, " %lf %lf", &dummy1, &dummy2) == 2 && !feof(pkfile) && !ferror(pkfile)) numpoints++;
+			if(sscanf(line, " %lf %lf", &dummy1, &dummy2) == 2 && !feof(pkfile) && !ferror(pkfile)) numpoints++;
 		}
 
-		if (numpoints < 2)
+		if(numpoints < 2)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadPowerSpectrum! No valid data found in file " << filename << "." << endl;
 			fclose(pkfile);
@@ -385,7 +385,7 @@ void loadPowerSpectrum(const char * filename, gsl_spline * & pkspline, const dou
 		k = (double *) malloc(sizeof(double) * numpoints);
 		pk = (double *) malloc(sizeof(double) * numpoints);
 
-		if (k == NULL || pk == NULL)
+		if(k == NULL || pk == NULL)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadPowerSpectrum! Memory error." << endl;
 			fclose(pkfile);
@@ -394,13 +394,13 @@ void loadPowerSpectrum(const char * filename, gsl_spline * & pkspline, const dou
 
 		rewind(pkfile);
 
-		while (!feof(pkfile) && !ferror(pkfile))
+		while(!feof(pkfile) && !ferror(pkfile))
 		{
 			fgets(line, MAX_LINESIZE, pkfile);
 
-			if (sscanf(line, " %lf %lf", &dummy1, &dummy2) == 2 && !feof(pkfile) && !ferror(pkfile))
+			if(sscanf(line, " %lf %lf", &dummy1, &dummy2) == 2 && !feof(pkfile) && !ferror(pkfile))
 			{
-				if (dummy1 < 0. || dummy2 < 0.)
+				if(dummy1 < 0. || dummy2 < 0.)
 				{
 					cerr << " proc#" << parallel.rank() << ": error in loadPowerSpectrum! Negative entry encountered." << endl;
 					free(k);
@@ -409,9 +409,9 @@ void loadPowerSpectrum(const char * filename, gsl_spline * & pkspline, const dou
 					parallel.abortForce();
 				}
 
-				if (i > 0)
+				if(i > 0)
 				{
-					if (k[i-1] >= dummy1 * boxsize)
+					if(k[i-1] >= dummy1 * boxsize)
 					{
 						cerr << " proc#" << parallel.rank() << ": error in loadPowerSpectrum! k-values are not strictly ordered." << endl;
 						free(k);
@@ -429,7 +429,7 @@ void loadPowerSpectrum(const char * filename, gsl_spline * & pkspline, const dou
 
 		fclose(pkfile);
 
-		if (i != numpoints)
+		if(i != numpoints)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadPowerSpectrum! File may have changed or file pointer corrupted." << endl;
 			free(k);
@@ -443,7 +443,7 @@ void loadPowerSpectrum(const char * filename, gsl_spline * & pkspline, const dou
 	{
 		parallel.broadcast_dim0<int>(numpoints, 0);
 
-		if (numpoints < 2)
+		if(numpoints < 2)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadPowerSpectrum! Communication error." << endl;
 			parallel.abortForce();
@@ -452,7 +452,7 @@ void loadPowerSpectrum(const char * filename, gsl_spline * & pkspline, const dou
 		k = (double *) malloc(sizeof(double) * numpoints);
 		pk = (double *) malloc(sizeof(double) * numpoints);
 
-		if (k == NULL || pk == NULL)
+		if(k == NULL || pk == NULL)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadPowerSpectrum! Memory error." << endl;
 			parallel.abortForce();
@@ -498,7 +498,7 @@ void loadTransferFunctions(const char * filename, gsl_spline * & tk_delta, gsl_s
 	double * tk_d;
 	double * tk_t;
 
-	if (parallel.grid_rank()[0] == 0) // read file
+	if(parallel.grid_rank()[0] == 0) // read file
 	{
 		FILE * tkfile;
 		char line[MAX_LINESIZE];
@@ -511,26 +511,26 @@ void loadTransferFunctions(const char * filename, gsl_spline * & tk_delta, gsl_s
 
 		tkfile = fopen(filename, "r");
 
-		if (tkfile == NULL)
+		if(tkfile == NULL)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadTransferFunctions! Unable to open file " << filename << "." << endl;
 			parallel.abortForce();
 		}
 
-		while (!feof(tkfile) && !ferror(tkfile))
+		while(!feof(tkfile) && !ferror(tkfile))
 		{
 			fgets(line, MAX_LINESIZE, tkfile);
-			if (line[MAX_LINESIZE-1] != 0)
+			if(line[MAX_LINESIZE-1] != 0)
 			{
 				cerr << " proc#" << parallel.rank() << ": error in loadTransferFunctions! Character limit (" << (MAX_LINESIZE-1) << "/line) exceeded in file " << filename << "." << endl;
 				fclose(tkfile);
 				parallel.abortForce();
 			}
 
-			if (line[0] != '#' && !feof(tkfile) && !ferror(tkfile)) numpoints++;
+			if(line[0] != '#' && !feof(tkfile) && !ferror(tkfile)) numpoints++;
 		}
 
-		if (numpoints < 2)
+		if(numpoints < 2)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadTransferFunctions! No valid data found in file " << filename << "." << endl;
 			fclose(tkfile);
@@ -541,7 +541,7 @@ void loadTransferFunctions(const char * filename, gsl_spline * & tk_delta, gsl_s
 		tk_d = (double *) malloc(sizeof(double) * numpoints);
 		tk_t = (double *) malloc(sizeof(double) * numpoints);
 
-		if (k == NULL || tk_d == NULL || tk_t == NULL)
+		if(k == NULL || tk_d == NULL || tk_t == NULL)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadTransferFunctions! Memory error." << endl;
 			fclose(tkfile);
@@ -550,27 +550,27 @@ void loadTransferFunctions(const char * filename, gsl_spline * & tk_delta, gsl_s
 
 		rewind(tkfile);
 
-		while (!feof(tkfile) && !ferror(tkfile))
+		while(!feof(tkfile) && !ferror(tkfile))
 		{
 			fgets(line, MAX_LINESIZE, tkfile);
-			for (ptr = line, i = 0; (ptr = strchr(ptr, ':')) != NULL; i++)
+			for(ptr = line, i = 0; (ptr = strchr(ptr, ':')) != NULL; i++)
 			{
 				ptr++;
-				if (*ptr == 'k') kcol = i;
-				else if (*ptr == 'd')
+				if(*ptr == 'k') kcol = i;
+				else if(*ptr == 'd')
 				{
-					if (strncmp(ptr+2, qname, strlen(qname)) == 0) dcol = i;
+					if(strncmp(ptr+2, qname, strlen(qname)) == 0) dcol = i;
 				}
-				else if (*ptr == 't')
+				else if(*ptr == 't')
 				{
-					if (strncmp(ptr+2, qname, strlen(qname)) == 0) tcol = i;
+					if(strncmp(ptr+2, qname, strlen(qname)) == 0) tcol = i;
 				}
 			}
 
-			if (kcol >= 0 && dcol >= 0 && tcol >= 0) break;
+			if(kcol >= 0 && dcol >= 0 && tcol >= 0) break;
 		}
 
-		if (kcol < 0 || dcol < 0 || tcol < 0)
+		if(kcol < 0 || dcol < 0 || tcol < 0)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadTransferFunctions! Unable to identify requested columns!" << endl;
 			fclose(tkfile);
@@ -581,9 +581,9 @@ void loadTransferFunctions(const char * filename, gsl_spline * & tk_delta, gsl_s
 		}
 
 		colmax = i;
-		for (i = 0, ptr=format; i < colmax; i++)
+		for(i = 0, ptr=format; i < colmax; i++)
 		{
-		    if (i == kcol || i == dcol || i == tcol)
+		    if(i == kcol || i == dcol || i == tcol)
 		    {
 		        strncpy(ptr, " %lf", 4);
 		        ptr += 4;
@@ -596,27 +596,27 @@ void loadTransferFunctions(const char * filename, gsl_spline * & tk_delta, gsl_s
 		}
 		*ptr = '\0';
 
-		if (kcol < dcol && dcol < tcol)
+		if(kcol < dcol && dcol < tcol)
 		{
 			kcol = 0; dcol = 1; tcol = 2;
 		}
-		else if (kcol < tcol && tcol < dcol)
+		else if(kcol < tcol && tcol < dcol)
 		{
 			kcol = 0; dcol = 2; tcol = 1;
 		}
-		else if (dcol < kcol && kcol < tcol)
+		else if(dcol < kcol && kcol < tcol)
 		{
 			kcol = 1; dcol = 0; tcol = 2;
 		}
-		else if (dcol < tcol && tcol < kcol)
+		else if(dcol < tcol && tcol < kcol)
 		{
 			kcol = 2; dcol = 0; tcol = 1;
 		}
-		else if (tcol < kcol && kcol < dcol)
+		else if(tcol < kcol && kcol < dcol)
 		{
 			kcol = 1; dcol = 2; tcol = 0;
 		}
-		else if (tcol < dcol && dcol < kcol)
+		else if(tcol < dcol && dcol < kcol)
 		{
 			kcol = 2; dcol = 1; tcol = 0;
 		}
@@ -631,13 +631,13 @@ void loadTransferFunctions(const char * filename, gsl_spline * & tk_delta, gsl_s
 		}
 
 		i = 0;
-		while (!feof(tkfile) && !ferror(tkfile))
+		while(!feof(tkfile) && !ferror(tkfile))
 		{
 			fgets(line, MAX_LINESIZE, tkfile);
 
-			if (sscanf(line, format, dummy, dummy+1, dummy+2) == 3 && !feof(tkfile) && !ferror(tkfile))
+			if(sscanf(line, format, dummy, dummy+1, dummy+2) == 3 && !feof(tkfile) && !ferror(tkfile))
 			{
-				if (dummy[kcol] < 0.)
+				if(dummy[kcol] < 0.)
 				{
 					cerr << " proc#" << parallel.rank() << ": error in loadTransferFunctions! Negative k-value encountered." << endl;
 					free(k);
@@ -647,9 +647,9 @@ void loadTransferFunctions(const char * filename, gsl_spline * & tk_delta, gsl_s
 					parallel.abortForce();
 				}
 
-				if (i > 0)
+				if(i > 0)
 				{
-					if (k[i-1] >= dummy[kcol] * boxsize)
+					if(k[i-1] >= dummy[kcol] * boxsize)
 					{
 						cerr << " proc#" << parallel.rank() << ": error in loadTransferFunctions! k-values are not strictly ordered." << endl;
 						free(k);
@@ -669,7 +669,7 @@ void loadTransferFunctions(const char * filename, gsl_spline * & tk_delta, gsl_s
 
 		fclose(tkfile);
 
-		if (i != numpoints)
+		if(i != numpoints)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadTransferFunctions! File may have changed or file pointer corrupted." << endl;
 			free(k);
@@ -684,7 +684,7 @@ void loadTransferFunctions(const char * filename, gsl_spline * & tk_delta, gsl_s
 	{
 		parallel.broadcast_dim0<int>(numpoints, 0);
 
-		if (numpoints < 2)
+		if(numpoints < 2)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadTransferFunctions! Communication error." << endl;
 			parallel.abortForce();
@@ -694,7 +694,7 @@ void loadTransferFunctions(const char * filename, gsl_spline * & tk_delta, gsl_s
 		tk_d = (double *) malloc(sizeof(double) * numpoints);
 		tk_t = (double *) malloc(sizeof(double) * numpoints);
 
-		if (k == NULL || tk_d == NULL || tk_t == NULL)
+		if(k == NULL || tk_d == NULL || tk_t == NULL)
 		{
 			cerr << " proc#" << parallel.rank() << ": error in loadTransferFunctions! Memory error." << endl;
 			parallel.abortForce();
@@ -742,14 +742,14 @@ void generateCICKernel(Field<Real> & ker, const long numpcl = 0, float * pcldata
 	float wx, wy, wz, q1, q2, q3, q4, ww;
 	Site x(ker.lattice());
 
-	for (x.first(); x.test(); x.next())
+	for(x.first(); x.test(); x.next())
 	{
 		ker(x) = 0.;
 	}
 
-	if (numpcl == 0 || pcldata == NULL) // standard kernel
+	if(numpcl == 0 || pcldata == NULL) // standard kernel
 	{
-		if (x.setCoord(0, 0, 0))
+		if(x.setCoord(0, 0, 0))
 		{
 			ker(x) = 6. * renorm;
 			ker(x+0) = -renorm;
@@ -757,16 +757,16 @@ void generateCICKernel(Field<Real> & ker, const long numpcl = 0, float * pcldata
 			ker(x) = -renorm;
 		}
 
-		if (x.setCoord(0, 1, 0))
+		if(x.setCoord(0, 1, 0))
 			ker(x) = -renorm;
 
-		if (x.setCoord(0, 0, 1))
+		if(x.setCoord(0, 0, 1))
 			ker(x) = -renorm;
 
-		if (x.setCoord(0, linesize-1, 0))
+		if(x.setCoord(0, linesize-1, 0))
 			ker(x) = -renorm;
 
-		if (x.setCoord(0, 0, linesize-1))
+		if(x.setCoord(0, 0, linesize-1))
 			ker(x) = -renorm;
 
 		return;
@@ -776,13 +776,13 @@ void generateCICKernel(Field<Real> & ker, const long numpcl = 0, float * pcldata
 
 	renorm /= (Real) (numpcl * (long) numtile * (long) numtile * (long) numtile) / (Real) (linesize * linesize * linesize);
 
-	for (i = 0; i < numpcl; i++)
+	for(i = 0; i < numpcl; i++)
 	{
-		for (oct = 0; oct < 8; oct++)
+		for(oct = 0; oct < 8; oct++)
 		{
-			if (oct == 0)
+			if(oct == 0)
 			{
-				if (linesize * pcldata[3*i] / numtile >= 1. || linesize * pcldata[3*i+1] / numtile >= 1. || linesize * pcldata[3*i+2] / numtile >= 1.)
+				if(linesize * pcldata[3*i] / numtile >= 1. || linesize * pcldata[3*i+1] / numtile >= 1. || linesize * pcldata[3*i+2] / numtile >= 1.)
 					continue;
 
 				// particle is in the first octant
@@ -794,9 +794,9 @@ void generateCICKernel(Field<Real> & ker, const long numpcl = 0, float * pcldata
 				sy = 1;
 				sz = 1;
 			}
-			else if (oct == 1)
+			else if(oct == 1)
 			{
-				if (linesize * (1.-pcldata[3*i]) / numtile >= 1. || linesize * pcldata[3*i+1] / numtile >= 1. || linesize * pcldata[3*i+2] / numtile >= 1.)
+				if(linesize * (1.-pcldata[3*i]) / numtile >= 1. || linesize * pcldata[3*i+1] / numtile >= 1. || linesize * pcldata[3*i+2] / numtile >= 1.)
 					continue;
 
 				// particle is in the second octant
@@ -808,9 +808,9 @@ void generateCICKernel(Field<Real> & ker, const long numpcl = 0, float * pcldata
 				sy = 1;
 				sz = 1;
 			}
-			else if (oct == 2)
+			else if(oct == 2)
 			{
-				if (linesize * (1.-pcldata[3*i]) / numtile >= 1. || linesize * (1.-pcldata[3*i+1]) / numtile >= 1. || linesize * pcldata[3*i+2] / numtile >= 1.)
+				if(linesize * (1.-pcldata[3*i]) / numtile >= 1. || linesize * (1.-pcldata[3*i+1]) / numtile >= 1. || linesize * pcldata[3*i+2] / numtile >= 1.)
 					continue;
 
 				// particle is in the third octant
@@ -822,9 +822,9 @@ void generateCICKernel(Field<Real> & ker, const long numpcl = 0, float * pcldata
 				sy = -1;
 				sz = 1;
 			}
-			else if (oct == 3)
+			else if(oct == 3)
 			{
-				if (linesize * pcldata[3*i] / numtile >= 1. || linesize * (1.-pcldata[3*i+1]) / numtile >= 1. || linesize * pcldata[3*i+2] / numtile >= 1.)
+				if(linesize * pcldata[3*i] / numtile >= 1. || linesize * (1.-pcldata[3*i+1]) / numtile >= 1. || linesize * pcldata[3*i+2] / numtile >= 1.)
 					continue;
 
 				// particle is in the fourth octant
@@ -836,9 +836,9 @@ void generateCICKernel(Field<Real> & ker, const long numpcl = 0, float * pcldata
 				sy = -1;
 				sz = 1;
 			}
-			else if (oct == 4)
+			else if(oct == 4)
 			{
-				if (linesize * pcldata[3*i] / numtile >= 1. || linesize * pcldata[3*i+1] / numtile >= 1. || linesize * (1.-pcldata[3*i+2]) / numtile >= 1.)
+				if(linesize * pcldata[3*i] / numtile >= 1. || linesize * pcldata[3*i+1] / numtile >= 1. || linesize * (1.-pcldata[3*i+2]) / numtile >= 1.)
 					continue;
 
 				// particle is in the fifth octant
@@ -850,9 +850,9 @@ void generateCICKernel(Field<Real> & ker, const long numpcl = 0, float * pcldata
 				sy = 1;
 				sz = -1;
 			}
-			else if (oct == 5)
+			else if(oct == 5)
 			{
-				if (linesize * (1.-pcldata[3*i]) / numtile >= 1. || linesize * pcldata[3*i+1] / numtile >= 1. || linesize * (1.-pcldata[3*i+2]) / numtile >= 1.)
+				if(linesize * (1.-pcldata[3*i]) / numtile >= 1. || linesize * pcldata[3*i+1] / numtile >= 1. || linesize * (1.-pcldata[3*i+2]) / numtile >= 1.)
 					continue;
 
 				// particle is in the sixth octant
@@ -864,9 +864,9 @@ void generateCICKernel(Field<Real> & ker, const long numpcl = 0, float * pcldata
 				sy = 1;
 				sz = -1;
 			}
-			else if (oct == 6)
+			else if(oct == 6)
 			{
-				if (linesize * (1.-pcldata[3*i]) / numtile >= 1. || linesize * (1.-pcldata[3*i+1]) / numtile >= 1. || linesize * (1.-pcldata[3*i+2]) / numtile >= 1.)
+				if(linesize * (1.-pcldata[3*i]) / numtile >= 1. || linesize * (1.-pcldata[3*i+1]) / numtile >= 1. || linesize * (1.-pcldata[3*i+2]) / numtile >= 1.)
 					continue;
 
 				// particle is in the seventh octant
@@ -878,9 +878,9 @@ void generateCICKernel(Field<Real> & ker, const long numpcl = 0, float * pcldata
 				sy = -1;
 				sz = -1;
 			}
-			else if (oct == 7)
+			else if(oct == 7)
 			{
-				if (linesize * pcldata[3*i] / numtile >= 1. || linesize * (1.-pcldata[3*i+1]) / numtile >= 1. || linesize * (1.-pcldata[3*i+2]) / numtile >= 1.)
+				if(linesize * pcldata[3*i] / numtile >= 1. || linesize * (1.-pcldata[3*i+1]) / numtile >= 1. || linesize * (1.-pcldata[3*i+2]) / numtile >= 1.)
 					continue;
 
 				// particle is in the eight-th octant
@@ -900,48 +900,48 @@ void generateCICKernel(Field<Real> & ker, const long numpcl = 0, float * pcldata
 			ww = wy*wz*renorm;
 			q1 = (wx > 0.9) ? 2. : 1.;
 
-			if (x.setCoord(0, 0, 0))
+			if(x.setCoord(0, 0, 0))
 			{
 				ker(x) += ww * wy * wz * q1;
 				x.setCoord((linesize+sx)%linesize, 0, 0);
 				ker(x) -= ww * wy * wz;
-				if (wx > 0.9)
+				if(wx > 0.9)
 				{
 					x.setCoord((linesize-sx)%linesize, 0, 0);
 					ker(x) -= ww * wy * wz;
 				}
 			}
 
-			if (x.setCoord(0, 0, (linesize+sz)%linesize))
+			if(x.setCoord(0, 0, (linesize+sz)%linesize))
 			{
 				ker(x) += ww * wy * (1.-wz) * q1;
 				x.setCoord((linesize+sx)%linesize, 0, (linesize+sz)%linesize);
 				ker(x) -= ww * wy * (1.-wz);
-				if (wx > 0.9)
+				if(wx > 0.9)
 				{
 					x.setCoord((linesize-sx)%linesize, 0, (linesize+sz)%linesize);
 					ker(x) -= ww * wy * (1.-wz);
 				}
 			}
 
-			if (x.setCoord(0, (linesize+sy)%linesize, 0))
+			if(x.setCoord(0, (linesize+sy)%linesize, 0))
 			{
 				ker(x) += ww * (1.-wy) * wz * q1;
 				x.setCoord((linesize+sx)%linesize, (linesize+sy)%linesize, 0);
 				ker(x) -= ww * (1.-wy) * wz;
-				if (wx > 0.9)
+				if(wx > 0.9)
 				{
 					x.setCoord((linesize-sx)%linesize, (linesize+sy)%linesize, 0);
 					ker(x) -= ww * (1.-wy) * wz;
 				}
 			}
 
-			if (x.setCoord(0, (linesize+sy)%linesize, (linesize+sz)%linesize))
+			if(x.setCoord(0, (linesize+sy)%linesize, (linesize+sz)%linesize))
 			{
 				ker(x) += ww * (1.-wy) * (1.-wz) * q1;
 				x.setCoord((linesize+sx)%linesize, (linesize+sy)%linesize, (linesize+sz)%linesize);
 				ker(x) -= ww * (1.-wy) * (1.-wz);
-				if (wx > 0.9)
+				if(wx > 0.9)
 				{
 					x.setCoord((linesize-sx)%linesize, (linesize+sy)%linesize, (linesize+sz)%linesize);
 					ker(x) -= ww * (1.-wy) * (1.-wz);
@@ -953,44 +953,44 @@ void generateCICKernel(Field<Real> & ker, const long numpcl = 0, float * pcldata
 			ww = wx*wz*renorm;
 			q1 = (wy > 0.9) ? 2. : 1.;
 
-			if (x.setCoord(0, 0, 0))
+			if(x.setCoord(0, 0, 0))
 			{
 				ker(x) += ww * wx * wz * q1;
 				x.setCoord((linesize+sx)%linesize, 0, 0);
 				ker(x) += ww * (1.-wx) * wz * q1;
 			}
 
-			if (x.setCoord(0, 0, (linesize+sz)%linesize))
+			if(x.setCoord(0, 0, (linesize+sz)%linesize))
 			{
 				ker(x) += ww * wx * (1.-wz) * q1;
 				x.setCoord((linesize+sx)%linesize, 0, (linesize+sz)%linesize);
 				ker(x) += ww * (1.-wx) * (1.-wz) * q1;
 			}
 
-			if (x.setCoord(0, (linesize+sy)%linesize, 0))
+			if(x.setCoord(0, (linesize+sy)%linesize, 0))
 			{
 				ker(x) -= ww * wx * wz;
 				x.setCoord((linesize+sx)%linesize, (linesize+sy)%linesize, 0);
 				ker(x) -= ww * (1.-wx) * wz;
 			}
 
-			if (x.setCoord(0, (linesize+sy)%linesize, (linesize+sz)%linesize))
+			if(x.setCoord(0, (linesize+sy)%linesize, (linesize+sz)%linesize))
 			{
 				ker(x) -= ww * wx * (1.-wz);
 				x.setCoord((linesize+sx)%linesize, (linesize+sy)%linesize, (linesize+sz)%linesize);
 				ker(x) -= ww * (1.-wx) * (1.-wz);
 			}
 
-			if (wy > 0.9)
+			if(wy > 0.9)
 			{
-				if (x.setCoord(0, (linesize-sy)%linesize, 0))
+				if(x.setCoord(0, (linesize-sy)%linesize, 0))
 				{
 					ker(x) -= ww * wx * wz;
 					x.setCoord((linesize+sx)%linesize, (linesize-sy)%linesize, 0);
 					ker(x) -= ww * (1.-wx) * wz;
 				}
 
-				if (x.setCoord(0, (linesize-sy)%linesize, (linesize+sz)%linesize))
+				if(x.setCoord(0, (linesize-sy)%linesize, (linesize+sz)%linesize))
 				{
 					ker(x) -= ww * wx * (1.-wz);
 					x.setCoord((linesize+sx)%linesize, (linesize-sy)%linesize, (linesize+sz)%linesize);
@@ -1003,44 +1003,44 @@ void generateCICKernel(Field<Real> & ker, const long numpcl = 0, float * pcldata
 			ww = wx*wy*renorm;
 			q1 = (wz > 0.9) ? 2. : 1.;
 
-			if (x.setCoord(0, 0, 0))
+			if(x.setCoord(0, 0, 0))
 			{
 				ker(x) += ww * wx * wy * q1;
 				x.setCoord((linesize+sx)%linesize, 0, 0);
 				ker(x) += ww * (1.-wx) * wy * q1;
 			}
 
-			if (x.setCoord(0, (linesize+sy)%linesize, 0))
+			if(x.setCoord(0, (linesize+sy)%linesize, 0))
 			{
 				ker(x) += ww * wx * (1.-wy) * q1;
 				x.setCoord((linesize+sx)%linesize, (linesize+sy)%linesize, 0);
 				ker(x) += ww * (1.-wx) * (1.-wy) * q1;
 			}
 
-			if (x.setCoord(0, 0, (linesize+sz)%linesize))
+			if(x.setCoord(0, 0, (linesize+sz)%linesize))
 			{
 				ker(x) -= ww * wx * wy;
 				x.setCoord((linesize+sx)%linesize, 0, (linesize+sz)%linesize);
 				ker(x) -= ww * (1.-wx) * wy;
 			}
 
-			if (x.setCoord(0, (linesize+sy)%linesize, (linesize+sz)%linesize))
+			if(x.setCoord(0, (linesize+sy)%linesize, (linesize+sz)%linesize))
 			{
 				ker(x) -= ww * wx * (1.-wy);
 				x.setCoord((linesize+sx)%linesize, (linesize+sy)%linesize, (linesize+sz)%linesize);
 				ker(x) -= ww * (1.-wx) * (1.-wy);
 			}
 
-			if (wz > 0.9)
+			if(wz > 0.9)
 			{
-				if (x.setCoord(0, 0, (linesize-sz)%linesize))
+				if(x.setCoord(0, 0, (linesize-sz)%linesize))
 				{
 					ker(x) -= ww * wx * wy;
 					x.setCoord((linesize+sx)%linesize, 0, (linesize-sz)%linesize);
 					ker(x) -= ww * (1.-wx) * wy;
 				}
 
-				if (x.setCoord(0, (linesize+sy)%linesize, (linesize-sz)%linesize))
+				if(x.setCoord(0, (linesize+sy)%linesize, (linesize-sz)%linesize))
 				{
 					ker(x) -= ww * wx * (1.-wy);
 					x.setCoord((linesize+sx)%linesize, (linesize+sy)%linesize, (linesize-sz)%linesize);
@@ -1104,14 +1104,14 @@ void generateDisplacementField(Field<Cplx> & potFT, const Real coeff, const gsl_
 	sinc = (float *) malloc(linesize * sizeof(float));
 
 	sinc[0] = 1.;
-	if (deconvolve_f == 1)
+	if(deconvolve_f == 1)
 	{
-		for (i = 1; i < linesize; i++)
+		for(i = 1; i < linesize; i++)
 			sinc[i] = sin(M_PI * (float) i / (float) linesize) * (float) linesize / (M_PI * (float) i);
 	}
 	else
 	{
-		for (i = 1; i < linesize; i++)
+		for(i = 1; i < linesize; i++)
 			sinc[i] = 1.;
 	}
 
@@ -1122,11 +1122,11 @@ void generateDisplacementField(Field<Cplx> & potFT, const Real coeff, const gsl_
 	kymin = k.coord(1);
 	kzmin = k.coord(2);
 
-	if (kymin < (linesize / 2) + 1 && kzmin < (linesize / 2) + 1)
+	if(kymin < (linesize / 2) + 1 && kzmin < (linesize / 2) + 1)
 	{
 		prng.seed(seed);
 
-		if (kymin == 0 && kzmin == 0)
+		if(kymin == 0 && kzmin == 0)
 		{
 			k.setCoord(0, 0, 0);
 			potFT(k) = Cplx(0.,0.);
@@ -1138,17 +1138,17 @@ void generateDisplacementField(Field<Cplx> & potFT, const Real coeff, const gsl_
 			prng.discard(((uint64_t) kzmin * huge_skip + (uint64_t) kymin) * huge_skip);
 		}
 
-		for (kz = kzmin; kz < (linesize / 2) + 1 && kz <= kzmax; kz++)
+		for(kz = kzmin; kz < (linesize / 2) + 1 && kz <= kzmax; kz++)
 		{
-			for (ky = kymin, j = 0; ky < (linesize / 2) + 1 && ky <= kymax; ky++, j++)
+			for(ky = kymin, j = 0; ky < (linesize / 2) + 1 && ky <= kymax; ky++, j++)
 			{
-				for (i = 0; kx < (linesize / 2) + 1; kx++)
+				for(i = 0; kx < (linesize / 2) + 1; kx++)
 				{
 					k.setCoord(kx, ky, kz);
 
 					k2 = (float) (kx * kx) + (float) (ky * ky) + (float) (kz * kz);
 
-					if (kx >= kmax || ky >= kmax || kz >= kmax || (k2 >= kmax * kmax && ksphere > 0))
+					if(kx >= kmax || ky >= kmax || kz >= kmax || (k2 >= kmax * kmax && ksphere > 0))
 					{
 						potFT(k) = Cplx(0., 0.);
 					}
@@ -1161,7 +1161,7 @@ void generateDisplacementField(Field<Cplx> & potFT, const Real coeff, const gsl_
 							r1 = (float) prng() / (float) sitmo::prng_engine::max();
 							i++;
 						}
-						while (r1 == 0.);
+						while(r1 == 0.);
 						r2 = (float) prng() / (float) sitmo::prng_engine::max();
 						i++;
 
@@ -1175,22 +1175,22 @@ void generateDisplacementField(Field<Cplx> & potFT, const Real coeff, const gsl_
 		}
 	}
 
-	if (kymax >= (linesize / 2) + 1 && kzmin < (linesize / 2) + 1)
+	if(kymax >= (linesize / 2) + 1 && kzmin < (linesize / 2) + 1)
 	{
 		prng.seed(seed);
 		prng.discard(((huge_skip + (uint64_t) kzmin) * huge_skip + (uint64_t) (linesize - kymax)) * huge_skip);
 
-		for (kz = kzmin; kz < (linesize / 2) + 1 && kz <= kzmax; kz++)
+		for(kz = kzmin; kz < (linesize / 2) + 1 && kz <= kzmax; kz++)
 		{
-			for (ky = kymax, j = 0; ky >= (linesize / 2) + 1 && ky >= kymin; ky--, j++)
+			for(ky = kymax, j = 0; ky >= (linesize / 2) + 1 && ky >= kymin; ky--, j++)
 			{
-				for (kx = 0, i = 0; kx < (linesize / 2) + 1; kx++)
+				for(kx = 0, i = 0; kx < (linesize / 2) + 1; kx++)
 				{
 					k.setCoord(kx, ky, kz);
 
 					k2 = (float) (kx * kx) + (float) ((linesize-ky) * (linesize-ky)) + (float) (kz * kz);
 
-					if (kx >= kmax || (linesize-ky) >= kmax || kz >= kmax || (k2 >= kmax * kmax && ksphere > 0))
+					if(kx >= kmax || (linesize-ky) >= kmax || kz >= kmax || (k2 >= kmax * kmax && ksphere > 0))
 					{
 						potFT(k) = Cplx(0., 0.);
 					}
@@ -1203,7 +1203,7 @@ void generateDisplacementField(Field<Cplx> & potFT, const Real coeff, const gsl_
 							r1 = (float) prng() / (float) sitmo::prng_engine::max();
 							i++;
 						}
-						while (r1 == 0.);
+						while(r1 == 0.);
 						r2 = (float) prng() / (float) sitmo::prng_engine::max();
 						i++;
 
@@ -1216,22 +1216,22 @@ void generateDisplacementField(Field<Cplx> & potFT, const Real coeff, const gsl_
 		}
 	}
 
-	if (kymin < (linesize / 2) + 1 && kzmax >= (linesize / 2) + 1)
+	if(kymin < (linesize / 2) + 1 && kzmax >= (linesize / 2) + 1)
 	{
 		prng.seed(seed);
 		prng.discard(((huge_skip + huge_skip + (uint64_t) (linesize - kzmax)) * huge_skip + (uint64_t) kymin) * huge_skip);
 
-		for (kz = kzmax; kz >= (linesize / 2) + 1 && kz >= kzmin; kz--)
+		for(kz = kzmax; kz >= (linesize / 2) + 1 && kz >= kzmin; kz--)
 		{
-			for (ky = kymin, j = 0; ky < (linesize / 2) + 1 && ky <= kymax; ky++, j++)
+			for(ky = kymin, j = 0; ky < (linesize / 2) + 1 && ky <= kymax; ky++, j++)
 			{
-				for (kx = 1, i = 0; kx < (linesize / 2) + 1; kx++)
+				for(kx = 1, i = 0; kx < (linesize / 2) + 1; kx++)
 				{
 					k.setCoord(kx, ky, kz);
 
 					k2 = (float) (kx * kx) + (float) (ky * ky) + (float) ((linesize-kz) * (linesize-kz));
 
-					if (kx >= kmax || ky >= kmax || (linesize-kz) >= kmax || (k2 >= kmax * kmax && ksphere > 0))
+					if(kx >= kmax || ky >= kmax || (linesize-kz) >= kmax || (k2 >= kmax * kmax && ksphere > 0))
 					{
 						potFT(k) = Cplx(0., 0.);
 					}
@@ -1244,7 +1244,7 @@ void generateDisplacementField(Field<Cplx> & potFT, const Real coeff, const gsl_
 							r1 = (float) prng() / (float) sitmo::prng_engine::max();
 							i++;
 						}
-						while (r1 == 0.);
+						while(r1 == 0.);
 						r2 = (float) prng() / (float) sitmo::prng_engine::max();
 						i++;
 
@@ -1260,16 +1260,16 @@ void generateDisplacementField(Field<Cplx> & potFT, const Real coeff, const gsl_
 		prng.discard(((uint64_t) (linesize - kzmax) * huge_skip + (uint64_t) kymin) * huge_skip);
 		kx = 0;
 
-		for (kz = kzmax; kz >= (linesize / 2) + 1 && kz >= kzmin; kz--)
+		for(kz = kzmax; kz >= (linesize / 2) + 1 && kz >= kzmin; kz--)
 		{
-			for (ky = kymin, j = 0; ky < (linesize / 2) + 1 && ky <= kymax; ky++, j++)
+			for(ky = kymin, j = 0; ky < (linesize / 2) + 1 && ky <= kymax; ky++, j++)
 			{
 				k.setCoord(kx, ky, kz);
 
 				k2 = (float) (ky * ky) + (float) ((linesize-kz) * (linesize-kz));
 				i = 0;
 
-				if (ky >= kmax || (linesize-kz) >= kmax || (k2 >= kmax * kmax && ksphere > 0))
+				if(ky >= kmax || (linesize-kz) >= kmax || (k2 >= kmax * kmax && ksphere > 0))
 				{
 					potFT(k) = Cplx(0., 0.);
 				}
@@ -1282,7 +1282,7 @@ void generateDisplacementField(Field<Cplx> & potFT, const Real coeff, const gsl_
 						r1 = (float) prng() / (float) sitmo::prng_engine::max();
 						i++;
 					}
-					while (r1 == 0.);
+					while(r1 == 0.);
 					r2 = (float) prng() / (float) sitmo::prng_engine::max();
 					i++;
 
@@ -1295,22 +1295,22 @@ void generateDisplacementField(Field<Cplx> & potFT, const Real coeff, const gsl_
 		}
 	}
 
-	if (kymax >= (linesize / 2) + 1 && kzmax >= (linesize / 2) + 1)
+	if(kymax >= (linesize / 2) + 1 && kzmax >= (linesize / 2) + 1)
 	{
 		prng.seed(seed);
 		prng.discard(((huge_skip + huge_skip + huge_skip + (uint64_t) (linesize - kzmax)) * huge_skip + (uint64_t) (linesize - kymax)) * huge_skip);
 
-		for (kz = kzmax; kz >= (linesize / 2) + 1 && kz >= kzmin; kz--)
+		for(kz = kzmax; kz >= (linesize / 2) + 1 && kz >= kzmin; kz--)
 		{
-			for (ky = kymax, j = 0; ky >= (linesize / 2) + 1 && ky >= kymin; ky--, j++)
+			for(ky = kymax, j = 0; ky >= (linesize / 2) + 1 && ky >= kymin; ky--, j++)
 			{
-				for (kx = 1, i = 0; kx < (linesize / 2) + 1; kx++)
+				for(kx = 1, i = 0; kx < (linesize / 2) + 1; kx++)
 				{
 					k.setCoord(kx, ky, kz);
 
 					k2 = (float) (kx * kx) + (float) ((linesize-ky) * (linesize-ky)) + (float) ((linesize-kz) * (linesize-kz));
 
-					if (kx >= kmax || (linesize-ky) >= kmax || (linesize-kz) >= kmax || (k2 >= kmax * kmax && ksphere > 0))
+					if(kx >= kmax || (linesize-ky) >= kmax || (linesize-kz) >= kmax || (k2 >= kmax * kmax && ksphere > 0))
 					{
 						potFT(k) = Cplx(0., 0.);
 					}
@@ -1323,7 +1323,7 @@ void generateDisplacementField(Field<Cplx> & potFT, const Real coeff, const gsl_
 							r1 = (float) prng() / (float) sitmo::prng_engine::max();
 							i++;
 						}
-						while (r1 == 0.);
+						while(r1 == 0.);
 						r2 = (float) prng() / (float) sitmo::prng_engine::max();
 						i++;
 
@@ -1339,16 +1339,16 @@ void generateDisplacementField(Field<Cplx> & potFT, const Real coeff, const gsl_
 		prng.discard(((huge_skip + huge_skip + (uint64_t) (linesize - kzmax)) * huge_skip + (uint64_t) (linesize - kymax)) * huge_skip);
 		kx = 0;
 
-		for (kz = kzmax; kz >= (linesize / 2) + 1 && kz >= kzmin; kz--)
+		for(kz = kzmax; kz >= (linesize / 2) + 1 && kz >= kzmin; kz--)
 		{
-			for (ky = kymax, j = 0; ky >= (linesize / 2) + 1 && ky >= kymin; ky--, j++)
+			for(ky = kymax, j = 0; ky >= (linesize / 2) + 1 && ky >= kymin; ky--, j++)
 			{
 				k.setCoord(kx, ky, kz);
 
 				k2 = (float) ((linesize-ky) * (linesize-ky)) + (float) ((linesize-kz) * (linesize-kz));
 				i = 0;
 
-				if ((linesize-ky) >= kmax || (linesize-kz) >= kmax || (k2 >= kmax * kmax && ksphere > 0))
+				if((linesize-ky) >= kmax || (linesize-kz) >= kmax || (k2 >= kmax * kmax && ksphere > 0))
 				{
 					potFT(k) = Cplx(0., 0.);
 				}
@@ -1361,7 +1361,7 @@ void generateDisplacementField(Field<Cplx> & potFT, const Real coeff, const gsl_
 						r1 = (float) prng() / (float) sitmo::prng_engine::max();
 						i++;
 					}
-					while (r1 == 0.);
+					while(r1 == 0.);
 					r2 = (float) prng() / (float) sitmo::prng_engine::max();
 					i++;
 
@@ -1408,17 +1408,17 @@ void initializeParticlePositions(const long numpart, const float * partdata, con
 	part.vel[1] = 0.;
 	part.vel[2] = 0.;
 
-	for (ztile = (pcls.lattice().coordSkip()[0] * numtile) / pcls.lattice().size(2); ztile <= ((pcls.lattice().coordSkip()[0] + pcls.lattice().sizeLocal(2)) * numtile) / pcls.lattice().size(2); ztile++)
+	for(ztile = (pcls.lattice().coordSkip()[0] * numtile) / pcls.lattice().size(2); ztile <= ((pcls.lattice().coordSkip()[0] + pcls.lattice().sizeLocal(2)) * numtile) / pcls.lattice().size(2); ztile++)
 	{
-		if (ztile >= numtile) break;
+		if(ztile >= numtile) break;
 
-		for (ytile = (pcls.lattice().coordSkip()[1] * numtile) / pcls.lattice().size(1); ytile <= ((pcls.lattice().coordSkip()[1] + pcls.lattice().sizeLocal(1)) * numtile) / pcls.lattice().size(1); ytile++)
+		for(ytile = (pcls.lattice().coordSkip()[1] * numtile) / pcls.lattice().size(1); ytile <= ((pcls.lattice().coordSkip()[1] + pcls.lattice().sizeLocal(1)) * numtile) / pcls.lattice().size(1); ytile++)
 		{
-			if (ytile >= numtile) break;
+			if(ytile >= numtile) break;
 
-			for (xtile = 0; xtile < numtile; xtile++)
+			for(xtile = 0; xtile < numtile; xtile++)
 			{
-				for (i = 0; i < numpart; i++)
+				for(i = 0; i < numpart; i++)
 				{
 					part.pos[0] = ((Real) xtile + partdata[3*i]) / (Real) numtile;
 					part.pos[1] = ((Real) ytile + partdata[3*i+1]) / (Real) numtile;
@@ -1519,23 +1519,23 @@ double applyMomentumDistribution(Particles<part_simple,part_simple_info,part_sim
 	                   0.343516979f,  0.355786485f,  0.368757588f,  0.382580625f,
 	                   0.397475563f,  0.413789108f,  0.432131941f,  0.453799050f, 0.482830296f};
 
-	if (delta != NULL)
+	if(delta != NULL)
 	{
 		l = (double) delta->lattice().size(0);
 		x.initialize(delta->lattice());
 		x.first();
 	}
 
-	for (xPart.first(); xPart.test(); xPart.next())
+	for(xPart.first(); xPart.test(); xPart.next())
 	{
-		if (pcls->field()(xPart).size != 0)
+		if(pcls->field()(xPart).size != 0)
 		{
-			for (it=(pcls->field())(xPart).parts.begin(); it != (pcls->field())(xPart).parts.end(); ++it)
+			for(it=(pcls->field())(xPart).parts.begin(); it != (pcls->field())(xPart).parts.end(); ++it)
 			{
 				prng.seed(seed);
 				prng.discard((uint64_t) (7l * (*it).ID));
 
-				while (true)
+				while(true)
 				{
 					r = prng();
 					i = r % 64;
@@ -1543,17 +1543,17 @@ double applyMomentumDistribution(Particles<part_simple,part_simple_info,part_sim
 
 					q = ql[i] + 64.0f * (qr[i]-ql[i]) * ((float) r / (float) sitmo::prng_engine::max());
 
-					if (q > ql[i+1] && q < qr[i+1]) break;
+					if(q > ql[i+1] && q < qr[i+1]) break;
 
-					if (f[i] + (f[i+1]-f[i]) * ((float) prng() / (float) sitmo::prng_engine::max()) < q * q / (exp(q) + 1.0f)) break;
+					if(f[i] + (f[i+1]-f[i]) * ((float) prng() / (float) sitmo::prng_engine::max()) < q * q / (exp(q) + 1.0f)) break;
 				}
 
 				r1 = acos(2. * ((float) prng() / (float) sitmo::prng_engine::max()) - 1.);
 				r2 = 2 * M_PI * ((float) prng() / (float) sitmo::prng_engine::max());
 
-				if (delta != NULL)
+				if(delta != NULL)
 				{
-					for (i = 0; i < 3; i++)
+					for(i = 0; i < 3; i++)
 						d[i] = modf((*it).pos[i] * l, &dummy);
 
 					dT = (1. - d[0]) * (1. - d[1]) * (1. - d[2]) * (*delta)(x);
@@ -1578,7 +1578,7 @@ double applyMomentumDistribution(Particles<part_simple,part_simple_info,part_sim
 			}
 		}
 
-		if (delta != NULL) x.next();
+		if(delta != NULL) x.next();
 	}
 
 	return sum_q;
@@ -1663,24 +1663,24 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 
 	loadHomogeneousTemplate(ic.pclfile[0], sim.numpcl[0], pcldata);
 
-	if (pcldata == NULL)
+	if(pcldata == NULL)
 	{
 		COUT << " error: particle data was empty!" << endl;
 		parallel.abortForce();
 	}
 
-	if (ic.flags & ICFLAG_CORRECT_DISPLACEMENT)
+	if(ic.flags & ICFLAG_CORRECT_DISPLACEMENT)
 		generateCICKernel(*source, sim.numpcl[0], pcldata, ic.numtile[0]);
 	else
 		generateCICKernel(*source);
 
 	plan_source->execute(FFT_FORWARD);
 
-	if (ic.pkfile[0] != '\0')	// initial displacements & velocities are derived from a single power spectrum
+	if(ic.pkfile[0] != '\0')	// initial displacements & velocities are derived from a single power spectrum
 	{
 		loadPowerSpectrum(ic.pkfile, pkspline, sim.boxsize);
 
-		if (pkspline == NULL)
+		if(pkspline == NULL)
 		{
 			COUT << " error: power spectrum was empty!" << endl;
 			parallel.abortForce();
@@ -1689,7 +1689,7 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 		temp1 = (double *) malloc(pkspline->size * sizeof(double));
 		temp2 = (double *) malloc(pkspline->size * sizeof(double));
 
-		for (i = 0; i < pkspline->size; i++)
+		for(i = 0; i < pkspline->size; i++)
 		{
 			temp1[i] = pkspline->x[i];
 			temp2[i] = pkspline->y[i] / sim.boxsize / sim.boxsize;
@@ -1703,7 +1703,7 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 	else					// initial displacements and velocities are set by individual transfer functions
 	{
 #ifdef HAVE_CLASS
-		if (ic.tkfile[0] == '\0')
+		if(ic.tkfile[0] == '\0')
 		{
 			initializeCLASSstructures(sim, ic, cosmo, class_background, class_perturbs, class_spectra, params, numparam);
 			loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_t1, "tot", sim.boxsize, sim.z_in, cosmo.h);
@@ -1712,7 +1712,7 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 #endif
 		loadTransferFunctions(ic.tkfile, tk_d1, tk_t1, "tot", sim.boxsize, cosmo.h);
 
-		if (tk_d1 == NULL || tk_t1 == NULL)
+		if(tk_d1 == NULL || tk_t1 == NULL)
 		{
 			COUT << " error: total transfer function was empty!" << endl;
 			parallel.abortForce();
@@ -1722,12 +1722,12 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 		temp2 = (double *) malloc(tk_d1->size * sizeof(double));
 
 		rescale = 3. * Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) * (1. + 0.5 * Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) * ((1. / Hconf(0.98 * a, fourpiG, cosmo) / Hconf(0.98 * a, fourpiG, cosmo)) - (8. / Hconf(0.99 * a, fourpiG, cosmo) / Hconf(0.99 * a, fourpiG, cosmo)) + (8. / Hconf(1.01 * a, fourpiG, cosmo) / Hconf(1.01 * a, fourpiG, cosmo)) - (1. / Hconf(1.02 * a, fourpiG, cosmo) / Hconf(1.02 * a, fourpiG, cosmo))) / 0.12);
-		for (i = 0; i < tk_d1->size; i++) // construct phi
+		for(i = 0; i < tk_d1->size; i++) // construct phi
 			temp1[i] = (1.5 * (Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) - Hconf(1., fourpiG, cosmo) * Hconf(1., fourpiG, cosmo) * a * a * cosmo.Omega_Lambda) * tk_d1->y[i] + rescale * tk_t1->y[i] / tk_d1->x[i] / tk_d1->x[i]) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 
-		if (sim.relativistic_flag == 0)
+		if(sim.relativistic_flag == 0)
 		{
-			for (i = 0; i < tk_t1->size; i++) // construct gauge correction for N-body gauge (3 Hconf theta_tot / k^2)
+			for(i = 0; i < tk_t1->size; i++) // construct gauge correction for N-body gauge (3 Hconf theta_tot / k^2)
 				temp2[i] = -3. * Hconf(a, fourpiG, cosmo)  * M_PI * tk_t1->y[i] * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i] / tk_d1->x[i] / tk_d1->x[i];
 
 			nbspline = gsl_spline_alloc(gsl_interp_cspline, tk_t1->size);
@@ -1740,13 +1740,13 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 		gsl_spline_free(tk_t1);
 
 #ifdef HAVE_CLASS
-		if (ic.tkfile[0] == '\0')
+		if(ic.tkfile[0] == '\0')
 		{
-			if (sim.relativistic_flag == 0)
+			if(sim.relativistic_flag == 0)
 			{
 				loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_t1, NULL, sim.boxsize, sim.z_in, cosmo.h);
 
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp1[i] = -tk_d1->y[i];
 
 				gsl_spline_free(tk_d1);
@@ -1754,7 +1754,7 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 
 				loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_t1, NULL, sim.boxsize, (sim.z_in + 0.01) / 0.99, cosmo.h);
 
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp1[i] += tk_d1->y[i];
 
 				gsl_spline_free(tk_d1);
@@ -1762,7 +1762,7 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 
 				loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_t1, "tot", sim.boxsize, (sim.z_in + 0.01) / 0.99, cosmo.h);
 
-				for (i = 0; i < tk_d1->size; i++) // construct gauge correction for N-body gauge velocities
+				for(i = 0; i < tk_d1->size; i++) // construct gauge correction for N-body gauge velocities
 					temp1[i] = -99.5 * Hconf(0.995 * a, fourpiG, cosmo) * (3. * temp1[i] * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i] + (temp2[i] + 3. * Hconf(0.99 * a, fourpiG, cosmo)  * M_PI * tk_t1->y[i] * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i] / tk_d1->x[i] / tk_d1->x[i]));
 
 				vnbspline = gsl_spline_alloc(gsl_interp_cspline, tk_t1->size);
@@ -1778,53 +1778,53 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 #endif
 		loadTransferFunctions(ic.tkfile, tk_d1, tk_t1, "cdm", sim.boxsize, cosmo.h);	// get transfer functions for CDM
 
-		if (tk_d1 == NULL || tk_t1 == NULL)
+		if(tk_d1 == NULL || tk_t1 == NULL)
 		{
 			COUT << " error: cdm transfer function was empty!" << endl;
 			parallel.abortForce();
 		}
 
-		if (sim.baryon_flag > 0)
+		if(sim.baryon_flag > 0)
 		{
 #ifdef HAVE_CLASS
-			if (ic.tkfile[0] == '\0')
+			if(ic.tkfile[0] == '\0')
 				loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d2, tk_t2, "b", sim.boxsize, sim.z_in, cosmo.h);
 			else
 #endif
 			loadTransferFunctions(ic.tkfile, tk_d2, tk_t2, "b", sim.boxsize, cosmo.h);	// get transfer functions for baryons
 
-			if (tk_d2 == NULL || tk_t2 == NULL)
+			if(tk_d2 == NULL || tk_t2 == NULL)
 			{
 				COUT << " error: baryon transfer function was empty!" << endl;
 				parallel.abortForce();
 			}
-			if (tk_d2->size != tk_d1->size)
+			if(tk_d2->size != tk_d1->size)
 			{
 				COUT << " error: baryon transfer function line number mismatch!" << endl;
 				parallel.abortForce();
 			}
 		}
 
-		if (sim.baryon_flag == 2)	// baryon treatment = blend; compute displacement & velocity from weighted average
+		if(sim.baryon_flag == 2)	// baryon treatment = blend; compute displacement & velocity from weighted average
 		{
-			if (sim.relativistic_flag > 0)
+			if(sim.relativistic_flag > 0)
 			{
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp1[i] = -3. * pkspline->y[i] / pkspline->x[i] / pkspline->x[i] - ((cosmo.Omega_cdm * tk_d1->y[i] + cosmo.Omega_b * tk_d2->y[i]) / (cosmo.Omega_cdm + cosmo.Omega_b)) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 			}
 			else
 			{
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp1[i] = nbspline->y[i] - ((cosmo.Omega_cdm * tk_d1->y[i] + cosmo.Omega_b * tk_d2->y[i]) / (cosmo.Omega_cdm + cosmo.Omega_b)) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 			}
-			if (sim.relativistic_flag > 0 || vnbspline == NULL)
+			if(sim.relativistic_flag > 0 || vnbspline == NULL)
 			{
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp2[i] = -a * ((cosmo.Omega_cdm * tk_t1->y[i] + cosmo.Omega_b * tk_t2->y[i]) / (cosmo.Omega_cdm + cosmo.Omega_b)) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 			}
 			else
 			{
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp2[i] = a * vnbspline->y[i] - a * ((cosmo.Omega_cdm * tk_t1->y[i] + cosmo.Omega_b * tk_t2->y[i]) / (cosmo.Omega_cdm + cosmo.Omega_b)) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 			}
 
@@ -1838,28 +1838,28 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 			gsl_spline_free(tk_t2);
 		}
 
-		if (sim.baryon_flag == 3)	// baryon treatment = hybrid; compute displacement & velocity from weighted average (sub-species)
+		if(sim.baryon_flag == 3)	// baryon treatment = hybrid; compute displacement & velocity from weighted average (sub-species)
 		{
-			if (8. * cosmo.Omega_b / (cosmo.Omega_cdm + cosmo.Omega_b) > 1.)
+			if(8. * cosmo.Omega_b / (cosmo.Omega_cdm + cosmo.Omega_b) > 1.)
 			{
-				if (sim.relativistic_flag > 0)
+				if(sim.relativistic_flag > 0)
 				{
-					for (i = 0; i < tk_d1->size; i++)
+					for(i = 0; i < tk_d1->size; i++)
 						temp1[i] = -3. * pkspline->y[i] / pkspline->x[i] / pkspline->x[i] - ((8. * cosmo.Omega_cdm * tk_d1->y[i] + (7. * cosmo.Omega_b - cosmo.Omega_cdm) * tk_d2->y[i]) / (cosmo.Omega_cdm + cosmo.Omega_b) / 7.) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 				}
 				else
 				{
-					for (i = 0; i < tk_d1->size; i++)
+					for(i = 0; i < tk_d1->size; i++)
 						temp1[i] = nbspline->y[i] - ((8. * cosmo.Omega_cdm * tk_d1->y[i] + (7. * cosmo.Omega_b - cosmo.Omega_cdm) * tk_d2->y[i]) / (cosmo.Omega_cdm + cosmo.Omega_b) / 7.) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 				}
-				if (sim.relativistic_flag > 0 || vnbspline == NULL)
+				if(sim.relativistic_flag > 0 || vnbspline == NULL)
 				{
-					for (i = 0; i < tk_d1->size; i++)
+					for(i = 0; i < tk_d1->size; i++)
 						temp2[i] = -a * ((8. * cosmo.Omega_cdm * tk_t1->y[i] + (7. * cosmo.Omega_b - cosmo.Omega_cdm) * tk_t2->y[i]) / (cosmo.Omega_cdm + cosmo.Omega_b) / 7.) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 				}
 				else
 				{
-					for (i = 0; i < tk_d1->size; i++)
+					for(i = 0; i < tk_d1->size; i++)
 						temp2[i] = a * vnbspline->y[i] - a * ((8. * cosmo.Omega_cdm * tk_t1->y[i] + (7. * cosmo.Omega_b - cosmo.Omega_cdm) * tk_t2->y[i]) / (cosmo.Omega_cdm + cosmo.Omega_b) / 7.) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 				}
 
@@ -1872,24 +1872,24 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 			}
 			else
 			{
-				if (sim.relativistic_flag > 0)
+				if(sim.relativistic_flag > 0)
 				{
-					for (i = 0; i < tk_d1->size; i++)
+					for(i = 0; i < tk_d1->size; i++)
 						temp1[i] = -3. * pkspline->y[i] / pkspline->x[i] / pkspline->x[i] - (((cosmo.Omega_cdm - 7. * cosmo.Omega_b) * tk_d1->y[i] + 8. * cosmo.Omega_b * tk_d2->y[i]) / (cosmo.Omega_cdm + cosmo.Omega_b)) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 				}
 				else
 				{
-					for (i = 0; i < tk_d1->size; i++)
+					for(i = 0; i < tk_d1->size; i++)
 						temp1[i] = nbspline->y[i] - (((cosmo.Omega_cdm - 7. * cosmo.Omega_b) * tk_d1->y[i] + 8. * cosmo.Omega_b * tk_d2->y[i]) / (cosmo.Omega_cdm + cosmo.Omega_b)) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 				}
-				if (sim.relativistic_flag > 0 || vnbspline == NULL)
+				if(sim.relativistic_flag > 0 || vnbspline == NULL)
 				{
-					for (i = 0; i < tk_d1->size; i++)
+					for(i = 0; i < tk_d1->size; i++)
 						temp2[i] = -a * (((cosmo.Omega_cdm - 7. * cosmo.Omega_b) * tk_t1->y[i] + 8. * cosmo.Omega_b * tk_t2->y[i]) / (cosmo.Omega_cdm + cosmo.Omega_b)) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 				}
 				else
 				{
-					for (i = 0; i < tk_d1->size; i++)
+					for(i = 0; i < tk_d1->size; i++)
 						temp2[i] = a * vnbspline->y[i] - a * (((cosmo.Omega_cdm - 7. * cosmo.Omega_b) * tk_t1->y[i] + 8. * cosmo.Omega_b * tk_t2->y[i]) / (cosmo.Omega_cdm + cosmo.Omega_b)) * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 				}
 
@@ -1902,26 +1902,26 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 			}
 		}
 
-		if (sim.baryon_flag == 1 || (sim.baryon_flag == 3 && 8. * cosmo.Omega_b / (cosmo.Omega_cdm + cosmo.Omega_b) > 1.)) // compute baryonic displacement & velocity
+		if(sim.baryon_flag == 1 || (sim.baryon_flag == 3 && 8. * cosmo.Omega_b / (cosmo.Omega_cdm + cosmo.Omega_b) > 1.)) // compute baryonic displacement & velocity
 		{
-			if (sim.relativistic_flag > 0)
+			if(sim.relativistic_flag > 0)
 			{
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp1[i] = -3. * pkspline->y[i] / pkspline->x[i] / pkspline->x[i] - tk_d2->y[i] * M_PI * sqrt(Pk_primordial(tk_d2->x[i] * cosmo.h / sim.boxsize, ic) / tk_d2->x[i]) / tk_d2->x[i];
 			}
 			else
 			{
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp1[i] = nbspline->y[i] - tk_d2->y[i] * M_PI * sqrt(Pk_primordial(tk_d2->x[i] * cosmo.h / sim.boxsize, ic) / tk_d2->x[i]) / tk_d2->x[i];
 			}
-			if (sim.relativistic_flag > 0 || vnbspline == NULL)
+			if(sim.relativistic_flag > 0 || vnbspline == NULL)
 			{
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp2[i] = -a * tk_t2->y[i] * M_PI * sqrt(Pk_primordial(tk_d2->x[i] * cosmo.h / sim.boxsize, ic) / tk_d2->x[i]) / tk_d2->x[i];
 			}
 			else
 			{
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp2[i] = a * vnbspline->y[i] - a * tk_t2->y[i] * M_PI * sqrt(Pk_primordial(tk_d2->x[i] * cosmo.h / sim.boxsize, ic) / tk_d2->x[i]) / tk_d2->x[i];
 			}
 
@@ -1933,26 +1933,26 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 			gsl_spline_init(tk_t2, tk_d1->x, temp2, tk_d1->size);
 		}
 
-		if (sim.baryon_flag < 2 || (sim.baryon_flag == 3 && 8. * cosmo.Omega_b / (cosmo.Omega_cdm + cosmo.Omega_b) <= 1.))	// compute CDM displacement & velocity
+		if(sim.baryon_flag < 2 || (sim.baryon_flag == 3 && 8. * cosmo.Omega_b / (cosmo.Omega_cdm + cosmo.Omega_b) <= 1.))	// compute CDM displacement & velocity
 		{
-			if (sim.relativistic_flag > 0)
+			if(sim.relativistic_flag > 0)
 			{
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp1[i] = -3. * pkspline->y[i] / pkspline->x[i] / pkspline->x[i] - tk_d1->y[i] * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 			}
 			else
 			{
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp1[i] = nbspline->y[i] - tk_d1->y[i] * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 			}
-			if (sim.relativistic_flag > 0 || vnbspline == NULL)
+			if(sim.relativistic_flag > 0 || vnbspline == NULL)
 			{
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp2[i] = -a * tk_t1->y[i] * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 			}
 			else
 			{
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp2[i] = a * vnbspline->y[i] - a * tk_t1->y[i] * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 			}
 
@@ -1964,7 +1964,7 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 			gsl_spline_init(tk_t1, pkspline->x, temp2, pkspline->size);
 		}
 
-		if ((sim.baryon_flag == 1 && !(ic.flags & ICFLAG_CORRECT_DISPLACEMENT)) || sim.baryon_flag == 3)
+		if((sim.baryon_flag == 1 && !(ic.flags & ICFLAG_CORRECT_DISPLACEMENT)) || sim.baryon_flag == 3)
 		{
 			generateDisplacementField(*scalarFT, 0., tk_d2, (unsigned int) ic.seed, ic.flags & ICFLAG_KSPHERE);
 			gsl_spline_free(tk_d2);
@@ -1981,7 +1981,7 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 	chi->updateHalo();	// chi now contains the CDM displacement
 
 	strcpy(pcls_cdm_info.type_name, "part_simple");
-	if (sim.baryon_flag == 1)
+	if(sim.baryon_flag == 1)
 		pcls_cdm_info.mass = cosmo.Omega_cdm / (Real) (sim.numpcl[0]*(long)ic.numtile[0]*(long)ic.numtile[0]*(long)ic.numtile[0]);
 	else
 		pcls_cdm_info.mass = (cosmo.Omega_cdm + cosmo.Omega_b) / (Real) (sim.numpcl[0]*(long)ic.numtile[0]*(long)ic.numtile[0]*(long)ic.numtile[0]);
@@ -1991,7 +1991,7 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 
 	initializeParticlePositions(sim.numpcl[0], pcldata, ic.numtile[0], *pcls_cdm);
 	i = MAX;
-	if (sim.baryon_flag == 3)	// baryon treatment = hybrid; displace particles using both displacement fields
+	if(sim.baryon_flag == 3)	// baryon treatment = hybrid; displace particles using both displacement fields
 		pcls_cdm->moveParticles(displace_pcls_ic_basic, 1., ic_fields, 2, NULL, &max_displacement, &i, 1);
 	else
 		pcls_cdm->moveParticles(displace_pcls_ic_basic, 1., &chi, 1, NULL, &max_displacement, &i, 1);	// displace CDM particles
@@ -2002,17 +2002,17 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 
 	free(pcldata);
 
-	if (sim.baryon_flag == 1)
+	if(sim.baryon_flag == 1)
 	{
 		loadHomogeneousTemplate(ic.pclfile[1], sim.numpcl[1], pcldata);
 
-		if (pcldata == NULL)
+		if(pcldata == NULL)
 		{
 			COUT << " error: particle data was empty!" << endl;
 			parallel.abortForce();
 		}
 
-		if (ic.flags & ICFLAG_CORRECT_DISPLACEMENT)
+		if(ic.flags & ICFLAG_CORRECT_DISPLACEMENT)
 		{
 			generateCICKernel(*phi, sim.numpcl[1], pcldata, ic.numtile[1]);
 			plan_phi->execute(FFT_FORWARD);
@@ -2039,14 +2039,14 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 		free(pcldata);
 	}
 
-	if (ic.pkfile[0] == '\0')	// set velocities using transfer functions
+	if(ic.pkfile[0] == '\0')	// set velocities using transfer functions
 	{
-		if (ic.flags & ICFLAG_CORRECT_DISPLACEMENT)
+		if(ic.flags & ICFLAG_CORRECT_DISPLACEMENT)
 			generateCICKernel(*source);
 
 		plan_source->execute(FFT_FORWARD);
 
-		if (sim.baryon_flag == 1 || sim.baryon_flag == 3)
+		if(sim.baryon_flag == 1 || sim.baryon_flag == 3)
 		{
 			generateDisplacementField(*scalarFT, 0., tk_t2, (unsigned int) ic.seed, ic.flags & ICFLAG_KSPHERE, 0);
 			plan_phi->execute(FFT_BACKWARD);
@@ -2060,63 +2060,63 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 		chi->updateHalo();	// chi now contains the CDM velocity potential
 		gsl_spline_free(tk_t1);
 
-		if (sim.baryon_flag == 3)	// baryon treatment = hybrid; set velocities using both velocity potentials
+		if(sim.baryon_flag == 3)	// baryon treatment = hybrid; set velocities using both velocity potentials
 			maxvel[0] = pcls_cdm->updateVel(initialize_q_ic_basic, 1., ic_fields, 2) / a;
 		else
 			maxvel[0] = pcls_cdm->updateVel(initialize_q_ic_basic, 1., &chi, 1) / a;	// set CDM velocities
 
-		if (sim.baryon_flag == 1)
+		if(sim.baryon_flag == 1)
 			maxvel[1] = pcls_b->updateVel(initialize_q_ic_basic, 1., &phi, 1) / a;	// set baryon velocities
 	}
 
-	if (sim.baryon_flag > 1) sim.baryon_flag = 0;
+	if(sim.baryon_flag > 1) sim.baryon_flag = 0;
 
-	for (p = 0; p < cosmo.num_ncdm; p++)	// initialization of non-CDM species
+	for(p = 0; p < cosmo.num_ncdm; p++)	// initialization of non-CDM species
 	{
-		if (ic.numtile[1+sim.baryon_flag+p] < 1) continue;
+		if(ic.numtile[1+sim.baryon_flag+p] < 1) continue;
 
 		loadHomogeneousTemplate(ic.pclfile[1+sim.baryon_flag+p], sim.numpcl[1+sim.baryon_flag+p], pcldata);
 
-		if (pcldata == NULL)
+		if(pcldata == NULL)
 		{
 			COUT << " error: particle data was empty!" << endl;
 			parallel.abortForce();
 		}
 
-		if (ic.pkfile[0] == '\0')
+		if(ic.pkfile[0] == '\0')
 		{
 			sprintf(ncdm_name, "ncdm[%d]", p);
 #ifdef HAVE_CLASS
-			if (ic.tkfile[0] == '\0')
+			if(ic.tkfile[0] == '\0')
 				loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_t1, ncdm_name, sim.boxsize, sim.z_in, cosmo.h);
 			else
 #endif
 			loadTransferFunctions(ic.tkfile, tk_d1, tk_t1, ncdm_name, sim.boxsize, cosmo.h);
 
-			if (tk_d1 == NULL || tk_t1 == NULL)
+			if(tk_d1 == NULL || tk_t1 == NULL)
 			{
 				COUT << " error: ncdm transfer function was empty! (species " << p << ")" << endl;
 				parallel.abortForce();
 			}
 
-			if (sim.relativistic_flag > 0)
+			if(sim.relativistic_flag > 0)
 			{
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp1[i] = -3. * pkspline->y[i] / pkspline->x[i] / pkspline->x[i] - tk_d1->y[i] * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 			}
 			else
 			{
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp1[i] = nbspline->y[i] - tk_d1->y[i] * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 			}
-			if (sim.relativistic_flag > 0 || vnbspline == NULL)
+			if(sim.relativistic_flag > 0 || vnbspline == NULL)
 			{
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp2[i] = -a * tk_t1->y[i] * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 			}
 			else
 			{
-				for (i = 0; i < tk_d1->size; i++)
+				for(i = 0; i < tk_d1->size; i++)
 					temp2[i] = a * vnbspline->y[i] - a * tk_t1->y[i] * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
 			}
 
@@ -2156,19 +2156,19 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 
 		free(pcldata);
 
-		if (ic.pkfile[0] == '\0')	// set non-CDM velocities using transfer functions
+		if(ic.pkfile[0] == '\0')	// set non-CDM velocities using transfer functions
 			pcls_ncdm[p].updateVel(initialize_q_ic_basic, 1., &phi, 1);
 	}
 
 	free(temp1);
 	free(temp2);
 
-	if (ic.pkfile[0] == '\0')
+	if(ic.pkfile[0] == '\0')
 	{
 		plan_source->execute(FFT_FORWARD);
 		generateDisplacementField(*scalarFT, 0., pkspline, (unsigned int) ic.seed, ic.flags & ICFLAG_KSPHERE, 0);
 #ifdef HAVE_CLASS
-		if (ic.tkfile[0] == '\0')
+		if(ic.tkfile[0] == '\0')
 			freeCLASSstructures(class_background, class_perturbs, class_spectra);
 #endif
 	}
@@ -2176,11 +2176,11 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 	{
 		projection_init(source);
 		scalarProjectionCIC_project(pcls_cdm, source);
-		if (sim.baryon_flag)
+		if(sim.baryon_flag)
 			scalarProjectionCIC_project(pcls_b, source);
-		for (p = 0; p < cosmo.num_ncdm; p++)
+		for(p = 0; p < cosmo.num_ncdm; p++)
 		{
-			if (ic.numtile[1+sim.baryon_flag+p] < 1) continue;
+			if(ic.numtile[1+sim.baryon_flag+p] < 1) continue;
 			scalarProjectionCIC_project(pcls_ncdm+p, source);
 		}
 		scalarProjectionCIC_comm(source);
@@ -2188,7 +2188,7 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 		plan_source->execute(FFT_FORWARD);
 
 		kFT.first();
-		if (kFT.coord(0) == 0 && kFT.coord(1) == 0 && kFT.coord(2) == 0)
+		if(kFT.coord(0) == 0 && kFT.coord(1) == 0 && kFT.coord(2) == 0)
 			(*scalarFT)(kFT) = Cplx(0.,0.);
 
 		solveModifiedPoissonFT(*scalarFT, *scalarFT, fourpiG / a, 3. * sim.relativistic_flag * (Hconf(a, fourpiG, cosmo) * Hconf(a, fourpiG, cosmo) + fourpiG * cosmo.Omega_m / a));
@@ -2197,29 +2197,29 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 	plan_phi->execute(FFT_BACKWARD);
 	phi->updateHalo();	// phi now finally contains phi
 
-	if (ic.pkfile[0] != '\0')	// if power spectrum is used instead of transfer functions, set velocities using linear approximation
+	if(ic.pkfile[0] != '\0')	// if power spectrum is used instead of transfer functions, set velocities using linear approximation
 	{
 		rescale = a / Hconf(a, fourpiG, cosmo) / (1.5 * Omega_m(a, cosmo) + 2. * Omega_rad(a, cosmo));
 		maxvel[0] = pcls_cdm->updateVel(initialize_q_ic_basic, rescale, &phi, 1) / a;
-		if (sim.baryon_flag)
+		if(sim.baryon_flag)
 			maxvel[1] = pcls_b->updateVel(initialize_q_ic_basic, rescale, &phi, 1) / a;
 	}
 
-	for (p = 0; p < cosmo.num_ncdm; p++)
+	for(p = 0; p < cosmo.num_ncdm; p++)
 	{
-		if (ic.numtile[1+sim.baryon_flag+p] < 1)
+		if(ic.numtile[1+sim.baryon_flag+p] < 1)
 		{
 			maxvel[1+sim.baryon_flag+p] = 0;
 			continue;
 		}
 
-		if (ic.pkfile[0] != '\0') // if power spectrum is used instead of transfer functions, set bulk velocities using linear approximation
+		if(ic.pkfile[0] != '\0') // if power spectrum is used instead of transfer functions, set bulk velocities using linear approximation
 		{
 			rescale = a / Hconf(a, fourpiG, cosmo) / (1.5 * Omega_m(a, cosmo) + Omega_rad(a, cosmo));
 			pcls_ncdm[p].updateVel(initialize_q_ic_basic, rescale, &phi, 1);
 		}
 
-		if (cosmo.m_ncdm[p] > 0.) // add velocity dispersion for non-CDM species
+		if(cosmo.m_ncdm[p] > 0.) // add velocity dispersion for non-CDM species
 		{
 			rescale = pow(cosmo.Omega_g * cosmo.h * cosmo.h / C_PLANCK_LAW, 0.25) * cosmo.T_ncdm[p] * C_BOLTZMANN_CST / cosmo.m_ncdm[p];
 			mean_q = applyMomentumDistribution(pcls_ncdm+p, (unsigned int) (ic.seed + p), rescale);
@@ -2231,7 +2231,7 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 
 	projection_init(Bi);
 	projection_T0i_project(pcls_cdm, Bi, phi);
-	if (sim.baryon_flag)
+	if(sim.baryon_flag)
 		projection_T0i_project(pcls_b, Bi, phi);
 	projection_T0i_comm(Bi);
 	plan_Bi->execute(FFT_FORWARD);
@@ -2241,7 +2241,7 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 
 	projection_init(Sij);
 	projection_Tij_project(pcls_cdm, Sij, a, phi);
-	if (sim.baryon_flag)
+	if(sim.baryon_flag)
 		projection_Tij_project(pcls_b, Sij, a, phi);
 	projection_Tij_comm(Sij);
 
@@ -2252,9 +2252,9 @@ void generateIC_basic(metadata & sim, icsettings & ic, cosmology & cosmo, const 
 	chi->updateHalo();	// chi now finally contains chi
 
 	gsl_spline_free(pkspline);
-	if (sim.relativistic_flag == 0)
+	if(sim.relativistic_flag == 0)
 		gsl_spline_free(nbspline);
-	if (vnbspline != NULL)
+	if(vnbspline != NULL)
 		gsl_spline_free(vnbspline);
 }
 

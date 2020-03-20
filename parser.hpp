@@ -730,7 +730,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	ic.restart_version = -1.;
 
 	ic.restart_dtau_old = -1.;
-	ic.restart_dtau_old_2 = -1.;
 	ic.restart_dtau_osci = -1.;
 	ic.restart_dtau_bg = -1.;
 	ic.restart_a = -1.;
@@ -1433,15 +1432,13 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 		{
 			parseParameter(params, numparam, "dtau_old", ic.restart_dtau_old);
-			parseParameter(params, numparam, "dtau_old_2", ic.restart_dtau_old_2);
 			parseParameter(params, numparam, "dtau_osci", ic.restart_dtau_osci);
 			parseParameter(params, numparam, "dtau_bg", ic.restart_dtau_bg);
 			parseParameter(params, numparam, "scale_factor", ic.restart_a);
 			parseParameter(params, numparam, "Hubble", ic.restart_Hubble);
 			parseParameter(params, numparam, "Rbar", ic.restart_Rbar);
 			parseParameter(params, numparam, "dot_Rbar", ic.restart_dot_Rbar);
-
-			// TODO: Maybe check that all of these are correcty parsed?
+			// TODO: check that all of these are correcty parsed
 		}
 
 		parseParameter(params, numparam, "metric file", pptr, i);

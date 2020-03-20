@@ -505,9 +505,9 @@ bool xi_allowed(
 
 
 
-/////////////////////////////////////////////
-// Print out f(R) model details
-/////////////////////////////////////////////
+////////////////////////////////////////////////////////
+// Some rescaling and printing out of f(R) model details
+////////////////////////////////////////////////////////
 void fR_details(
   const cosmology cosmo,
   metadata * sim,
@@ -516,7 +516,6 @@ void fR_details(
 {
 	if(sim->fR_model == FR_MODEL_HU_SAWICKI)
 	{
-		//TODO: Check whether we need to rescale something by some power of the boxsize
 		COUT << " Model: Hu-Sawicki\n f(R) = - m2 * c1 * pow(R/m2, n) / (1. + c2 * pow(R/m2, n))" << endl;
 		COUT << " with m2 = " << sim->fR_params[0] << " * 8piG * rho_{m0} / 3. = ";
 
@@ -574,7 +573,6 @@ void fR_details(
 }
 
 
-// TODO CHECK AND REWRITE
 void fR_rescale_before_hibernate(
   const cosmology cosmo,
   metadata * sim,
@@ -603,10 +601,9 @@ void fR_rescale_before_hibernate(
 
 
 
-/////////////////////////////////////////////
-// Output for check_field:
-// TODO: Add comments here
-/////////////////////////////////////////////
+/////////////////////////
+// Output for check_field
+/////////////////////////
 void output_check_field(
   double max,
   double absmax,
@@ -661,10 +658,9 @@ void output_check_field(
 
 
 
-/////////////////////////////////////////////
-// Check (scalar) field:
-// TODO: Add comments here
-/////////////////////////////////////////////
+///////////////////////
+// Check (scalar) field
+///////////////////////
 template <class FieldType>
 double check_field(
   Field<FieldType> & field,
@@ -782,10 +778,9 @@ double check_field(
 	return absmax;
 }
 
-/////////////////////////////////////////////
+//////////////////////////////////
 // Check correlation of two fields
-// TODO: Add comments here
-/////////////////////////////////////////////
+//////////////////////////////////
 template <class FieldType>
 double check_correl(
   Field<FieldType> & field1,
@@ -830,10 +825,9 @@ double check_correl(
 }
 
 
-/////////////////////////////////////////////
-// Check linear combination of two scalar fields:
-// TODO: Add comments here
-/////////////////////////////////////////////
+////////////////////////////////////////////////
+// Check linear combination of two scalar fields
+////////////////////////////////////////////////
 template <class FieldType>
 double check_field(
   Field<FieldType> & field1,
@@ -843,7 +837,7 @@ double check_field(
   string field_name,
   long n3,
   const metadata & sim,
-  string message = "") // TODO: correct lattice size
+  string message = "")
 {
   Site x(field1.lattice());
 	ios oldState(nullptr);
@@ -896,10 +890,9 @@ double check_field(
 }
 
 
-/////////////////////////////////////////////
-// Check linear combination of three scalar fields:
-// TODO: Add comments here
-/////////////////////////////////////////////
+//////////////////////////////////////////////////
+// Check linear combination of three scalar fields
+//////////////////////////////////////////////////
 template <class FieldType>
 double check_field(
   Field<FieldType> & field1,
@@ -910,7 +903,7 @@ double check_field(
   double c2,
   long n3,
   const metadata & sim,
-  string message = "") // TODO: correct lattice size
+  string message = "")
 {
   Site x(field1.lattice());
 	ios oldState(nullptr);
@@ -962,18 +955,17 @@ double check_field(
 	return absmax;
 }
 
-/////////////////////////////////////////////
+/////////////////////////////////////////////////
 // Checks vector field, each component separately
 // Quantities are the same as check_field
-// TODO: Add comments here
-/////////////////////////////////////////////
+/////////////////////////////////////////////////
 template <class FieldType>
 void check_vector_field(
   Field<FieldType> & field,
   string field_name,
   long n3,
   const metadata & sim,
-  string message = "") // TODO: correct lattice size
+  string message = "")
 {
   Site x(field.lattice());
 	ios oldState(nullptr);
@@ -1036,10 +1028,9 @@ void check_vector_field(
 	return;
 }
 
-/////////////////////////////////////////////
+//////////////////////////
 // Check all scalar fields
-// TODO: Add comments here
-/////////////////////////////////////////////
+//////////////////////////
 template <class FieldType>
 void check_all_fields(
 	Field<FieldType> &phi,
@@ -1076,9 +1067,9 @@ void check_all_fields(
 
 
 
-/////////////////////////////////////////////
-// Check particles (with some ID#, TODO: make this more universal, not with random ID
-/////////////////////////////////////////////
+//////////////////////////////////
+// Check particles (with some ID#)
+//////////////////////////////////
 void check_particles(
   const metadata & sim,
   Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm)
@@ -1092,10 +1083,9 @@ void check_particles(
 	MPI_Barrier(MPI_COMM_WORLD);
 }
 
-/////////////////////////////////////////////
+/////////////////////
 // Compute max of fRR
-// TODO Add description
-/////////////////////////////////////////////
+/////////////////////
 template <class FieldType>
 double compute_max_fRR(
   Field<FieldType> &deltaR,
@@ -1126,10 +1116,9 @@ double compute_max_fRR(
 	}
   return max;
 }
-/////////////////////////////////////////////
-// Flips (scalar) fields:
-// TODO: Add comments here
-/////////////////////////////////////////////
+////////////////////////
+// Flips (scalar) fields
+////////////////////////
 template <class FieldType>
 void flip_fields(
   Field<FieldType> & field1,
@@ -1170,10 +1159,9 @@ void flip_fields(
 }
 
 
-/////////////////////////////////////////////
-// Flips vector fields:
-// TODO: Add comments here
-/////////////////////////////////////////////
+//////////////////////
+// Flips vector fields
+//////////////////////
 template <class FieldType>
 void flip_vector_fields(
   Field<FieldType> & field1,
@@ -1213,10 +1201,9 @@ void erase_field(Field<FieldType> & field)
 	}
 }
 
-/////////////////////////////////////////////
-// Copies (scalar) fields:
-// TODO: Add comments here
-/////////////////////////////////////////////
+/////////////////////////
+// Copies (scalar) fields
+/////////////////////////
 template <class FieldType>
 void copy_field(
   Field<FieldType> & source,
@@ -1243,10 +1230,9 @@ void copy_field(
 }
 
 
-/////////////////////////////////////////////
-// Copies vector fields:
-// TODO: Add comments here
-/////////////////////////////////////////////
+///////////////////////
+// Copies vector fields
+///////////////////////
 template <class FieldType>
 void copy_vector_field(
   Field<FieldType> & source,
@@ -1277,10 +1263,9 @@ void copy_vector_field(
 }
 
 
-/////////////////////////////////////////////
-// Sums (scalar) fields:
-// TODO: Add comments here
-/////////////////////////////////////////////
+///////////////////////
+// Sums (scalar) fields
+///////////////////////
 template <class FieldType>
 void add_fields(
   Field<FieldType> & field1,
@@ -1296,10 +1281,9 @@ void add_fields(
 	return;
 }
 
-/////////////////////////////////////////////
-// Adds a constant to scalar field:
-// TODO: Add comments here
-/////////////////////////////////////////////
+//////////////////////////////////
+// Adds a constant to scalar field
+//////////////////////////////////
 template <class FieldType>
 void add_fields(
   Field<FieldType> & field1,
@@ -1368,74 +1352,9 @@ void scatter_field(
 	return;
 }
 
-/////////////////////////////////////////////
-// TODO: Add comments here
-/////////////////////////////////////////////
-template <class FieldType>
-void leapfrog_dotR(
-  Field<FieldType> & deltaR,
-  Field<FieldType> & deltaT,
-  Field<FieldType> & dot_deltaR_old,
-  Field<FieldType> & dot_deltaR_new,
-  double Hubble,
-  double coeff,
-  double dtau_old,
-  double dtau,
-  double dx2)
-{
-	Site x(deltaR.lattice());
-	double temp,
-				 coeff1 = (dtau_old + dtau) / 2.;
-	coeff1 *= 1. - coeff1 * Hubble;
-
-	for(x.first(); x.test(); x.next())
-	{
-		temp = deltaR(x+0) + deltaR(x-0) + deltaR(x+1) + deltaR(x-1) + deltaR(x+2) + deltaR(x-2) - 6. * deltaR(x);
-		temp /= dx2;
-		temp -= coeff * (deltaR(x) + deltaT(x)) + 2. * Hubble * dot_deltaR_old(x);
-		dot_deltaR_new(x) = dot_deltaR_old(x) + temp * coeff1;
-	}
-	return;
-}
-
-/////////////////////////////////////////////
-// TODO: Add comments here
-/////////////////////////////////////////////
-template <class FieldType>
-void leapfrog_dot_xi(
-  Field<FieldType> & xi,
-  Field<FieldType> & zeta,
-  Field<FieldType> & dot_xi_old,
-  Field<FieldType> & dot_xi_new,
-  double Hubble,
-  double a2,
-  double dtau_old,
-  double dtau,
-  double dx2)
-{
-	Site x(xi.lattice());
-	double temp,
-				 coeff1 = (dtau_old + dtau) / 2.;
-	coeff1 *= 1. - coeff1 * Hubble;
-
-	for(x.first(); x.test(); x.next())
-	{
-		temp = xi(x+0) + xi(x-0) + xi(x+1) + xi(x-1) + xi(x+2) + xi(x-2) - 6. * xi(x);
-		temp /= dx2;
-		temp -= a2 * zeta(x) / 3. + 2. * Hubble + dot_xi_old(x);
-		dot_xi_new(x) = dot_xi_old(x) + temp * coeff1;
-	}
-	return;
-}
-
-///// TODO: FOR EVERY INSTANCE OF convert_*_to_*, CHECK WITH
-// if(convert_*_to_*() > FR_WRONG) return FR_WRONG_RETURN;
-// (this could be important)
-
-/////////////////////////////////////////////
+////////////////////////
 // Converts deltaR to xi
-// TODO: Add comments here
-/////////////////////////////////////////////
+////////////////////////
 template <class FieldType>
 double convert_deltaR_to_xi(
   Field<FieldType> & deltaR,
@@ -1466,26 +1385,23 @@ double convert_deltaR_to_xi(
 	{
 		for(x.first(); x.test(); x.next())
 		{
-			if(isnan(deltaR(x)))cout<<"deltaR(x) is nan!"<<endl;
-			temp = fR(Rbar + deltaR(x), sim, 832);
-			//TODO REMOVE after debugging
-			if(temp > FR_WRONG)
+			if(isnan(deltaR(x)))
 			{
-	      cout << parallel.rank() << " 3 temp = FR_WRONG in convert_deltaR_to_xi -- xi, Rbar, temp = " << xi(x) << ", " << Rbar << ", " << temp << endl;
-				parallel.abortForce();
-				return FR_WRONG_RETURN; // Returns a huge number to throw some exception
+				cout << "deltaR(x) is nan!" << endl;
 			}
-			//END REMOVE
+
+			temp = fR(Rbar + deltaR(x), sim, 832);
 			xi(x) =  temp - fRbar;
 		}
 	}
+
 return 1.;
 }
 
 
-/////////////////////////////////////////////
+///////////////////
 // For single point
-/////////////////////////////////////////////
+///////////////////
 double convert_deltaR_to_xi_single(
   double deltaR,
   double Rbar,
@@ -1504,23 +1420,12 @@ double convert_deltaR_to_xi_single(
 	{
     double fR_temp;
     fR_temp = fR(Rbar + deltaR, sim, 8321);
-    //TODO REMOVE after debugging
-    if(fR_temp > FR_WRONG)
-    {
-      cout << parallel.rank() << " 3 fR_temp = FR_WRONG in convert_deltaR_to_xi -- Rbar, fR_temp = " << Rbar << ", " << fR_temp << endl;
-      parallel.abortForce();
-      return FR_WRONG_RETURN; // Returns a huge number to throw some exception
-    }
-    //END REMOVE
     return fR_temp - fRbar;
 	}
 }
 
-
 /////////////////////////////////////////////
 // For single point
-// TODO This can probably be greatly optimised.
-//      All the model-dependent tests are done for each point instead of just once.
 /////////////////////////////////////////////
 double convert_xi_to_deltaR_single(
 	double & deltaR,
@@ -1643,11 +1548,6 @@ double convert_xi_to_deltaR_single(
   return deltaR;
 }
 
-/////////////////////////////////////////////
-// TODO Details
-// Returns maximum value of fRR over the entire lattice.
-// the typical oscillation frenquency will be of order a/(sqrt(3*fRR_max))
-/////////////////////////////////////////////
 template <class FieldType>
 double convert_xi_to_deltaR(
 	Field<FieldType> & deltaR,
@@ -1656,30 +1556,129 @@ double convert_xi_to_deltaR(
 	double fRbar,
 	const metadata & sim)
 {
-  // Using Newton-Raphson Method
-  Site x(xi.lattice());
+	Site x(xi.lattice());
 
-  double fRR_temp,
-				 max_fRR = 0.;
+  double R_temp,
+				 temp,
+         fr,
+				 max_fRR = 0.,
+				 fRR_temp;
+  int count,
+			count_n = 1;
 
-  for(x.first(); x.test(); x.next())
-  {
-    convert_xi_to_deltaR_single(deltaR(x), xi(x), Rbar, fRbar, sim);
-    fRR_temp = fabs(fRR(deltaR(x) + Rbar, sim, 656));
-    if(fRR_temp > max_fRR) max_fRR = fRR_temp;
-  }
+	if(sim.fR_model == FR_MODEL_HU_SAWICKI)
+	{
+		double m2 = sim.fR_params[0],
+					 c2 = sim.fR_params[1],
+					 n  = sim.fR_params[2],
+					 c1 = sim.fR_params[3];
 
-  parallel.max(max_fRR);
+		if(n == 1. || n == 1) // xi <-> R relation is invertible algebraically
+		{
+			for(x.first(); x.test(); x.next())
+			{
+				fr = xi(x) + fRbar;
+				R_temp = - c1 / fr;
+				R_temp = m2 * (sqrt(R_temp) - 1.) / c2;
+				deltaR(x) = R_temp - Rbar;
+			}
+		}
+		else
+		{
+			for(x.first(); x.test(); x.next())
+			{
+				fr = xi(x) + fRbar;
+				// The initial guess for R is:
+				// 1) found from a large-R expansion of FR or
+				if(fr > - c1 * n / pow(c2, 1. - 1./n) / 4.)
+				{
+					R_temp = - c1 * n / c2 / c2 / fr;
+					R_temp = m2 * pow(fabs(R_temp), 1./(n + 1.));
+				}
+				else
+				{
+					R_temp = m2 * pow(- fr / c1 / n, 1./(n - 1.));
+				}
+
+				count = 0;
+				while(true)
+				{
+					temp = fR(R_temp, sim, 56);
+					fRR_temp = fRR(R_temp, sim, 57);
+
+					if(fabs(temp / fr - 1.) < sim.fR_target_precision) break;
+
+					R_temp += (fr - temp) / fRR_temp;
+
+					count ++;
+					if(count > count_n * sim.fR_count_max)
+					{
+						cout << "Could only reach a precision of " << temp << " in " << count_n * sim.fR_count_max << " steps.\n";
+						count_n++;
+					}
+				}
+
+				deltaR(x) = R_temp - Rbar;
+			}
+		}
+	}
+	else if(sim.fR_model == FR_MODEL_RN)
+	{
+		double a = sim.fR_params[0], n = sim.fR_params[1], n_minus_1 = n - 1.;
+
+		for(x.first(); x.test(); x.next())
+		{
+			R_temp = 1. + xi(x) / (a * n * pow(Rbar, n_minus_1));
+			if(R_temp > 0.)
+			{
+				R_temp = Rbar * pow(R_temp, 1./n_minus_1);
+			}
+
+			deltaR(x) = R_temp - Rbar;
+		}
+	}
+	else if(sim.fR_model == FR_MODEL_DELTA)
+	{
+		double a = sim.fR_params[0], delta = sim.fR_params[1];
+
+		for(x.first(); x.test(); x.next())
+		{
+			// METHOD 1
+			R_temp = xi(x) / a / (1. + delta) / pow(Rbar, delta) + 1.;
+			R_temp = Rbar * pow(R_temp, 1./delta);
+			// METHOD 2
+			// R_temp = pow( (1. + xi(x) + fRbar) / (a * (1. + delta)) , 1./delta);
+
+			deltaR(x) = R_temp - Rbar;
+		}
+	}
+
+	for(x.first(); x.test(); x.next()) // TODO remove after debug?
+	{
+		if(std::isnan(deltaR(x)) || R_temp <= 0.)
+		{
+			cout << " convert_xi_to_deltaR_single END" << endl;
+			cout << " deltaR = " << deltaR(x) << endl;
+			cout << " R_temp = " << R_temp << endl;
+			cout << "   Rbar = " << Rbar << endl;
+			return FR_WRONG_RETURN;
+		}
+
+		fRR_temp = fabs(fRR(deltaR(x) + Rbar, sim, 656));
+		if(fRR_temp > max_fRR) max_fRR = fRR_temp;
+	}
+
+	parallel.max(max_fRR);
 
 	if(max_fRR and !std::isnan(max_fRR))
 	{
 		return max_fRR;
 	}
-  else
-  {
-    COUT << " Warning 19: returning fRRbar\n";
-    return fRR(Rbar, sim, 65);
-  }
+	else
+	{
+		COUT << " Warning 19: returning fRRbar\n";
+		return fRR(Rbar, sim, 65);
+	}
 }
 
 /////////////////////////////////////////////////
@@ -1814,6 +1813,13 @@ double build_phi_ddot(
 
 	return 1.;
 }
+
+
+
+
+
+
+
 
 
 

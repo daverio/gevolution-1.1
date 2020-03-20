@@ -106,15 +106,11 @@ double residual_xi(
   double fRbar,
   const metadata & sim)
 {
-  double temp = deltaR;
+  double temp = deltaR, hub_corr = sim.xi_Hubble ? 1. : 0.;
 
   temp = temp * (1. - fRbar - xi) + 2. * (f(Rbar + deltaR, sim, 884) - fbar) - Rbar * xi;
   temp = laplace_xi - a2_over_3 * temp - rhs;
-
-  if(sim.xi_Hubble)
-  {
-    temp += 2. * phi * laplace_xi - two_Hubble_over_dtau * (xi - xi_old);
-  }
+  temp += hub_corr * (2. * phi * laplace_xi - two_Hubble_over_dtau * (xi - xi_old));
 
   return temp;
 }
@@ -330,13 +326,8 @@ double update_xi_and_deltaR_single(
   return deltaR;
 }
 
-
-//////////////////////////
-// Computes new guess for xi
-// Solves the equation Y[xi] == 0
-// where Y[xi] := laplacian(xi) - a^2/3 * zeta(xi)
-// TODO: Details here
-//////////////////////////
+////////////////////////////////////////////////////////////
+// Relaxation -- Update values of xi and deltaR
 template <template<class> class FieldClass, class FieldType>
 double update_xi_and_deltaR(
   FieldClass<FieldType> & phi,
@@ -353,99 +344,259 @@ double update_xi_and_deltaR(
   double fbar,
   double fRbar,
   const metadata & sim,
-  int level = -1)
+  int level = -1
+)
 {
-  double temp, resid, coeff_laplacian, overrelax;
+  double temp, dxi, resid, denominator, fr, coeff_laplacian, overrelax, relat_flag;
 
   coeff_laplacian = -6./dx/dx;
   overrelax = sim.overrelaxation_factor;
+  relat_flag = sim.relativistic_flag ? 1. : 0.;
 
-  if(sim.red_black)
-  {
-    SiteRedBlack3d x(xi.lattice());
-
-    for(x.firstRed(); x.testRed(); x.nextRed())
-    {
-      if(std::isnan(xi(x)) || fabs(xi(x)) > 1.E20)
-      {
-        cout << endl;
-        cout << " update_xi_and_deltaR before" << endl;
-        cout << " xi = " << xi(x) << endl;
-        cout << " dxi = " << laplace_xi(x) << endl;
-        cout << " Rbar = " << Rbar << endl;
-        cout << " deltaR = " << deltaR(x) << endl;
-        cout << " R = " << Rbar + deltaR(x) << endl;
-        cout << endl;
-        parallel.abortForce();
-      }
-
-      update_xi_and_deltaR_single(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, coeff_laplacian, overrelax, Rbar, fbar, fRbar, sim);
-    }
-
-    build_laplacian(xi, laplace_xi, dx); // TODO: This might be optimised somehow -- only build_laplacian on the Blacks?
-
-    for(x.firstBlack(); x.testBlack(); x.nextBlack())
-    {
-      if(std::isnan(xi(x)) || fabs(xi(x)) > 1.E20)
-      {
-        cout << endl;
-        cout << " update_xi_and_deltaR before" << endl;
-        cout << " xi = " << xi(x) << endl;
-        cout << " dxi = " << laplace_xi(x) << endl;
-        cout << " Rbar = " << Rbar << endl;
-        cout << " deltaR = " << deltaR(x) << endl;
-        cout << " R = " << Rbar + deltaR(x) << endl;
-        cout << endl;
-        parallel.abortForce();
-      }
-
-      update_xi_and_deltaR_single(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, coeff_laplacian, overrelax, Rbar, fbar, fRbar, sim);
-    }
-  }
-  else
+  if(!sim.red_black)// Sequential sweep
   {
     Site x(xi.lattice());
 
-    for(x.first(); x.test(); x.next())
+    // Update xi
+    if(sim.fR_model == FR_MODEL_HU_SAWICKI)
     {
-      if(std::isnan(xi(x)) || fabs(xi(x)) > 1.E20)
+      double n = sim.fR_params[2], c1 = sim.fR_params[3], c2 = sim.fR_params[1], xi_min;
+
+      if(n == 1 || n == 1.)
       {
-        cout << endl;
-        cout << " update_xi_and_deltaR before" << endl;
-        cout << " xi = " << xi(x) << endl;
-        cout << " dxi = " << laplace_xi(x) << endl;
-        cout << " Rbar = " << Rbar << endl;
-        cout << " deltaR = " << deltaR(x) << endl;
-        cout << " R = " << Rbar + deltaR(x) << endl;
-        cout << endl;
-        parallel.abortForce();
+        xi_min = - c1 - fRbar;
+      }
+      else
+      {
+        xi_min = - (1.+n)*(1.+n) * pow((n-1.) / c2 / (1.+n), 1.-1./n) / n / 4.- fRbar;
       }
 
-      update_xi_and_deltaR_single(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, coeff_laplacian, overrelax, Rbar, fbar, fRbar, sim);
-
-      if(std::isnan(xi(x)) || fabs(xi(x)) > 1.E20)
+      for(x.first(); x.test(); x.next())
       {
-        cout << endl;
-        cout << " update_xi_and_deltaR after xi" << endl;
-        cout << " xi = " << xi(x) << endl;
-        cout << " dxi = " << laplace_xi(x) << endl;
-        cout << " Rbar = " << Rbar << endl;
-        cout << " deltaR = " << deltaR(x) << endl;
-        cout << " R = " << Rbar + deltaR(x) << endl;
-        cout << endl;
-        parallel.abortForce();
+        resid = residual_xi(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
+        denominator = dresidual_dxi(xi(x), deltaR(x), a2_over_3, two_Hubble_over_dtau, Rbar, fRbar, sim);
+        denominator += (1. + 2. * relat_flag * phi(x)) * coeff_laplacian;
+        fr = xi(x) + fRbar;
+        if(fr)
+        {
+          resid = - overrelax * resid / fr / denominator;
+          while(true)
+          {
+            xi(x) = fr * exp(resid) - fRbar;
+
+            // Check if value of xi is allowed
+            if(xi(x) <= xi_min || xi(x) + fRbar >= 0.) // reduce step if not allowed
+            {
+              resid *= 0.5;
+            }
+            else break; // break if ok
+          }
+        }
+        else
+        {
+          cout << " fR = 0 in update_xi_single." << endl;
+        }
+      }
+    }
+    else if(sim.fR_model == FR_MODEL_RN)
+  	{
+  		double xi_min = - fRbar;
+
+      for(x.first(); x.test(); x.next())
+      {
+        resid = residual_xi(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
+        denominator = dresidual_dxi(xi(x), deltaR(x), a2_over_3, two_Hubble_over_dtau, Rbar, fRbar, sim);
+        denominator += (1. + 2. * relat_flag * phi(x)) * coeff_laplacian;
+        resid = - overrelax * resid / denominator;
+        while(true)
+        {
+          xi(x) = xi_previous_timestep(x) + resid;
+          if(xi(x) <= xi_min)
+          {
+            resid *= 0.5;
+          }
+          else break;
+        }
+      }
+  	}
+    else if(sim.fR_model == FR_MODEL_DELTA)
+  	{
+  		double a = sim.fR_params[0], delta = sim.fR_params[1];
+  		double xi_min = - a * (1. + delta) * pow(Rbar, delta);
+
+      for(x.first(); x.test(); x.next())
+      {
+        resid = residual_xi(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
+        denominator = dresidual_dxi(xi(x), deltaR(x), a2_over_3, two_Hubble_over_dtau, Rbar, fRbar, sim);
+        denominator += (1. + 2. * relat_flag * phi(x)) * coeff_laplacian;
+        resid = - overrelax * resid / denominator;
+        while(true)
+        {
+          xi(x) = xi_previous_timestep(x) + resid;
+          if(xi(x) <= xi_min)
+          {
+            resid *= 0.5;
+          }
+          else break;
+        }
+      }
+  	}
+  }
+  else // Red-Black scheme
+  {
+    SiteRedBlack3d x(xi.lattice());
+
+    if(sim.fR_model == FR_MODEL_HU_SAWICKI)
+    {
+      double n = sim.fR_params[2], c1 = sim.fR_params[3], c2 = sim.fR_params[1], xi_min;
+      if(n == 1 || n == 1.)
+      {
+        xi_min = - c1 - fRbar;
+      }
+      else
+      {
+        xi_min = - (1.+n)*(1.+n) * pow((n-1.) / c2 / (1.+n), 1.-1./n) / n / 4.- fRbar;
+      }
+
+      // Red cells first
+      for(x.firstRed(); x.testRed(); x.nextRed())
+      {
+        resid = residual_xi(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
+        denominator = dresidual_dxi(xi(x), deltaR(x), a2_over_3, two_Hubble_over_dtau, Rbar, fRbar, sim);
+        denominator += (1. + 2. * relat_flag * phi(x)) * coeff_laplacian;
+        fr = xi(x) + fRbar;
+        if(fr)
+        {
+          resid = - overrelax * resid / fr / denominator;
+          while(true)
+          {
+            xi(x) = fr * exp(resid) - fRbar;
+
+            // Check if value of xi is allowed
+            if(xi(x) <= xi_min || xi(x) + fRbar >= 0.) // reduce step if not allowed
+            {
+              resid *= 0.5;
+            }
+            else break; // break if ok
+          }
+        }
+        else
+        {
+          cout << " fR = 0 in update_xi_single." << endl;
+        }
+      }
+
+      // convert_xi_to_deltaR(deltaR, xi, Rbar, fRbar, sim);
+      build_laplacian(xi, laplace_xi, dx);
+
+      // Then Black cells
+      for(x.firstBlack(); x.testBlack(); x.nextBlack())
+      {
+        resid = residual_xi(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
+        denominator = dresidual_dxi(xi(x), deltaR(x), a2_over_3, two_Hubble_over_dtau, Rbar, fRbar, sim);
+        denominator += (1. + 2. * relat_flag * phi(x)) * coeff_laplacian;
+        fr = xi(x) + fRbar;
+        if(fr)
+        {
+          resid = - overrelax * resid / fr / denominator;
+          while(true)
+          {
+            xi(x) = fr * exp(resid) - fRbar;
+
+            // Check if value of xi is allowed
+            if(xi(x) <= xi_min || xi(x) + fRbar >= 0.) // reduce step if not allowed
+            {
+              resid *= 0.5;
+            }
+            else break; // break if ok
+          }
+        }
+        else
+        {
+          cout << " fR = 0 in update_xi_single." << endl;
+        }
+      }
+    }
+    else if(sim.fR_model == FR_MODEL_RN)
+    {
+      double xi_min = - fRbar;
+
+      for(x.firstRed(); x.testRed(); x.nextRed())
+      {
+        resid = - overrelax * resid / denominator;
+        while(true)
+        {
+          xi(x) = xi_previous_timestep(x) + resid;
+          if(xi(x) <= xi_min)
+          {
+            resid *= 0.5;
+          }
+          else break;
+        }
+      }
+
+      convert_xi_to_deltaR(deltaR, xi, Rbar, fRbar, sim);
+      build_laplacian(xi, laplace_xi, dx);
+
+      for(x.firstBlack(); x.testBlack(); x.nextBlack())
+      {
+        resid = - overrelax * resid / denominator;
+        while(true)
+        {
+          xi(x) = xi_previous_timestep(x) + resid;
+          if(xi(x) <= xi_min)
+          {
+            resid *= 0.5;
+          }
+          else break;
+        }
+      }
+    }
+    else if(sim.fR_model == FR_MODEL_DELTA)
+    {
+      double a = sim.fR_params[0], delta = sim.fR_params[1];
+      double xi_min = - a * (1. + delta) * pow(Rbar, delta);
+
+      for(x.firstRed(); x.testRed(); x.nextRed())
+      {
+        resid = - overrelax * resid / denominator;
+        while(true)
+        {
+          xi(x) = xi_previous_timestep(x) + resid;
+          if(xi(x) <= xi_min)
+          {
+            resid *= 0.5;
+          }
+          else break;
+        }
+      }
+
+      convert_xi_to_deltaR(deltaR, xi, Rbar, fRbar, sim);
+      build_laplacian(xi, laplace_xi, dx);
+
+      for(x.firstBlack(); x.testBlack(); x.nextBlack())
+      {
+        resid = - overrelax * resid / denominator;
+        while(true)
+        {
+          xi(x) = xi_previous_timestep(x) + resid;
+          if(xi(x) <= xi_min)
+          {
+            resid *= 0.5;
+          }
+          else break;
+        }
       }
     }
   }
 
+  convert_xi_to_deltaR(deltaR, xi, Rbar, fRbar, sim);
   build_laplacian(xi, laplace_xi, dx);
-
   // TODO: Why doesn't it work without this (apparently useless) call?
   temp = compute_error(phi, xi, xi_previous_timestep, laplace_xi, deltaR, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, 1, sim, level);
 
   return temp;
 }
-
 
 //////////////////////////////////////////////////
 //////////// OTHER TOOLS AND ROUTINES ////////////

@@ -272,7 +272,7 @@ void writePowerSpectrum(Real * kbin, Real * power, Real * kscatter, Real * pscat
 #ifdef EXACT_OUTPUT_REDSHIFTS
 		Real * power2 = (Real *) malloc(numbins * sizeof(Real));
 
-		for(int i = 0; i < numbins; i++)
+		for(int i=0; i<numbins; i++)
 			power2[i] = power[i]/rescalep;
 
 		if(1. / a < z_target + 1.)
@@ -292,7 +292,7 @@ void writePowerSpectrum(Real * kbin, Real * power, Real * kscatter, Real * pscat
 				{
 					weight = (weight - z_target) / (1. + weight - 1./a);
 					fscanf(infile, "%*[^\n]\n");
-					for(int i = 0; i < numbins; i++)
+					for(int i=0; i<numbins; i++)
 					{
 						if(occupation[i] > 0)
 						{
@@ -331,7 +331,7 @@ void writePowerSpectrum(Real * kbin, Real * power, Real * kscatter, Real * pscat
 			fprintf(outfile, "# redshift z=%f\n", (1./a)-1.);
 			fprintf(outfile, "# k              Pk             sigma(k)       sigma(Pk)      count\n");
 
-			for(int i = 0; i < numbins; i++)
+			for(int i=0; i<numbins; i++)
 			{
 				if(occupation[i] > 0)
 #ifdef EXACT_OUTPUT_REDSHIFTS

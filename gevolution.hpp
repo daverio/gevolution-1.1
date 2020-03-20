@@ -39,10 +39,11 @@ double build_homogeneous_terms(
 	Field<FieldType> & Sij,
 	double & T00_hom,
 	double & Tii_hom,
+	double & Trace_hom,
 	double & phi_hom,
 	double & T00_hom_rescaled_a3,
-	double a,
-	long numpts3d
+	const double a,
+	const long numpts3d
 )
 {
 	double a3 = a*a*a;
@@ -53,7 +54,7 @@ double build_homogeneous_terms(
 	phi_hom = 0.;
 	for(x.first(); x.test(); x.next())
 	{
-		T00_hom += - source(x); // source = - a^3 * T00
+		T00_hom += -source(x); // source = - a^3 * T00
 		Tii_hom += Sij(x,0,0) + Sij(x,1,1) + Sij(x,2,2); // Sij = a^3 Tij
 		phi_hom += phi(x);
 	}
@@ -64,8 +65,10 @@ double build_homogeneous_terms(
 	Tii_hom /= (Real) numpts3d;
 	phi_hom /= (Real) numpts3d;
 	T00_hom_rescaled_a3 = T00_hom / (1. + 3. * phi_hom);
-	T00_hom /= a3; // T00_hom contained a^3 * <T00>, now contains the correct <T00>
-	Tii_hom /= a3; // same for Tii
+	T00_hom /= a3;
+	Tii_hom /= a3;
+
+	Trace_hom = T00_hom + Tii_hom;
 
 	return T00_hom;
 }
@@ -190,7 +193,6 @@ void prepareFTsource(
 
 /////////////////////////////////////////////////
 // Prepare source for 00 equation in F(R) gravity
-// TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
 void prepareFTsource_S00_fR_rel(
@@ -229,7 +231,7 @@ void prepareFTsource_S00_fR_rel(
 		source(x) = fourpiG_over_a * (negative_a3_T00(x) - negative_a3_T00_hom);// 4piG * (-a^3*T00 + a^3*Tbar00) / a = -4piG * a^2 * dT00
 		source(x) *= 1. - 4. * phi(x);
 		source(x) += threeH2 * (phi(x) - chi(x));
-		source(x) -= 3. * Hubble * phi(x) / dtau; //TODO: Do we want to keep this in the Quasi-static limit?
+		source(x) -= 3. * Hubble * phi(x) / dtau;
 
 		laplace = 0.;
 		for(i=0; i<3; ++i)
@@ -244,7 +246,8 @@ void prepareFTsource_S00_fR_rel(
 		}
 		laplace -= 6. * xi(x);
 
-		// F(R) terms -- METHOD 2 TODO: Optimize this, e.g. combining with the previous terms
+		// F(R) terms -- METHOD 2
+		// TODO: Optimize this, e.g. combining with the previous terms
 		source(x) -= fourpiG_over_a * (negative_a3_T00(x) - negative_a3_T00_hom) * fR / 2.;
 		source(x) -= 1.5 * Hubble * (xi(x) - xi_old(x)) / dtau;
 		source(x) -= threeH2 * xi(x) / 2.;
@@ -264,7 +267,6 @@ void prepareFTsource_S00_fR_rel(
 
 /////////////////////////////////////////////////
 // Prepare source for 00 equation in F(R) gravity
-// TODO: Add comments here
 /////////////////////////////////////////////////
 template <class FieldType>
 void prepareFTsource_S00_fR_Newtonian(
@@ -413,17 +415,18 @@ void projectFTsource_S0i(
 
 
 
-/////////////////////////////////////////////////
-// Returns 8piG*deltaT = 8piG * ( (T00 + T11 + T22 + T33) - (-rho_background + 3P_background) )
-// t00 contains -a^3 T00, tij contains a^3 Tij
-/////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////
+// Computes:
+// 8piG*deltaT = 8piG( (T00 + T11 + T22 + T33) - (-rho_backg + 3P_backg) )
+//////////////////////////////////////////////////////////////////////////
 template <class FieldType>
 void compute_eightpiG_deltaT(
 	Field<FieldType> & eightpiG_deltaT,
 	Field<FieldType> & negative_a3_t00,
 	Field<FieldType> & a3_tij,
 	double a,
-	double a3_Trace_hom,
+	double T00_hom,
+	double Trace_hom,
 	double fourpiG,
 	const metadata & sim
 )
@@ -439,8 +442,8 @@ void compute_eightpiG_deltaT(
 		for(x.first(); x.test(); x.next())
 		{
 			eightpiG_deltaT(x) = -negative_a3_t00(x) + a3_tij(x,0,0) + a3_tij(x,1,1) + a3_tij(x,2,2);
-			eightpiG_deltaT(x) -= a3_Trace_hom;
 			eightpiG_deltaT(x) /= a3;
+			eightpiG_deltaT(x) -= Trace_hom;
 			eightpiG_deltaT(x) *= eightpiG;
 		}
 	}
@@ -449,8 +452,8 @@ void compute_eightpiG_deltaT(
 		for(x.first(); x.test(); x.next())
 		{
 			eightpiG_deltaT(x) = -negative_a3_t00(x);
-			eightpiG_deltaT(x) -= a3_Trace_hom;
 			eightpiG_deltaT(x) /= a3;
+			eightpiG_deltaT(x) -= T00_hom;
 			eightpiG_deltaT(x) *= eightpiG;
 		}
 	}
@@ -549,7 +552,7 @@ void projectFTscalar(
 
 	for(i=0; i<linesize; ++i)
 	{
-		gridk2[i] = 2. * (Real) linesize * sin(M_PI * (Real) i / (Real) linesize); // TODO: can linesize and 1/dx be used interchangeably? Probably: YES
+		gridk2[i] = 2. * (Real) linesize * sin(M_PI * (Real) i / (Real) linesize);
 		kshift[i] = gridk2[i] * Cplx(cos(M_PI * (Real) i / (Real) linesize), -sin(M_PI * (Real) i / (Real) linesize));
 		gridk2[i] *= gridk2[i];
 	}
@@ -571,7 +574,7 @@ void projectFTscalar(
 						6. * kshift[k.coord(0)] * kshift[k.coord(1)] * SijFT(k, 0, 1) -
 						6. * kshift[k.coord(0)] * kshift[k.coord(2)] * SijFT(k, 0, 2) -
 						6. * kshift[k.coord(1)] * kshift[k.coord(2)] * SijFT(k, 1, 2)) /
-						(2. * (gridk2[k.coord(0)] + gridk2[k.coord(1)] + gridk2[k.coord(2)]) * (gridk2[k.coord(0)] + gridk2[k.coord(1)] + gridk2[k.coord(2)]) * linesize); // TODO: Why this factor linesize here?
+						(2. * (gridk2[k.coord(0)] + gridk2[k.coord(1)] + gridk2[k.coord(2)]) * (gridk2[k.coord(0)] + gridk2[k.coord(1)] + gridk2[k.coord(2)]) * linesize);
 		}
 	}
 	else
@@ -830,7 +833,7 @@ void projectFTtensor(
 //////////////////////////
 // Description:
 //   Modified Poisson solver using the standard Fourier method
-//   Solves: (Laplace - modif) potFT == sourceFT * coeff --> (k^2 + modif) potFT == - sourceFT * coeff       TODO: Write this better, check +- signs!
+//   Solves: (Laplace - modif) potFT == sourceFT * coeff --> (k^2 + modif) potFT == - sourceFT * coeff
 //
 // Arguments:
 //   sourceFT   reference to the Fourier image of the source field

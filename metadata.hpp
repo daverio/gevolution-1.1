@@ -446,7 +446,6 @@ struct icsettings
 
 	// f(R) restart
 	double restart_dtau_old;
-	double restart_dtau_old_2;
 	double restart_dtau_osci;
 	double restart_dtau_bg;
 	double restart_a;

@@ -968,6 +968,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 					}
 					else if(sim.fR_params[1] == 2. || sim.fR_params[1] == 2)
 					{
+						// TODO CHANGE BACK TO FR_MODEL_R2 after debug
 						sim.fR_model = FR_MODEL_R2;
 					}
 					else
@@ -1781,12 +1782,12 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			if(!parseParameter(params, numparam, "overrelaxation factor", sim.overrelaxation_factor))
 			{
 				sim.overrelaxation_factor = 1.;
-				COUT << " No overrelaxation fator set. Using default value = " << sim.overrelaxation_factor << endl;
+				COUT << " No overrelaxation factor set. Using default value = " << sim.overrelaxation_factor << endl;
 			}
 			else if(sim.overrelaxation_factor >= 2. || sim.overrelaxation_factor <= 0.)
 			{
 				sim.overrelaxation_factor = 1.;
-				COUT << " Wrong value for overrelaxation fator. Using default value = " << sim.overrelaxation_factor << endl;
+				COUT << " Wrong value for overrelaxation factor. Using default value = " << sim.overrelaxation_factor << endl;
 			}
 
 			if(sim.multigrid_or_not)

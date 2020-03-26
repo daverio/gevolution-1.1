@@ -32,49 +32,6 @@ using namespace std;
 using namespace LATfield2;
 
 
-template <class FieldType>
-double build_homogeneous_terms(
-	Field<FieldType> & source,
-	Field<FieldType> & phi,
-	Field<FieldType> & Sij,
-	double & T00_hom,
-	double & Tii_hom,
-	double & Trace_hom,
-	double & phi_hom,
-	double & T00_hom_rescaled_a3,
-	const double a,
-	const long numpts3d
-)
-{
-	double a3 = a*a*a;
-	Site x(phi.lattice());
-
-	T00_hom = 0.;
-	Tii_hom = 0.;
-	phi_hom = 0.;
-	for(x.first(); x.test(); x.next())
-	{
-		T00_hom += -source(x); // source = - a^3 * T00
-		Tii_hom += Sij(x,0,0) + Sij(x,1,1) + Sij(x,2,2); // Sij = a^3 Tij
-		phi_hom += phi(x);
-	}
-	parallel.sum<Real>(T00_hom);
-	parallel.sum<Real>(Tii_hom);
-	parallel.sum<Real>(phi_hom);
-	T00_hom /= (Real) numpts3d;
-	Tii_hom /= (Real) numpts3d;
-	phi_hom /= (Real) numpts3d;
-	T00_hom_rescaled_a3 = T00_hom / (1. + 3. * phi_hom);
-	T00_hom /= a3;
-	Tii_hom /= a3;
-
-	Trace_hom = T00_hom + Tii_hom;
-
-	return T00_hom;
-}
-
-
-
 //////////////////////////
 // prepareFTsource (1)
 //////////////////////////
@@ -411,56 +368,6 @@ void projectFTsource_S0i(
 	}
 	free(gridk2);
 	free(kshift);
-}
-
-
-
-//////////////////////////////////////////////////////////////////////////
-// Computes:
-// 8piG*deltaT = 8piG( (T00 + T11 + T22 + T33) - (-rho_backg + 3P_backg) )
-//////////////////////////////////////////////////////////////////////////
-template <class FieldType>
-void compute_eightpiG_deltaT(
-	Field<FieldType> & eightpiG_deltaT,
-	Field<FieldType> & negative_a3_t00,
-	Field<FieldType> & a3_tij,
-	double a,
-	double T00_hom,
-	double Trace_hom,
-	double fourpiG,
-	const metadata & sim
-)
-{
-  double
-		eightpiG = 2. * fourpiG,
-	 	a3 = a*a*a;
-
-	Site x(eightpiG_deltaT.lattice());
-
-	if(sim.relativistic_flag) // LCDM / relativistic f(R)
-	{
-		for(x.first(); x.test(); x.next())
-		{
-			eightpiG_deltaT(x) = -negative_a3_t00(x) + a3_tij(x,0,0) + a3_tij(x,1,1) + a3_tij(x,2,2);
-			eightpiG_deltaT(x) /= a3;
-			eightpiG_deltaT(x) -= Trace_hom;
-			eightpiG_deltaT(x) *= eightpiG;
-		}
-	}
-	else // Newton / Newtonian f(R)
-	{
-		for(x.first(); x.test(); x.next())
-		{
-			eightpiG_deltaT(x) = -negative_a3_t00(x);
-			eightpiG_deltaT(x) /= a3;
-			eightpiG_deltaT(x) -= T00_hom;
-			eightpiG_deltaT(x) *= eightpiG;
-		}
-	}
-
-  eightpiG_deltaT.updateHalo();
-
-	return;
 }
 
 

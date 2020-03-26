@@ -26,12 +26,12 @@
 
 inline double Tbar(const double a, const cosmology & cosmo)
 {
-	return - Omega_m(a, cosmo)/a/a/a - 4. * Omega_Lambda(a, cosmo);
+	return - cosmo.Omega_m/a/a/a - 4. * cosmo.Omega_Lambda;
 }
 
 double R_GR(const double a, const double fourpiG, const cosmology & cosmo)
 {
-	return 2. * fourpiG * ( Omega_m(a, cosmo)/a/a/a + 4. * (1. - Omega_m(a, cosmo) - Omega_rad(a, cosmo)) );
+	return 2. * fourpiG * ( cosmo.Omega_m/a/a/a + 4. * (1. - cosmo.Omega_m - cosmo.Omega_rad) );
 }
 
 inline double H_initial_fR(const double a, const double H, const double R, const double f, const double fr, const double frr_term)
@@ -42,22 +42,22 @@ inline double H_initial_fR(const double a, const double H, const double R, const
 
 inline double R_initial_fR(const double a, const double fourpiG, const cosmology & cosmo)
 {
-	return 2. * fourpiG * ( Omega_m(a, cosmo) / a / a / a + 4. * (1. - Omega_m(a, cosmo) - Omega_rad(a, cosmo)) );
+	return 2. * fourpiG * ( cosmo.Omega_m / a / a / a + 4. * (1. - cosmo.Omega_m - cosmo.Omega_rad) );
 }
 
 inline double Rbar_GR(const double a, const double fourpiG, const cosmology & cosmo)
 {
-	return 2. * fourpiG * ( (Omega_m(a, cosmo)) / a / a / a + 4. * Omega_Lambda(a, cosmo));
+	return 2. * fourpiG * ( cosmo.Omega_m / a / a / a + 4. * cosmo.Omega_Lambda );
 }
 
 inline double dot_R_initial_fR(const double a, const double H, const double fourpiG, const cosmology & cosmo, const metadata & sim)
 {
-	return -6. * fourpiG * H * Omega_m(a, cosmo) / a / a / a;
+	return -6. * fourpiG * H * cosmo.Omega_m / a / a / a;
 }
 
 inline double dot_Rbar_GR(const double a, const double H, const double fourpiG, const cosmology & cosmo)
 {
-	return -6. * fourpiG * H * Omega_m(a, cosmo) / a / a / a;
+	return -6. * fourpiG * H * cosmo.Omega_m / a / a / a;
 }
 
 ///////////////////////////////////////////
@@ -75,7 +75,7 @@ inline double a_dot_RungeKutta(const double a, const double H)
 
 inline double H_dot_RungeKutta(const double a, const double H, const double R)
 {
-	return a*a*R/6. - H*H;
+	return a * a * R / 6. - H * H;
 }
 
 inline double R_dot_RungeKutta(const double Y)
@@ -83,77 +83,88 @@ inline double R_dot_RungeKutta(const double Y)
 	return Y;
 }
 
-double Y_dot_RungeKutta(const double a,
-	 														const double H,
-															const double R,
-															const double Y,
-															const double Trace_hom,
-															const double fourpiG,
-															const cosmology & cosmo,
-															const metadata & sim)
+double Y_dot_RungeKutta(
+	const double a,
+	const double H,
+	const double R,
+	const double Y,
+	const double Trace_hom,
+	const double fourpiG,
+	const cosmology & cosmo,
+	const metadata & sim
+)
 {
-	double res,
-				 f0 = f(R, sim, 310),
-				 fr = fR(R, sim, 311),
-				 frr = fRR(R, sim, 312),
-				 frrr = fRRR(R, sim, 313);
+	double
+	result,
+	f0 = f(R, sim, 310),
+	fr = fR(R, sim, 311),
+	frr = fRR(R, sim, 312),
+	frrr = fRRR(R, sim, 313);
 
-	if(frr)
+	if(frr && false)
 	{
-		res = fr * R - 2. * f0 - R - 2. * fourpiG * Trace_hom;
-		res *= a * a / 3.;
-		res -= frrr * Y * Y;
-		res /= frr;
-		res -= 2. * H * Y;
+		result = 2. * f0 + (1. - fr) * R + 2. * fourpiG * Trace_hom;
+		result *= - a * a / 3.;
+		result -= frrr * Y * Y;
+		result /= frr;
+		result -= 2. * H * Y;
 	}
 	else
 	{
-		res = H / a;
-		res *= 24. * res;
-		res -= R;
-		res *= fourpiG * cosmo.Omega_m / a;
+		result = H / a;
+		result *= 24. * result;
+		result -= R;
+		result *= fourpiG * cosmo.Omega_m / a;
 	}
-	return res;
+
+	return result;
 }
 
 ///////////////////////////////////////////////////////
 // Runge-Kutta background evolution with trace equation
 ///////////////////////////////////////////////////////
-double rungekutta_fR(double & a,
-									         double & H,
-									         double & R,
-													 double & Y, // := dot_R
-									         const double fourpiG,
-													 const double dtau,
-													 const double T_hom,
-									         const cosmology & cosmo,
-									         const metadata & sim)
+double rungekutta_fR(
+	double & a,
+	double & H,
+	double & R,
+	double & Y, // := dot_R
+	const double fourpiG,
+	const double dtau,
+	const double Trace_hom,
+	const cosmology & cosmo,
+	const metadata & sim
+)
 {
-	double a1, a2, a3, a4,
-				 H1, H2, H3, H4,
-				 R1, R2, R3, R4,
-				 Y1, Y2, Y3, Y4,
-				 Tbar_0 = Tbar(a, cosmo);
+	double
+	trace_new,
+	a1, a2, a3, a4,
+	H1, H2, H3, H4,
+	R1, R2, R3, R4,
+	Y1, Y2, Y3, Y4,
+	Tbar_0 = Tbar(a, cosmo);
 
 	a1 = a_dot_RungeKutta(a, H);
 	H1 = H_dot_RungeKutta(a, H, R);
 	R1 = R_dot_RungeKutta(Y);
-	Y1 = Y_dot_RungeKutta(a, H, R, Y, T_hom, fourpiG, cosmo, sim);
+	Y1 = Y_dot_RungeKutta(a, H, R, Y, Trace_hom, fourpiG, cosmo, sim);
 
+	trace_new = Trace_hom * Tbar(a + 0.5 * a1 * dtau, cosmo) / Tbar_0;
 	a2 = a_dot_RungeKutta(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau);
 	H2 = H_dot_RungeKutta(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau);
 	R2 = R_dot_RungeKutta(Y + 0.5 * Y1 * dtau);
-	Y2 = Y_dot_RungeKutta(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau, Y + 0.5 * Y1 * dtau, T_hom * Tbar(a + 0.5 * a1 * dtau, cosmo) / Tbar_0, fourpiG, cosmo, sim);
+	Y2 = Y_dot_RungeKutta(a + 0.5 * a1 * dtau, H + 0.5 * H1 * dtau, R + 0.5 * R1 * dtau, Y + 0.5 * Y1 * dtau, trace_new, fourpiG, cosmo, sim);
 
+	trace_new =  Trace_hom * Tbar(a + 0.5 * a2 * dtau, cosmo) / Tbar_0;
 	a3 = a_dot_RungeKutta(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau);
 	H3 = H_dot_RungeKutta(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau);
 	R3 = R_dot_RungeKutta(Y + 0.5 * Y2 * dtau);
-	Y3 = Y_dot_RungeKutta(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau, Y + 0.5 * Y2 * dtau, T_hom * Tbar(a + 0.5 * a2 * dtau, cosmo) / Tbar_0, fourpiG, cosmo, sim);
+	Y3 = Y_dot_RungeKutta(a + 0.5 * a2 * dtau, H + 0.5 * H2 * dtau, R + 0.5 * R2 * dtau, Y + 0.5 * Y2 * dtau, trace_new, fourpiG, cosmo, sim);
 
+	trace_new =  Trace_hom * Tbar(a + a3 * dtau, cosmo) / Tbar_0;
 	a4 = a_dot_RungeKutta(a + a3 * dtau, H + H3 * dtau);
 	H4 = H_dot_RungeKutta(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau);
 	R4 = R_dot_RungeKutta(Y + Y3 * dtau);
-	Y4 = Y_dot_RungeKutta(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau, Y + Y3 * dtau, T_hom * Tbar(a + a3 * dtau, cosmo) / Tbar_0, fourpiG, cosmo, sim);
+	Y4 = Y_dot_RungeKutta(a + a3 * dtau, H + H3 * dtau, R + R3 * dtau, Y + Y3 * dtau, trace_new, fourpiG, cosmo, sim);
 
 	a += dtau * (a1 + 2.*a2 + 2.*a3 + a4) / 6.;
 	H += dtau * (H1 + 2.*H2 + 2.*H3 + H4) / 6.;
@@ -177,8 +188,8 @@ void rungekutta_background(
 	const double Trace_hom,
 	const cosmology & cosmo,
 	const metadata & sim,
-	const double dtau_bg = 0,
-	const int numsteps_bg = 1
+	const double dtau_bg,
+	const int numsteps_bg
 )
 {
 	// GR or Newtonian evolution

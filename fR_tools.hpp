@@ -83,8 +83,7 @@ Real f(
 	}
 	else if(sim.fR_model == FR_MODEL_RN)
 	{
-		double a = sim.fR_params[0], n = sim.fR_params[1];
-		output = a * pow(R, n);
+		output = sim.fR_params[0] * pow(R, sim.fR_params[1]);
 	}
 	else if(sim.fR_model == FR_MODEL_HU_SAWICKI)
 	{
@@ -112,10 +111,8 @@ Real f(
 	}
 	else if(sim.fR_model == FR_MODEL_DELTA)
 	{
-		double a = sim.fR_params[0], delta = sim.fR_params[1];
-
-		Rpow = pow(R, delta);
-		output = R * (a * Rpow - 1.);
+		Rpow = pow(R, sim.fR_params[1] + 1.);
+		output = sim.fR_params[0] * Rpow - R;
 
 		if(std::isnan(output))
 		{
@@ -143,9 +140,6 @@ Real fR(
   const metadata & sim,
   int code)
 {
-
-
-
 	double output = 0.,
 				 Rpow;
 
@@ -168,12 +162,8 @@ Real fR(
 	}
 	else if(sim.fR_model == FR_MODEL_RN)
 	{
-		double a = sim.fR_params[0], n = sim.fR_params[1];
-
-    // Rpow = n > 1. ? pow(R, n - 1.) : pow(R, 1. - n);
-		Rpow = pow(R, n - 1.);
-
-		output = a * n * Rpow;
+		Rpow = pow(R, sim.fR_params[1]) / R;
+		output = sim.fR_params[0] * sim.fR_params[1] * Rpow;
 
 		if(std::isnan(output))
 		{
@@ -212,10 +202,8 @@ Real fR(
 	}
 	else if(sim.fR_model == FR_MODEL_DELTA)
 	{
-		double a = sim.fR_params[0], delta = sim.fR_params[1];
-
-		Rpow = pow(R, delta);
-		output = a * (1. + delta) * Rpow - 1.;
+		Rpow = pow(R, sim.fR_params[1]);
+		output = sim.fR_params[0] * (1. + sim.fR_params[1]) * Rpow - 1.;
 
     if(std::isnan(output))
 		{
@@ -241,15 +229,15 @@ Real fRR(
   const metadata & sim,
   int code)
 {
+	if(R <= 0.)
+	{
+		cout << " R = " << R << " in fRR (code " << code << ")." << endl;
+		return FR_WRONG_RETURN;
+	}
+
 	double output = 0.,
 	       R_over_m2,
          Rpow;
-
-  if(R <= 0.)
-  {
-    cout << " R = " << R << " in fRR (code " << code << ")." << endl;
-    return FR_WRONG_RETURN;
-  }
 
   if(sim.fR_model == FR_MODEL_R2)
   {
@@ -264,11 +252,8 @@ Real fRR(
 	}
 	else if(sim.fR_model == FR_MODEL_RN)
 	{
-		double a = sim.fR_params[0], n = sim.fR_params[1];
-
-    Rpow = pow(R, n) / R / R;
-
-		output = a * n * (n - 1.) * Rpow;
+    Rpow = pow(R, sim.fR_params[1]) / R / R;
+		output = sim.fR_params[0] * sim.fR_params[1] * (sim.fR_params[1] - 1.) * Rpow;
 
 		if(std::isnan(output))
 		{
@@ -313,10 +298,8 @@ Real fRR(
 	}
 	else if(sim.fR_model == FR_MODEL_DELTA)
 	{
-		double a = sim.fR_params[0], delta = sim.fR_params[1];
-
-		Rpow = pow(R, delta - 1.);
-		output = a * delta * (delta + 1.) * Rpow;
+		Rpow = pow(R, sim.fR_params[1] - 1.);
+		output = sim.fR_params[0] * (1. + sim.fR_params[1]) * sim.fR_params[1] * Rpow;
 
 		if(std::isnan(output))
 		{
@@ -361,10 +344,8 @@ Real fRRR(
 	}
 	else if(sim.fR_model == FR_MODEL_RN)
 	{
-		double a = sim.fR_params[0], n = sim.fR_params[1];
-
-    Rpow = pow(R, n) / R / R / R;
-		output = a * n * (n - 1.) * (n - 2.) * Rpow;
+    Rpow = pow(R, sim.fR_params[1]) / R / R / R;
+		output = sim.fR_params[0] * sim.fR_params[1] * (sim.fR_params[1] - 1.) * (sim.fR_params[1] - 2.) * Rpow;
 
 		if(std::isnan(output))
 		{
@@ -412,10 +393,8 @@ Real fRRR(
 	}
 	else if(sim.fR_model == FR_MODEL_DELTA)
 	{
-		double a = sim.fR_params[0], delta = sim.fR_params[1];
-
-		Rpow = pow(R, delta - 2.);
-		output = a * delta * (delta * delta - 1.) * Rpow;
+		Rpow = pow(R, sim.fR_params[1] - 2.);
+		output = sim.fR_params[0] * sim.fR_params[1] * (sim.fR_params[1] * sim.fR_params[1] - 1.) * Rpow;
 
 		if(std::isnan(output))
 		{
@@ -445,6 +424,8 @@ bool xi_allowed(
 	const metadata & sim
 )
 {
+	double xi_min;
+
 	if(std::isnan(xi) || fabs(xi) >= 1.E20)
 	{
 		return false;
@@ -452,7 +433,7 @@ bool xi_allowed(
 
 	if(sim.fR_model == FR_MODEL_RN)
 	{
-		double xi_min = - fRbar;
+		xi_min = - fRbar;
 		if(xi <= xi_min)
 		{
 			return false;
@@ -464,8 +445,7 @@ bool xi_allowed(
 	}
 	else if(sim.fR_model == FR_MODEL_DELTA)
 	{
-		double a = sim.fR_params[0], delta = sim.fR_params[1];
-		double xi_min = - a * (1. + delta) * pow(Rbar, delta);
+		xi_min = - sim.fR_params[0] * (1. + sim.fR_params[1]) * pow(Rbar, sim.fR_params[1]);
 		if(xi <= xi_min)
 		{
 			return false;
@@ -480,8 +460,7 @@ bool xi_allowed(
 		double
 		n  = sim.fR_params[2],
 		c1 = sim.fR_params[3],
-		c2 = sim.fR_params[1],
-		xi_min;
+		c2 = sim.fR_params[1];
 
 		if(n == 1 || n == 1.)
 		{
@@ -533,16 +512,11 @@ void fR_details(
 	else if(sim->fR_model == FR_MODEL_RN)
 	{
 		COUT
-		<< " f(R) model:" << endl;
-
-    COUT
+		<< " f(R) model:" << endl
     << " f(R) = R * (R / (b*8piG*rho0))^(n-1), with b = " << sim->fR_params[0] << endl
     << "                                            n = " << sim->fR_params[1] << endl;
 
 		sim->fR_params[0] = 1. / pow(2. * fourpiG * sim->fR_params[0], sim->fR_params[1] - 1.);
-
-		// if(sim->fR_params[1] > 1.) sim->fR_params[0] = 1. / pow(2. * fourpiG * sim->fR_params[0], sim->fR_params[1] - 1.);
-    // else sim->fR_params[0] = pow(2. * fourpiG * sim->fR_params[0], 1. - sim->fR_params[1]);
 
     COUT << " rescaled as: f(R) = a * R^n, with a = " << sim->fR_params[0] << endl;
 	}
@@ -558,17 +532,13 @@ void fR_details(
 	}
 	else if(sim->fR_model == FR_MODEL_DELTA)
 	{
-		// Specify fR0 and delta
-		double delta = sim->fR_params[1];
-
-		sim->fR_params[0] = (1. + sim->fR_params[0]) / (1. + delta);
-		sim->fR_params[0] /= pow(2.*fourpiG*(4.*cosmo.Omega_Lambda + cosmo.Omega_m), delta); // if you initially pass fR0
-
-		double a = sim->fR_params[0];
-
-		COUT << " f(R) model: f(R) = a * (R / (8piG * rho0))^(1+delta) - R" << endl;
-		COUT << "              a-1 = " << a-1. << endl;
-		COUT << "            delta = " << delta << endl;
+		sim->fR_params[0] = (1. + sim->fR_params[0]) / (1. + sim->fR_params[1]);
+		sim->fR_params[0] /= pow(4.*cosmo.Omega_Lambda + cosmo.Omega_m, sim->fR_params[1]); // if you initially pass fR0
+		COUT << " f(R) model: f(R) = a * R * (R/8piG_rho0)^delta - R" << endl;
+		COUT << "              a-1 = " << sim->fR_params[0] - 1. << endl;
+		COUT << "            delta = " << sim->fR_params[1] << endl;
+		sim->fR_params[0] /= pow(2. * fourpiG, sim->fR_params[1]);
+		// Now model is f = sim->fR_params[0] * R^(1 + sim->fR_params[1]) - R
 	}
 }
 
@@ -595,6 +565,7 @@ void fR_rescale_before_hibernate(
 	}
 	else if(sim->fR_model == FR_MODEL_DELTA)
 	{
+		// TODO: FIX THIS?
 	}
 }
 
@@ -667,7 +638,8 @@ double check_field(
   string field_name,
   long n3,
   const metadata & sim,
-  string message = "")
+  string message = ""
+)
 {
   Site x(field.lattice());
 	ios oldState(nullptr);
@@ -725,8 +697,8 @@ double check_field(
   Field<FieldType> & field,
   string field_name,
   long n3,
-	string message = "",
-  int prec = 6
+	string message="",
+  int prec=6
 )
 {
   Site x(field.lattice());
@@ -788,7 +760,8 @@ double check_correl(
   Field<FieldType> & field2,
   string field_name2,
   long n3,
-  const metadata & sim)
+  const metadata & sim
+)
 {
 	Site x(field1.lattice());
 	ios oldState(nullptr);
@@ -837,7 +810,8 @@ double check_field(
   string field_name,
   long n3,
   const metadata & sim,
-  string message = "")
+  string message = ""
+)
 {
   Site x(field1.lattice());
 	ios oldState(nullptr);
@@ -903,7 +877,8 @@ double check_field(
   double c2,
   long n3,
   const metadata & sim,
-  string message = "")
+  string message = ""
+)
 {
   Site x(field1.lattice());
 	ios oldState(nullptr);
@@ -965,7 +940,8 @@ void check_vector_field(
   string field_name,
   long n3,
   const metadata & sim,
-  string message = "")
+  string message = ""
+)
 {
   Site x(field.lattice());
 	ios oldState(nullptr);
@@ -1044,7 +1020,8 @@ void check_all_fields(
   Field<FieldType> &phi_ddot,
 	Field<FieldType> &Bi,
 	long n3,
-  const metadata & sim)
+  const metadata & sim
+)
 {
   int oc = sim.out_check;
 
@@ -1072,7 +1049,8 @@ void check_all_fields(
 //////////////////////////////////
 void check_particles(
   const metadata & sim,
-  Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm)
+  Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm
+)
 {
 	int i, num[8] = {0, 262143, 1, 26, 30000, 180024, 220023, 262142};
 
@@ -1090,7 +1068,8 @@ template <class FieldType>
 double compute_max_fRR(
   Field<FieldType> &deltaR,
   double Rbar,
-  const metadata & sim)
+  const metadata & sim
+)
 {
 	if(sim.fR_model == FR_MODEL_R2)// In R + R^2 gravity, fRR is a constant
 	{
@@ -1122,7 +1101,8 @@ double compute_max_fRR(
 template <class FieldType>
 void flip_fields(
   Field<FieldType> & field1,
-  Field<FieldType> & field2)
+  Field<FieldType> & field2
+)
 {
 	Site x(field1.lattice());
 	FieldType temp;
@@ -1143,7 +1123,8 @@ template <class FieldType>
 void flip_fields(
   Field<FieldType> & field1,
   Field<FieldType> & field2,
-  Field<FieldType> & field3)
+  Field<FieldType> & field3
+)
 {
 	Site x(field1.lattice());
 	FieldType temp;
@@ -1376,6 +1357,7 @@ double convert_deltaR_to_xi(
 	else if(sim.fR_model == FR_MODEL_RN)
 	{
 		double a = sim.fR_params[0], n = sim.fR_params[1], n_minus_1 = n - 1.;
+
 		for(x.first(); x.test(); x.next())
 		{
 			xi(x) = a * n * pow(Rbar + deltaR(x), n_minus_1) - fRbar;
@@ -1628,10 +1610,10 @@ double convert_xi_to_deltaR(
 
 		for(x.first(); x.test(); x.next())
 		{
-			R_temp = 1. + xi(x) / (a * n * pow(Rbar, n_minus_1));
+			R_temp = (xi(x) + fRbar) / a / n;
 			if(R_temp > 0.)
 			{
-				R_temp = Rbar * pow(R_temp, 1./n_minus_1);
+				R_temp = pow(R_temp, 1./n_minus_1);
 			}
 
 			deltaR(x) = R_temp - Rbar;
@@ -1815,11 +1797,96 @@ double build_phi_ddot(
 }
 
 
+//////////////////////////////////////////////////////////////////////////
+// Computes:
+// 8piG*deltaT = 8piG( (T00 + T11 + T22 + T33) - (-rho_backg + 3P_backg) )
+//////////////////////////////////////////////////////////////////////////
+template <class FieldType>
+void compute_eightpiG_deltaT(
+	Field<FieldType> & eightpiG_deltaT,
+	Field<FieldType> & negative_a3_t00,
+	Field<FieldType> & a3_tij,
+	double a,
+	double T00_hom,
+	double Trace_hom,
+	double fourpiG,
+	const metadata & sim
+)
+{
+  double
+		eightpiG = 2. * fourpiG,
+	 	a3 = a*a*a;
+
+	Site x(eightpiG_deltaT.lattice());
+
+	if(sim.relativistic_flag) // LCDM / relativistic f(R)
+	{
+		for(x.first(); x.test(); x.next())
+		{
+			eightpiG_deltaT(x) = -negative_a3_t00(x) + a3_tij(x,0,0) + a3_tij(x,1,1) + a3_tij(x,2,2);
+			eightpiG_deltaT(x) /= a3;
+			eightpiG_deltaT(x) -= Trace_hom;
+			eightpiG_deltaT(x) *= eightpiG;
+		}
+	}
+	else // Newton / Newtonian f(R)
+	{
+		for(x.first(); x.test(); x.next())
+		{
+			eightpiG_deltaT(x) = -negative_a3_t00(x);
+			eightpiG_deltaT(x) /= a3;
+			eightpiG_deltaT(x) -= T00_hom;
+			eightpiG_deltaT(x) *= eightpiG;
+		}
+	}
+
+  eightpiG_deltaT.updateHalo();
+
+	return;
+}
 
 
+////////////////////////////////
+////////////////////////////////
+template <class FieldType>
+double build_homogeneous_terms(
+	Field<FieldType> & source,
+	Field<FieldType> & phi,
+	Field<FieldType> & Sij,
+	double & T00_hom,
+	double & Tii_hom,
+	double & Trace_hom,
+	double & phi_hom,
+	double & T00_hom_rescaled_a3,
+	const double a,
+	const long numpts3d
+)
+{
+	double a3 = a*a*a;
+	Site x(phi.lattice());
 
+	T00_hom = Tii_hom = phi_hom = 0.;
 
+	for(x.first(); x.test(); x.next())
+	{
+		T00_hom -= source(x); // source = - a^3 * T00
+		Tii_hom += Sij(x,0,0) + Sij(x,1,1) + Sij(x,2,2); // Sij = a^3 Tij
+		phi_hom += phi(x);
+	}
 
+	parallel.sum<Real>(T00_hom);
+	parallel.sum<Real>(Tii_hom);
+	parallel.sum<Real>(phi_hom);
+	T00_hom /= (Real) numpts3d;
+	Tii_hom /= (Real) numpts3d;
+	phi_hom /= (Real) numpts3d;
+	T00_hom_rescaled_a3 = T00_hom / (1. + 3. * phi_hom);
+	T00_hom /= a3;
+	Tii_hom /= a3;
+	Trace_hom = T00_hom + Tii_hom;
+
+	return T00_hom;
+}
 
 
 

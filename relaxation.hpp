@@ -75,11 +75,21 @@ int prepare_initial_guess_trace_equation(
   double fRbar,
   const metadata & sim)
 {
-  // For the moment, simply set fields to zero (except the source term rhs)
-  erase_field(xi);
-  erase_field(deltaR);
-  erase_field(laplace_xi);
-  copy_field(eightpiG_deltaT, rhs, a*a/3.);
+  copy_field(eightpiG_deltaT, rhs, a*a/3.); // source term
+
+  // TODO
+  // METHOD 1 -- deltaR = - eightpiG_deltaT; xi, laplace_xi consistent;
+  copy_field(eightpiG_deltaT, deltaR, -1.);
+  convert_deltaR_to_xi(deltaR, xi, Rbar, fRbar, sim);
+  build_laplacian(xi, laplace_xi, dx);
+  // END METHOD 1
+
+  //// METHOD 2 -- all fields to zero
+  // erase_field(xi);
+  // erase_field(laplace_xi);
+  // erase_field(deltaR);
+  //// END METHOD 2
+
   return 0;
 }
 
@@ -106,11 +116,20 @@ double residual_xi(
   double fRbar,
   const metadata & sim)
 {
-  double temp = deltaR, hub_corr = sim.xi_Hubble ? 1. : 0.;
+  double temp = deltaR;
 
-  temp = temp * (1. - fRbar - xi) + 2. * (f(Rbar + deltaR, sim, 884) - fbar) - Rbar * xi;
-  temp = laplace_xi - a2_over_3 * temp - rhs;
-  temp += hub_corr * (2. * phi * laplace_xi - two_Hubble_over_dtau * (xi - xi_old));
+  if(sim.relativistic_flag)
+  {
+    double hub_corr = sim.xi_Hubble ? 1. : 0.;
+
+    temp = temp * (1. - fRbar - xi) + 2. * (f(Rbar + deltaR, sim, 884) - fbar) - Rbar * xi;
+    temp = laplace_xi - a2_over_3 * temp - rhs;
+    temp += hub_corr * (2. * phi * laplace_xi - two_Hubble_over_dtau * (xi - xi_old));
+  }
+  else
+  {
+    temp = laplace_xi - a2_over_3 * temp - rhs;
+  }
 
   return temp;
 }
@@ -130,9 +149,7 @@ double dresidual_dxi(
   double fRbar,
   const metadata & sim)
 {
-  double
-    R = Rbar + deltaR,
-    temp = fRR(R, sim, 738);
+  double R = Rbar + deltaR, temp = fRR(R, sim, 738);
 
   if(!temp || temp > FR_WRONG)
   {
@@ -228,12 +245,13 @@ double update_xi_single(
       if(fr)
       {
         resid = - overrelax * resid / fr / denominator;
+
         while(true)
         {
           xi = fr * exp(resid) - fRbar;
           if(!xi_allowed(xi, Rbar, fRbar, sim))
           {
-            resid *= 0.5;
+            resid /= 2.;
           }
           else break;
         }
@@ -251,7 +269,7 @@ double update_xi_single(
         xi = xi_prev + resid;
         if(!xi_allowed(xi, Rbar, fRbar, sim))
         {
-          resid *= 0.5;
+          resid /= 2.;
         }
         else break;
       }
@@ -264,7 +282,7 @@ double update_xi_single(
 double update_xi_and_deltaR_single(
   double phi,
   double & xi,
-  double xi_previous_timestep,
+  double xi_old,
   double laplace_xi,
   double & deltaR,
   double rhs,
@@ -280,7 +298,7 @@ double update_xi_and_deltaR_single(
   double temp, dxi;
 
   dxi = xi; // original value
-  temp = update_xi_single(phi, xi, xi_previous_timestep, laplace_xi, deltaR, rhs, a2_over_3, two_Hubble_over_dtau, coeff_laplacian, overrelax, Rbar, fbar, fRbar, sim);
+  temp = update_xi_single(phi, xi, xi_old, laplace_xi, deltaR, rhs, a2_over_3, two_Hubble_over_dtau, coeff_laplacian, overrelax, Rbar, fbar, fRbar, sim);
 
   if(std::isnan(deltaR) || fabs(xi) >= 1.E20 || deltaR + Rbar <= 0.)
 	{
@@ -332,7 +350,7 @@ template <template<class> class FieldClass, class FieldType>
 double update_xi_and_deltaR(
   FieldClass<FieldType> & phi,
   FieldClass<FieldType> & xi,
-  FieldClass<FieldType> & xi_previous_timestep,
+  FieldClass<FieldType> & xi_old,
   FieldClass<FieldType> & laplace_xi,
   FieldClass<FieldType> & deltaR,
   FieldClass<FieldType> & eightpiG_deltaT,
@@ -368,12 +386,12 @@ double update_xi_and_deltaR(
       }
       else
       {
-        xi_min = - (1.+n)*(1.+n) * pow((n-1.) / c2 / (1.+n), 1.-1./n) / n / 4.- fRbar;
+        xi_min = - (1.+n) * (1.+n) * pow((n-1.) / c2 / (1.+n), 1.-1./n) / n / 4. - fRbar;
       }
 
       for(x.first(); x.test(); x.next())
       {
-        resid = residual_xi(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
+        resid = residual_xi(phi(x), xi(x), xi_old(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
         denominator = dresidual_dxi(xi(x), deltaR(x), a2_over_3, two_Hubble_over_dtau, Rbar, fRbar, sim);
         denominator += (1. + 2. * relat_flag * phi(x)) * coeff_laplacian;
         fr = xi(x) + fRbar;
@@ -387,7 +405,7 @@ double update_xi_and_deltaR(
             // Check if value of xi is allowed
             if(xi(x) <= xi_min || xi(x) + fRbar >= 0.) // reduce step if not allowed
             {
-              resid *= 0.5;
+              resid /= 2.;
             }
             else break; // break if ok
           }
@@ -404,18 +422,23 @@ double update_xi_and_deltaR(
 
       for(x.first(); x.test(); x.next())
       {
-        resid = residual_xi(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
+        resid = residual_xi(phi(x), xi(x), xi_old(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
         denominator = dresidual_dxi(xi(x), deltaR(x), a2_over_3, two_Hubble_over_dtau, Rbar, fRbar, sim);
         denominator += (1. + 2. * relat_flag * phi(x)) * coeff_laplacian;
+
         resid = - overrelax * resid / denominator;
+
         while(true)
         {
-          xi(x) = xi_previous_timestep(x) + resid;
-          if(xi(x) <= xi_min)
+          if(xi(x) + resid <= xi_min)
           {
-            resid *= 0.5;
+            resid /= 2.;
           }
-          else break;
+          else
+          {
+            xi(x) += resid;
+            break;
+          }
         }
       }
   	}
@@ -426,18 +449,22 @@ double update_xi_and_deltaR(
 
       for(x.first(); x.test(); x.next())
       {
-        resid = residual_xi(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
+        resid = residual_xi(phi(x), xi(x), xi_old(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
         denominator = dresidual_dxi(xi(x), deltaR(x), a2_over_3, two_Hubble_over_dtau, Rbar, fRbar, sim);
         denominator += (1. + 2. * relat_flag * phi(x)) * coeff_laplacian;
         resid = - overrelax * resid / denominator;
+
         while(true)
         {
-          xi(x) = xi_previous_timestep(x) + resid;
-          if(xi(x) <= xi_min)
+          if(xi(x) + resid <= xi_min)
           {
-            resid *= 0.5;
+            resid /= 2.;
           }
-          else break;
+          else
+          {
+            xi(x) += resid;
+            break;
+          }
         }
       }
   	}
@@ -461,7 +488,7 @@ double update_xi_and_deltaR(
       // Red cells first
       for(x.firstRed(); x.testRed(); x.nextRed())
       {
-        resid = residual_xi(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
+        resid = residual_xi(phi(x), xi(x), xi_old(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
         denominator = dresidual_dxi(xi(x), deltaR(x), a2_over_3, two_Hubble_over_dtau, Rbar, fRbar, sim);
         denominator += (1. + 2. * relat_flag * phi(x)) * coeff_laplacian;
         fr = xi(x) + fRbar;
@@ -475,7 +502,7 @@ double update_xi_and_deltaR(
             // Check if value of xi is allowed
             if(xi(x) <= xi_min || xi(x) + fRbar >= 0.) // reduce step if not allowed
             {
-              resid *= 0.5;
+              resid /= 2.;
             }
             else break; // break if ok
           }
@@ -492,7 +519,7 @@ double update_xi_and_deltaR(
       // Then Black cells
       for(x.firstBlack(); x.testBlack(); x.nextBlack())
       {
-        resid = residual_xi(phi(x), xi(x), xi_previous_timestep(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
+        resid = residual_xi(phi(x), xi(x), xi_old(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
         denominator = dresidual_dxi(xi(x), deltaR(x), a2_over_3, two_Hubble_over_dtau, Rbar, fRbar, sim);
         denominator += (1. + 2. * relat_flag * phi(x)) * coeff_laplacian;
         fr = xi(x) + fRbar;
@@ -506,7 +533,7 @@ double update_xi_and_deltaR(
             // Check if value of xi is allowed
             if(xi(x) <= xi_min || xi(x) + fRbar >= 0.) // reduce step if not allowed
             {
-              resid *= 0.5;
+              resid /= 2.;
             }
             else break; // break if ok
           }
@@ -523,15 +550,22 @@ double update_xi_and_deltaR(
 
       for(x.firstRed(); x.testRed(); x.nextRed())
       {
+        resid = residual_xi(phi(x), xi(x), xi_old(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
+        denominator = dresidual_dxi(xi(x), deltaR(x), a2_over_3, two_Hubble_over_dtau, Rbar, fRbar, sim);
+        denominator += (1. + 2. * relat_flag * phi(x)) * coeff_laplacian;
         resid = - overrelax * resid / denominator;
+
         while(true)
         {
-          xi(x) = xi_previous_timestep(x) + resid;
-          if(xi(x) <= xi_min)
+          if(xi(x) + resid <= xi_min)
           {
-            resid *= 0.5;
+            resid /= 2.;
           }
-          else break;
+          else
+          {
+            xi(x) += resid;
+            break;
+          }
         }
       }
 
@@ -540,15 +574,22 @@ double update_xi_and_deltaR(
 
       for(x.firstBlack(); x.testBlack(); x.nextBlack())
       {
+        resid = residual_xi(phi(x), xi(x), xi_old(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
+        denominator = dresidual_dxi(xi(x), deltaR(x), a2_over_3, two_Hubble_over_dtau, Rbar, fRbar, sim);
+        denominator += (1. + 2. * relat_flag * phi(x)) * coeff_laplacian;
         resid = - overrelax * resid / denominator;
+
         while(true)
         {
-          xi(x) = xi_previous_timestep(x) + resid;
-          if(xi(x) <= xi_min)
+          if(xi(x) + resid <= xi_min)
           {
-            resid *= 0.5;
+            resid /= 2.;
           }
-          else break;
+          else
+          {
+            xi(x) += resid;
+            break;
+          }
         }
       }
     }
@@ -559,15 +600,22 @@ double update_xi_and_deltaR(
 
       for(x.firstRed(); x.testRed(); x.nextRed())
       {
+        resid = residual_xi(phi(x), xi(x), xi_old(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
+        denominator = dresidual_dxi(xi(x), deltaR(x), a2_over_3, two_Hubble_over_dtau, Rbar, fRbar, sim);
+        denominator += (1. + 2. * relat_flag * phi(x)) * coeff_laplacian;
         resid = - overrelax * resid / denominator;
+
         while(true)
         {
-          xi(x) = xi_previous_timestep(x) + resid;
-          if(xi(x) <= xi_min)
+          if(xi(x) + resid <= xi_min)
           {
-            resid *= 0.5;
+            resid /= 2.;
           }
-          else break;
+          else
+          {
+            xi(x) += resid;
+            break;
+          }
         }
       }
 
@@ -576,15 +624,22 @@ double update_xi_and_deltaR(
 
       for(x.firstBlack(); x.testBlack(); x.nextBlack())
       {
+        resid = residual_xi(phi(x), xi(x), xi_old(x), laplace_xi(x), deltaR(x), rhs(x), a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
+        denominator = dresidual_dxi(xi(x), deltaR(x), a2_over_3, two_Hubble_over_dtau, Rbar, fRbar, sim);
+        denominator += (1. + 2. * relat_flag * phi(x)) * coeff_laplacian;
         resid = - overrelax * resid / denominator;
+
         while(true)
         {
-          xi(x) = xi_previous_timestep(x) + resid;
-          if(xi(x) <= xi_min)
+          if(xi(x) + resid <= xi_min)
           {
-            resid *= 0.5;
+            resid /= 2.;
           }
-          else break;
+          else
+          {
+            xi(x) += resid;
+            break;
+          }
         }
       }
     }
@@ -593,7 +648,7 @@ double update_xi_and_deltaR(
   convert_xi_to_deltaR(deltaR, xi, Rbar, fRbar, sim);
   build_laplacian(xi, laplace_xi, dx);
   // TODO: Why doesn't it work without this (apparently useless) call?
-  temp = compute_error(phi, xi, xi_previous_timestep, laplace_xi, deltaR, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, 1, sim, level);
+  temp = compute_error(phi, xi, xi_old, laplace_xi, deltaR, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, 1, sim, level);
 
   return temp;
 }
@@ -685,7 +740,7 @@ void build_residual(
 // TODO: Details here
 //////////////////////////
 template <class FieldType>
-double relaxation(
+double relaxation_solver(
   MultiField<FieldType> * phi,
   MultiField<FieldType> * xi,
   MultiField<FieldType> * xi_old,
@@ -736,7 +791,6 @@ double relaxation(
   // END REMOVE
 
   COUT << "                fin.error = " << error << endl;
-
   return error;
 }
 
@@ -778,7 +832,6 @@ double relaxation_step(
   }
   else
   {
-    error = compute_error(phi, xi, xi_old, laplace_xi, deltaR, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim, level);
     return error;
   }
 }
@@ -816,7 +869,9 @@ double single_layer_solver(
   {
     while(true)
     {
-      error = relaxation_step(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim, level);
+      relaxation_step(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim, level);
+
+      error = compute_error(phi, xi, xi_old, laplace_xi, deltaR, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim, level);
 
       if(error < sim.relaxation_error)
       {
@@ -844,7 +899,9 @@ double single_layer_solver(
   {
     while(true)
     {
-      error = relaxation_step(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim, level);
+      relaxation_step(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim, level);
+
+      error = compute_error(phi, xi, xi_old, laplace_xi, deltaR, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim, level);
 
       if(error < sim.relaxation_error)
       {

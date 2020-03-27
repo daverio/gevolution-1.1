@@ -148,6 +148,62 @@ void prepareFTsource(
 }
 
 
+//////////////////////////
+//////////////////////////
+template <class FieldType>
+void prepareFTsource_Sij_fR(
+	Field<FieldType> & phi,
+	Field<FieldType> & chi,
+	Field<FieldType> & xi,
+	Field<FieldType> & a3_Tij,
+	Field<FieldType> & Sij,
+	const double eightpiG_dx2_over_a
+)
+{
+	Site x(phi.lattice());
+
+	for(x.first(); x.test(); x.next())
+	{
+		// 0-0-component:
+		Sij(x, 0, 0) = eightpiG_dx2_over_a * a3_Tij(x, 0, 0);
+		Sij(x, 0, 0) -= (4. * phi(x) - 2. * chi(x)) * (phi(x-0) + phi(x+0) - 2. * phi(x));
+		Sij(x, 0, 0) -= 0.5 * (phi(x+0) - phi(x-0)) * (phi(x+0) - phi(x-0));
+		Sij(x, 0, 0) += xi(x-0) + xi(x+0) - 2. * xi(x);
+
+		// 1-1-component:
+		Sij(x, 1, 1) = eightpiG_dx2_over_a * a3_Tij(x, 1, 1);
+		Sij(x, 1, 1) -= (4. * phi(x) - 2. * chi(x)) * (phi(x-1) + phi(x+1) - 2. * phi(x));
+		Sij(x, 1, 1) -= 0.5 * (phi(x+1) - phi(x-1)) * (phi(x+1) - phi(x-1));
+		Sij(x, 1, 1) += xi(x-1) + xi(x+1) - 2. * xi(x);
+
+		// 2-2-component:
+		Sij(x, 2, 2) = eightpiG_dx2_over_a * a3_Tij(x, 2, 2);
+		Sij(x, 2, 2) -= (4. * phi(x) - 2. * chi(x)) * (phi(x-2) + phi(x+2) - 2. * phi(x));
+		Sij(x, 2, 2) -= 0.5 * (phi(x+2) - phi(x-2)) * (phi(x+2) - phi(x-2));
+		Sij(x, 2, 2) += xi(x-2) + xi(x+2) - 2. * xi(x);
+
+		// 0-1-component:
+		Sij(x, 0, 1) = eightpiG_dx2_over_a * a3_Tij(x, 0, 1);
+		Sij(x, 0, 1) -= 0.5 * (phi(x+0+1) - phi(x+1) + phi(x+0) - phi(x)) * (phi(x+0+1) - phi(x+0) + phi(x+1) - phi(x));
+		Sij(x, 0, 1) -= (phi(x+0+1) + phi(x+1) + phi(x+1) + phi(x) - 0.5 * (chi(x+0+1) + chi(x+1) + chi(x+1) + chi(x))) * (phi(x+0+1) + phi(x) - phi(x+0) - phi(x+1));
+		Sij(x, 0, 1) += xi(x+0+1) + xi(x) - xi(x+0) - xi(x+1);
+
+		// 0-2-component:
+		Sij(x, 0, 2) = eightpiG_dx2_over_a * a3_Tij(x, 0, 2);
+		Sij(x, 0, 2) -= 0.5 * (phi(x+0+2) - phi(x+2) + phi(x+0) - phi(x)) * (phi(x+0+2) - phi(x+0) + phi(x+2) - phi(x));
+		Sij(x, 0, 2) -= (phi(x+0+2) + phi(x+2) + phi(x+2) + phi(x) - 0.5 * (chi(x+0+2) + chi(x+2) + chi(x+2) + chi(x))) * (phi(x+0+2) + phi(x) - phi(x+0) - phi(x+2));
+		Sij(x, 0, 2) += xi(x+0+2) + xi(x) - xi(x+0) - xi(x+2);
+
+		// 1-2-component:
+		Sij(x, 1, 2) = eightpiG_dx2_over_a * a3_Tij(x, 1, 2);
+		Sij(x, 1, 2) -= 0.5 * (phi(x+1+2) - phi(x+2) + phi(x+1) - phi(x)) * (phi(x+1+2) - phi(x+1) + phi(x+2) - phi(x));
+		Sij(x, 1, 2) -= (phi(x+1+2) + phi(x+2) + phi(x+2) + phi(x) - 0.5 * (chi(x+1+2) + chi(x+2) + chi(x+2) + chi(x))) * (phi(x+1+2) + phi(x) - phi(x+1) - phi(x+2));
+		Sij(x, 1, 2) += xi(x+1+2) + xi(x) - xi(x+1) - xi(x+2);
+	}
+}
+
+
+
 /////////////////////////////////////////////////
 // Prepare source for 00 equation in F(R) gravity
 /////////////////////////////////////////////////

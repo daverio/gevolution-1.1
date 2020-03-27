@@ -1724,31 +1724,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 				COUT << " /!\\ Relaxation method not specified. Using default: single layer (no multigrid)" << endl;
 			}
 
-			if(!parseParameter(params, numparam, "truncate relaxation", sim.truncate_relaxation))
-			{
-				COUT << " Relaxation solver never truncated, even if convergence slows down." << endl;
-				sim.truncate_relaxation = 0;
-			}
-			else if(sim.truncate_relaxation <= 0)
-			{
-				COUT << " Relaxation solver never truncated, even if convergence slows down." << endl;
-				sim.truncate_relaxation = 0;
-			}
-			else
-			{
-				COUT << " Relaxation truncated after " << sim.truncate_relaxation << " steps with (almost) no improvement." << endl;
-
-				if(!parseParameter(params, numparam, "truncation threshold", sim.relaxation_truncation_threshold))
-				{
-					COUT << " Setting truncation threshold at default = 0.01." << endl;
-					sim.relaxation_truncation_threshold = 0.01;
-				}
-				else
-				{
-					COUT << " Truncation threshold set at: " << sim.relaxation_truncation_threshold << endl;
-				}
-			}
-
 			if(!parseParameter(params, numparam, "red black", sim.red_black))
 			{
 				sim.red_black = 0;

@@ -305,7 +305,6 @@ struct metadata
 	int num_fR_params;
 	int xi_Hubble;
 	int lcdm_background;
-	int truncate_relaxation;
 	int relaxation_method;
 	int red_black;
 	int pre_smoothing;
@@ -327,7 +326,6 @@ struct metadata
 	double fR_count_max;
 	double relaxation_error;
 	double overrelaxation_factor;
-	double relaxation_truncation_threshold;
 	double z_switch_fR_background;
 };
 

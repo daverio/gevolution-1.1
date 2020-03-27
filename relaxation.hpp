@@ -79,15 +79,15 @@ int prepare_initial_guess_trace_equation(
 
   // TODO
   // METHOD 1 -- deltaR = - eightpiG_deltaT; xi, laplace_xi consistent;
-  copy_field(eightpiG_deltaT, deltaR, -1.);
-  convert_deltaR_to_xi(deltaR, xi, Rbar, fRbar, sim);
-  build_laplacian(xi, laplace_xi, dx);
+  // copy_field(eightpiG_deltaT, deltaR, -1.);
+  // convert_deltaR_to_xi(deltaR, xi, Rbar, fRbar, sim);
+  // build_laplacian(xi, laplace_xi, dx);
   // END METHOD 1
 
   //// METHOD 2 -- all fields to zero
-  // erase_field(xi);
-  // erase_field(laplace_xi);
-  // erase_field(deltaR);
+  erase_field(xi);
+  erase_field(laplace_xi);
+  erase_field(deltaR);
   //// END METHOD 2
 
   return 0;
@@ -821,7 +821,9 @@ double relaxation_step(
 {
   double error;
   // Attempt new guess
+  // COUT << "   - update_xi_and_deltaR" << endl;
   error = update_xi_and_deltaR(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim, level);
+  // COUT << "   - update_xi_and_deltaR: DONE" << endl;
 
   if(error > FR_WRONG)
   {
@@ -865,49 +867,25 @@ double single_layer_solver(
   int count = 0;
   double error = 0., previous_error = 1.;
 
-  if(sim.truncate_relaxation > 0)
+  while(true)
   {
-    while(true)
+    relaxation_step(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim, level);
+
+    error = compute_error(phi, xi, xi_old, laplace_xi, deltaR, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim, level);
+
+    if(error < sim.relaxation_error)
     {
-      relaxation_step(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim, level);
-
-      error = compute_error(phi, xi, xi_old, laplace_xi, deltaR, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim, level);
-
-      if(error < sim.relaxation_error)
-      {
-        break;
-      }
-
-      if(fabs(error/previous_error - 1.) <= sim.relaxation_truncation_threshold)
-      {
-        ++count;
-      }
-      else
-      {
-        count = 0;
-      }
-
-      if(count >= sim.truncate_relaxation)
-      {
-        break;
-      }
-
-      previous_error = error;
+      break;
     }
-  }
-  else
-  {
-    while(true)
+
+    if(error/previous_error > 1.)
     {
-      relaxation_step(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim, level);
-
-      error = compute_error(phi, xi, xi_old, laplace_xi, deltaR, rhs, dx, a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d, sim, level);
-
-      if(error < sim.relaxation_error)
-      {
-        break;
-      }
+      add_fields(deltaR, 0.5, eightpiG_deltaT, -0.5, deltaR);
+      convert_deltaR_to_xi(deltaR, xi, Rbar, fRbar, sim);
+      build_laplacian(xi, laplace_xi, dx);
     }
+
+    previous_error = error;
   }
 
   return error;

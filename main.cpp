@@ -825,7 +825,15 @@ int main(int argc, char **argv)
 		}
 
 		// prepare nonlinear source for additional equations
-		prepareFTsource<Real>(phi, Sij, Sij, 2. * fourpiG * dx * dx / a);
+		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
+		{
+			prepareFTsource_Sij_fR<Real>(phi, chi, xi, Sij, Sij, 2. * fourpiG * dx * dx / a);
+			// prepareFTsource<Real>(phi, Sij, Sij, 2. * fourpiG * dx * dx / a);
+		}
+		else
+		{
+			prepareFTsource<Real>(phi, Sij, Sij, 2. * fourpiG * dx * dx / a);
+		}
 
 		//////////////////////////////// Evolve chi ////////////////////////////////
 		copy_field(chi, chi_dot); // Before evolving chi, keep copy of old value
@@ -863,11 +871,6 @@ int main(int argc, char **argv)
 		fft_count++;
 #endif
 
-		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
-		{
-			add_fields(chi, xi, chi);
-		}
-
 		chi.updateHalo(); // communicate halo values
 
 		if(cycle)
@@ -903,6 +906,7 @@ int main(int argc, char **argv)
 		}
 		else // evolve B using vector projection
 		{
+			// TODO: Verify and fix for f(R) gravity!
 			evolveFTvector(SijFT, BiFT, a * a * dtau_old);
 		}
 

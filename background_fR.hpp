@@ -91,15 +91,16 @@ double Y_dot_RungeKutta(
 	const double Trace_hom,
 	const double fourpiG,
 	const cosmology & cosmo,
-	const metadata & sim
+	const metadata & sim,
+	string message = ""
 )
 {
 	double
 	result,
-	f0 = f(R, sim, 310),
-	fr = fR(R, sim, 311),
-	frr = fRR(R, sim, 312),
-	frrr = fRRR(R, sim, 313);
+	f0 = f(R, sim, message+"Y_dot_RungeKutta"),
+	fr = fR(R, sim, message+"Y_dot_RungeKutta"),
+	frr = fRR(R, sim, message+"Y_dot_RungeKutta"),
+	frrr = fRRR(R, sim, message+"Y_dot_RungeKutta");
 
 	if(frr && false)
 	{

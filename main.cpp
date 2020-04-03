@@ -425,9 +425,9 @@ int main(int argc, char **argv)
 		}
 
 		Rbar = R_initial_fR(a, fourpiG, cosmo);
-		fbar = f(Rbar, sim, 100);
-		fRbar = fR(Rbar, sim, 101);
-		fRRbar = fRR(Rbar, sim, 102);
+		fbar = f(Rbar, sim, "initial");
+		fRbar = fR(Rbar, sim, "initial");
+		fRRbar = fRR(Rbar, sim, "initial");
 		dot_fRbar = 0.;
 		T00_hom = T00_hom_rescaled_a3 = 0.;
 		Hubble = H_initial_fR(a, Hconf(a, fourpiG, cosmo), Rbar, fbar, fRbar,	6. * fourpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * fRRbar / a / a / a);
@@ -726,6 +726,12 @@ int main(int argc, char **argv)
 			{
 				copy_field(xi, xi_old);
 				prepare_initial_guess_trace_equation(deltaR, eightpiG_deltaT, xi, laplace_xi, rhs, a, dx, Rbar, fRbar, sim);
+
+				if(!cycle)
+				{
+					copy_field(xi, xi_old);
+				}
+
 				relaxation_solver(mg_phi, mg_xi, mg_xi_old, mg_laplace_xi, mg_deltaR, mg_eightpiG_deltaT, mg_rhs, mg_residual, mg_err, mg_engine, dx, a, dtau_old ? 2. * Hubble / dtau_old : 0., numpts3d, Rbar, fbar, fRbar, sim);
 				add_fields(deltaR, eightpiG_deltaT, zeta); // Build zeta from deltaR and eightpiG_deltaT
 				sim.multigrid_check_shape = 0; // Just check the first time (at most)
@@ -828,7 +834,6 @@ int main(int argc, char **argv)
 		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 		{
 			prepareFTsource_Sij_fR<Real>(phi, chi, xi, Sij, Sij, 2. * fourpiG * dx * dx / a);
-			// prepareFTsource<Real>(phi, Sij, Sij, 2. * fourpiG * dx * dx / a);
 		}
 		else
 		{
@@ -873,7 +878,7 @@ int main(int argc, char **argv)
 
 		chi.updateHalo(); // communicate halo values
 
-		if(cycle)
+		if(dtau_old)
 		{
 			add_fields(chi, 1./dtau_old, chi_dot, -1./dtau_old, chi_dot);
 			chi_dot.updateHalo();
@@ -1256,11 +1261,11 @@ int main(int argc, char **argv)
 		// Build background quantities after evolving background
 		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 		{
-			fbar = f(Rbar, sim, 700);
+			fbar = f(Rbar, sim, "building background cycle "+to_string(cycle));
 			dot_fRbar = - fRbar / dtau;
-			fRbar = fR(Rbar, sim, 701);
+			fRbar = fR(Rbar, sim, "building background cycle "+to_string(cycle));
 			dot_fRbar += fRbar / dtau;
-			fRRbar = fRR(Rbar, sim, 702);
+			fRRbar = fRR(Rbar, sim, "building background cycle "+to_string(cycle));
 		}
 
 		parallel.max<double>(maxvel, numspecies);

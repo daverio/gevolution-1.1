@@ -225,7 +225,9 @@ void prepareFTsource_S00_fR_rel(
 	const double Rbar,
 	const double fbar,
 	const double fRbar,
-	const metadata & sim)
+	const metadata & sim,
+	string message = ""
+)
 {
 	Site x(phi.lattice());
   Site xn(phi.lattice());
@@ -264,7 +266,7 @@ void prepareFTsource_S00_fR_rel(
 		source(x) -= fourpiG_over_a * (negative_a3_T00(x) - negative_a3_T00_hom) * fR / 2.;
 		source(x) -= 1.5 * Hubble * (xi(x) - xi_old(x)) / dtau;
 		source(x) -= threeH2 * xi(x) / 2.;
-		source(x) += 0.25 * a2 * (Rbar * xi(x) + fbar - f(Rbar + deltaR(x), sim, 110));
+		source(x) += 0.25 * a2 * (Rbar * xi(x) + fbar - f(Rbar + deltaR(x), sim, message+" prepareFTsource_S00_fR_rel"));
 		// Rescaling with dx^2 (Needed! To be done before adding gradient squared)
 		source(x) *= dx2;
 		// gradient squared

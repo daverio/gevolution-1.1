@@ -65,7 +65,7 @@ void hold(int n = 1)
 Real f(
   double R,
   const metadata & sim,
-  int code)
+  string message = "")
 {
 	double output = 0.,
 				 Rpow;
@@ -73,7 +73,8 @@ Real f(
 
   if(R <= 0.)
   {
-    cout << " R = " << R << " in f (code " << code << ")." << endl;
+    cout << message << " f(R), R<0" << endl;
+		cout << " R = " << R << ", f(R) = " << output << endl;
     return FR_WRONG_RETURN;
   }
 
@@ -104,7 +105,7 @@ Real f(
 
     if(std::isnan(output))
     {
-      cout << " f(R) Evaluated to NaN (code " << code << ")" << endl
+      cout << " f(R) Evaluated to NaN " << message << endl
       << " R = " << R << endl;
       return FR_WRONG_RETURN;
     }
@@ -117,15 +118,14 @@ Real f(
 		if(std::isnan(output))
 		{
 			cout
-			<< " f(R) Evaluated to NaN (code " << code << ")" << endl
+			<< " f(R) Evaluated to NaN " << message << endl
 			<< " R = " << R << ", R^delta = " << Rpow << ", f(R) = " << output << endl;
-			parallel.abortForce();
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
 	}
 	else
 	{
-		cout << " Something went wrong when computing f(R) (code " << code << "). Closing...\n";
+		cout << " Something went wrong when computing f(R) " << message << "). Closing...\n";
 		parallel.abortForce();
 	}
 
@@ -138,14 +138,15 @@ Real f(
 Real fR(
   double R,
   const metadata & sim,
-  int code)
+  string message = ""
+)
 {
 	double output = 0.,
 				 Rpow;
 
   if(R <= 0. || isnan(R))
   {
-    cout << " R = " << R << " in fR (code " << code << ")." << endl;
+    cout << message << " fR, R = " << R << endl;
     return FR_WRONG_RETURN;
   }
 
@@ -155,7 +156,7 @@ Real fR(
 
 		if(std::isnan(output))
 		{
-			cout << " fR Evaluated to NaN (code " << code << ")" << endl
+			cout <<  message << " fR Evaluated to NaN" << endl
 			<< " R = " << R << ", fR = " << output << endl;
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
@@ -167,8 +168,7 @@ Real fR(
 
 		if(std::isnan(output))
 		{
-			cout << " fR Evaluated to NaN (code " << code << ")" << endl
-			     << " R = " << R << ", R^(n-1) = " << Rpow << ", fR = " << output << endl;
+			cout << message << " fR, R = " << R << endl;
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
 	}
@@ -195,8 +195,7 @@ Real fR(
 
 		if(std::isnan(output))
 		{
-			cout << "UH fR Evaluated to NaN (code " << code << ")" << endl;
-			cout << " R = " << R << ", (R/m2)^n = " << Rpow << ", fR = " << output << endl;
+			cout << message << " fR, R = " << R << endl;
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
 	}
@@ -207,14 +206,13 @@ Real fR(
 
     if(std::isnan(output))
 		{
-			cout << " fR Evaluated to NaN (code " << code << ")" << endl
-			     << " R = " << R << ", R^delta = " << Rpow << ", fR = " << output << endl;
+			cout << message << " fR, R = " << R << endl;
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
 	}
 	else
 	{
-		cout << " Something went wrong when computing FR (code " << code << "). Closing...\n";
+		cout << " Something went wrong when computing FR " << message << " Closing...\n";
 		parallel.abortForce();
 	}
 
@@ -227,11 +225,12 @@ Real fR(
 Real fRR(
   double R,
   const metadata & sim,
-  int code)
+  string message = ""
+)
 {
 	if(R <= 0.)
 	{
-		cout << " R = " << R << " in fRR (code " << code << ")." << endl;
+		cout << message << " fRR, R = " << R << endl;
 		return FR_WRONG_RETURN;
 	}
 
@@ -244,9 +243,7 @@ Real fRR(
 		output = 2. * sim.fR_params[0];
 		if(std::isnan(output))
 		{
-			cout << " fRR Evaluated to NaN (code " << code << ")" << endl
-			<< " R = " << R << ", fRR = " << output << endl;
-			parallel.abortForce();
+			cout << message << " fRR, R = " << R << endl;
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
 	}
@@ -257,9 +254,7 @@ Real fRR(
 
 		if(std::isnan(output))
 		{
-			cout << " fRR Evaluated to NaN (code " << code << ")" << endl
-					 << " R = " << R << ", R^(n-2) = " << Rpow << ", fRR = " << output << endl;
-			parallel.abortForce();
+			cout << message << " fRR, R = " << R << endl;
 			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
 		}
 	}
@@ -283,17 +278,16 @@ Real fRR(
 			if(R_over_m2 * output) output = c1 * n * Rpow * (1. - n + (1. + n) * c2 * Rpow ) / (R_over_m2 * R_over_m2 * m2 * output * output * output);
       else
       {
-        cout << " R_over_m2 * output = 0 in fRR [FR_MODEL_HU_SAWICKI] (code " << code << ")" << endl
+				cout << message << " fRR, R = " << R << " R_over_m2 * output = 0 in fRR [FR_MODEL_HU_SAWICKI]"
         << " R = " << R << ", R/m2 = " << R_over_m2 << ", output = " << output << ", n = " << n << endl;
-        parallel.abortForce();
+        return FR_WRONG_RETURN;
       }
 		}
 
 		if(std::isnan(output))
 		{
-			cout << " fRR Evaluated to NaN (code " << code << ")" << endl
-			     << " R = " << R << ", (R/m2)^n = " << Rpow << ", fRR = " << output << ", n = " << n << endl;
-           parallel.abortForce();
+			cout << message << " fRR, R = " << R << endl;
+			return FR_WRONG_RETURN;
 		}
 	}
 	else if(sim.fR_model == FR_MODEL_DELTA)
@@ -303,15 +297,13 @@ Real fRR(
 
 		if(std::isnan(output))
 		{
-			cout << " fRR Evaluated to NaN (code " << code << ")" << endl
-			     << " R = " << R << ", R^(delta-1) = " << Rpow << ", fRR = " << output << endl;
-			parallel.abortForce();
-			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
+			cout << message << " fRR, R = " << R << endl;
+			return FR_WRONG_RETURN;
 		}
 	}
 	else
 	{
-		cout << " Something went wrong when computing fRR (code " << code << "). Closing...\n";
+		cout << " Something went wrong when computing fRR " << message << " Closing...\n";
 		parallel.abortForce();
 	}
 
@@ -324,7 +316,7 @@ Real fRR(
 Real fRRR(
   double R,
   const metadata & sim,
-  int code
+  string message = ""
 )
 {
 	double output = 0.,
@@ -333,9 +325,8 @@ Real fRRR(
 
   if(R <= 0.)
   {
-    cout << " R = " << R << " in fRRR (code " << code << ")." << endl;
-    parallel.abortForce();
-    return FR_WRONG_RETURN;
+		cout << message << " fRRR, R = " << R << endl;
+		return FR_WRONG_RETURN;
   }
 
   if(sim.fR_model == FR_MODEL_R2)
@@ -349,10 +340,8 @@ Real fRRR(
 
 		if(std::isnan(output))
 		{
-			cout << " fRRR Evaluated to NaN (code " << code << ")" << endl
-			<< " R = " << R << ", R^(n-3) = " << Rpow << ", fRRR = " << output << endl;
-			parallel.abortForce();
-			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
+			cout << message << " fRRR, R = " << R << endl;
+			return FR_WRONG_RETURN;
 		}
 	}
 	else if(sim.fR_model == FR_MODEL_HU_SAWICKI)
@@ -385,10 +374,8 @@ Real fRRR(
 
 		if(std::isnan(output))
 		{
-			cout << " fRRR Evaluated to NaN (code " << code << ")" << endl
-			     << " R = " << R << ", (R/m2)^n = " << Rpow << ", fRRR = " << output << endl;
-			parallel.abortForce();
-			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
+			cout << message << " fRRR, R = " << R << endl;
+			return FR_WRONG_RETURN;
 		}
 	}
 	else if(sim.fR_model == FR_MODEL_DELTA)
@@ -398,15 +385,13 @@ Real fRRR(
 
 		if(std::isnan(output))
 		{
-			cout << " fRRR Evaluated to NaN (code " << code << ")" << endl
-			<< " R = " << R << ", R(delta-2) = " << Rpow << ", fRRR = " << output << endl;
-			parallel.abortForce();
-			return FR_WRONG_RETURN; // Returns a huge number to throw some exception
+			cout << message << " fRRR, R = " << R << endl;
+			return FR_WRONG_RETURN;
 		}
 	}
 	else
 	{
-		cout << " Something went wrong when computing fRRR (code " << code << "). Closing...\n";
+		cout << " Something went wrong when computing fRRR " << message << " Closing...\n";
 		parallel.abortForce();
 	}
 
@@ -414,9 +399,32 @@ Real fRRR(
 }
 
 
-/////////////////////////////////////////////
+////////////////////////
 // allowed values for xi
-/////////////////////////////////////////////
+////////////////////////
+template <class FieldType>
+bool xi_allowed(
+	Field<FieldType> & deltaR,
+	Field<FieldType> & xi,
+	double Rbar,
+	double fRbar,
+	const metadata & sim
+)
+{
+	Site x(deltaR.lattice());
+
+	for(x.first(); x.test(); x.next())
+	{
+		if(!xi_allowed(xi(x), Rbar, fRbar, sim)) return false;
+	}
+
+	return true;
+}
+
+
+////////////////////////
+// allowed values for xi
+////////////////////////
 bool xi_allowed(
 	double xi,
 	double Rbar,
@@ -482,7 +490,24 @@ bool xi_allowed(
 	}
 }
 
+////////////////////////
+// allowed values for deltaR
+////////////////////////
+template <class FieldType>
+bool deltaR_allowed(
+	Field<FieldType> & deltaR,
+	double Rbar
+)
+{
+	Site x(deltaR.lattice());
 
+	for(x.first(); x.test(); x.next())
+	{
+		if(deltaR(x) + Rbar <= 0.) return false;
+	}
+
+	return true;
+}
 
 ////////////////////////////////////////////////////////
 // Some rescaling and printing out of f(R) model details
@@ -569,9 +594,6 @@ void fR_rescale_before_hibernate(
 	}
 }
 
-
-
-
 /////////////////////////
 // Output for check_field
 /////////////////////////
@@ -584,7 +606,8 @@ void output_check_field(
   double absavg,
   int prec,
   string field_name,
-  string message = "")
+  string message = ""
+)
 {
   int spaces = 20;
 
@@ -592,6 +615,7 @@ void output_check_field(
   COUT << "  Max|.| =  " << absmax;
   COUT << "  Min|.| =  " << absmin;
   COUT << "  Avg|.| =  " << absavg;
+	COUT << " " << message;
 
   COUT << endl << setw(spaces) << " ";
 
@@ -622,7 +646,7 @@ void output_check_field(
     COUT << "  Avg    =  " << avg;
   }
 
-  COUT << " " << message << endl;
+	COUT << endl;
 
   return;
 }
@@ -638,7 +662,8 @@ double check_field(
   string field_name,
   long n3,
   const metadata & sim,
-  string message = ""
+  string message = "",
+	int level = 0
 )
 {
   Site x(field.lattice());
@@ -676,12 +701,25 @@ double check_field(
     }
   }
 
-  parallel.max(max);
-  parallel.max(absmax);
-  parallel.min(min);
-  parallel.min(absmin);
-  parallel.sum(avg);
-  parallel.sum(absavg);
+	if(level == 0) // TODO Necessary?
+	{
+		parallel.max(max);
+		parallel.max(absmax);
+		parallel.min(min);
+		parallel.min(absmin);
+		parallel.sum(avg);
+		parallel.sum(absavg);
+	}
+	else // TODO Necessary?
+	{
+		parallel.layer_from_level(level).max(max);
+		parallel.layer_from_level(level).max(absmax);
+		parallel.layer_from_level(level).min(min);
+		parallel.layer_from_level(level).min(absmin);
+		parallel.layer_from_level(level).sum(avg);
+		parallel.layer_from_level(level).sum(absavg);
+	}
+
   avg /= n3;
   absavg /= n3;
 
@@ -693,12 +731,12 @@ double check_field(
 
 /////////////////////////////////////////////
 template <class FieldType>
-double check_field(
+double check_field_precision(
   Field<FieldType> & field,
   string field_name,
   long n3,
-	string message="",
-  int prec=6
+	string message = "",
+  int prec = 6
 )
 {
   Site x(field.lattice());
@@ -750,59 +788,11 @@ double check_field(
 	return absmax;
 }
 
-//////////////////////////////////
-// Check correlation of two fields
-//////////////////////////////////
-template <class FieldType>
-double check_correl(
-  Field<FieldType> & field1,
-  string field_name1,
-  Field<FieldType> & field2,
-  string field_name2,
-  long n3,
-  const metadata & sim
-)
-{
-	Site x(field1.lattice());
-	ios oldState(nullptr);
-	oldState.copyfmt(cout);
-
-  double sum1 = 0., sum2 = 0., sq1 = 0., sq2 = 0., sum12 = 0., temp1, temp2, correl_num, correl_den;
-
-  for(x.first(); x.test(); x.next())
-  {
-    temp1 = field1(x);
-    temp2 = field2(x);
-
-    sum1 += temp1;
-    sq1 += temp1 * temp1;
-    sum2 += temp2;
-    sq2 += temp2 * temp2;
-    sum12 += temp1 * temp2;
-  }
-
-  parallel.sum(sum1);
-  parallel.sum(sum2);
-  parallel.sum(sum12);
-  parallel.sum(sq1);
-  parallel.sum(sq2);
-
-  correl_num = sum12 - (2. - 1./n3) * sum1 * sum2 / n3;
-  correl_den = sqrt( sq1 - (2. - 1./n3) * sum1 * sum1 / n3 ) * sqrt( sq2 - (2. - 1./n3) * sum2 * sum2 / n3 );
-
-  COUT << " Correlator for " + field_name1 + " and " + field_name2 + " = " << correl_num / correl_den << endl;
-
-	cout.copyfmt(oldState);
-
-	return sum12;
-}
-
-
 ////////////////////////////////////////////////
 // Check linear combination of two scalar fields
 ////////////////////////////////////////////////
 template <class FieldType>
-double check_field(
+double check_linear_combination_of_fields(
   Field<FieldType> & field1,
   double c1,
   Field<FieldType> & field2,
@@ -863,72 +853,6 @@ double check_field(
 	return absmax;
 }
 
-
-//////////////////////////////////////////////////
-// Check linear combination of three scalar fields
-//////////////////////////////////////////////////
-template <class FieldType>
-double check_field(
-  Field<FieldType> & field1,
-  Field<FieldType> & field2,
-  Field<FieldType> & field3,
-  string field_name,
-  double c1,
-  double c2,
-  long n3,
-  const metadata & sim,
-  string message = ""
-)
-{
-  Site x(field1.lattice());
-	ios oldState(nullptr);
-	oldState.copyfmt(cout);
-
-  double max = -1.E+30, absmax = 0., min = 1.E+30, absmin = 1.E+30, avg = 0., absavg = 0., temp;
-
-  for(x.first(); x.test(); x.next())
-  {
-    temp = field1(x) + c1 * field2(x) + c2 * field3(x);
-    avg += temp;
-
-    if(temp >= max)
-    {
-      max = temp;
-    }
-
-		if(temp <= min)
-		{
-			min = temp;
-		}
-
-		temp = fabs(temp);
-    absavg += temp;
-
-		if(temp <= absmin)
-		{
-			absmin = temp;
-		}
-
-    if(temp >= absmax)
-    {
-      absmax = temp;
-    }
-  }
-
-  parallel.max(max);
-  parallel.max(absmax);
-  parallel.min(min);
-  parallel.min(absmin);
-  parallel.sum(avg);
-  parallel.sum(absavg);
-  avg /= n3;
-  absavg /= n3;
-
-  output_check_field(max, absmax, min, absmin, avg, absavg, sim.check_fields_precision, field_name, message);
-	cout.copyfmt(oldState);
-
-	return absmax;
-}
 
 /////////////////////////////////////////////////
 // Checks vector field, each component separately
@@ -1280,21 +1204,7 @@ void add_fields(
 	return;
 }
 
-template <class FieldType>
-void subtract_fields(
-  Field<FieldType> & field1,
-  Field<FieldType> & field2,
-  Field<FieldType> & result)
-{
-	Site x(field1.lattice());
-
-	for(x.first(); x.test(); x.next())
-	{
-		result(x) = field1(x) - field2(x);
-	}
-	return;
-}
-
+//////////////////////////////////
 template <class FieldType>
 void add_fields(
   Field<FieldType> & field1,
@@ -1312,14 +1222,32 @@ void add_fields(
 	return;
 }
 
+//////////////////////////////////
+template <class FieldType>
+void subtract_fields(
+  Field<FieldType> & field1,
+  Field<FieldType> & field2,
+  Field<FieldType> & result)
+{
+	Site x(field1.lattice());
+
+	for(x.first(); x.test(); x.next())
+	{
+		result(x) = field1(x) - field2(x);
+	}
+	return;
+}
+
+//////////////////////////////////
+// Randomly mixes fields c1*field1 and c2*field2
 template <class FieldType>
 void scatter_field(
   Field<FieldType> & field1,
   double c1,
   Field<FieldType> & field2,
   double c2,
-  Field<FieldType> & result,
-  double k)
+  Field<FieldType> & result
+)
 {
 	Site x(field1.lattice());
 	double r;
@@ -1327,8 +1255,7 @@ void scatter_field(
 	for(x.first(); x.test(); x.next())
 	{
 		r = (double) rand()/RAND_MAX;
-		r *= k;
-		result(x) = c1 * (1. - r) * field1(x) + c2 * r * field2(x);
+		result(x) = c1 * r * field1(x) + (c2  + c1 * (1. - r)) * field2(x);
 	}
 	return;
 }
@@ -1342,42 +1269,18 @@ double convert_deltaR_to_xi(
   Field<FieldType> & xi,
   double Rbar,
   double fRbar,
-  const metadata & sim)
+  const metadata & sim,
+	string message = ""
+)
 {
-	Site x(xi.lattice());
-	double temp;
+	Site x(deltaR.lattice());
 
-	if(sim.fR_model == FR_MODEL_R2)
+	for(x.first(); x.test(); x.next())
 	{
-		for(x.first(); x.test(); x.next())
-		{
-			xi(x) = 2. * sim.fR_params[0] * deltaR(x);
-		}
-	}
-	else if(sim.fR_model == FR_MODEL_RN)
-	{
-		double a = sim.fR_params[0], n = sim.fR_params[1], n_minus_1 = n - 1.;
-
-		for(x.first(); x.test(); x.next())
-		{
-			xi(x) = a * n * pow(Rbar + deltaR(x), n_minus_1) - fRbar;
-		}
-	}
-	else
-	{
-		for(x.first(); x.test(); x.next())
-		{
-			if(isnan(deltaR(x)))
-			{
-				cout << "deltaR(x) is nan!" << endl;
-			}
-
-			temp = fR(Rbar + deltaR(x), sim, 832);
-			xi(x) =  temp - fRbar;
-		}
+		xi(x) = fR(Rbar + deltaR(x), sim, message+" convert_deltaR_to_xi") - fRbar;
 	}
 
-return 1.;
+	return 1.;
 }
 
 
@@ -1388,7 +1291,9 @@ double convert_deltaR_to_xi_single(
   double deltaR,
   double Rbar,
   double fRbar,
-  const metadata & sim)
+  const metadata & sim,
+	string message = ""
+)
 {
 	if(sim.fR_model == FR_MODEL_R2)
 	{
@@ -1401,7 +1306,7 @@ double convert_deltaR_to_xi_single(
 	else
 	{
     double fR_temp;
-    fR_temp = fR(Rbar + deltaR, sim, 8321);
+    fR_temp = fR(Rbar + deltaR, sim, message+" convert_deltaR_to_xi_single");
     return fR_temp - fRbar;
 	}
 }
@@ -1414,7 +1319,9 @@ double convert_xi_to_deltaR_single(
 	double xi,
 	double Rbar,
 	double fRbar,
-	const metadata & sim)
+	const metadata & sim,
+	string message = ""
+)
 {
   double R_temp,
 				 temp,
@@ -1478,8 +1385,8 @@ double convert_xi_to_deltaR_single(
       count = 0;
       while(true)
       {
-        temp = fR(R_temp, sim, 56);
-        fRR_temp = fRR(R_temp, sim, 57);
+        temp = fR(R_temp, sim, message+" convert_xi_to_deltaR_single");
+        fRR_temp = fRR(R_temp, sim, message+" convert_xi_to_deltaR_single");
 
         if(fabs(temp / fr - 1.) < sim.fR_target_precision) break;
 
@@ -1536,7 +1443,9 @@ double convert_xi_to_deltaR(
 	Field<FieldType> & xi,
 	double Rbar,
 	double fRbar,
-	const metadata & sim)
+	const metadata & sim,
+	string message = ""
+)
 {
 	Site x(xi.lattice());
 
@@ -1585,8 +1494,8 @@ double convert_xi_to_deltaR(
 				count = 0;
 				while(true)
 				{
-					temp = fR(R_temp, sim, 56);
-					fRR_temp = fRR(R_temp, sim, 57);
+					temp = fR(R_temp, sim, message+" convert_xi_to_deltaR");
+					fRR_temp = fRR(R_temp, sim, message+" convert_xi_to_deltaR");
 
 					if(fabs(temp / fr - 1.) < sim.fR_target_precision) break;
 
@@ -1646,7 +1555,7 @@ double convert_xi_to_deltaR(
 			return FR_WRONG_RETURN;
 		}
 
-		fRR_temp = fabs(fRR(deltaR(x) + Rbar, sim, 656));
+		fRR_temp = fabs(fRR(deltaR(x) + Rbar, sim, message+" convert_xi_to_deltaR"));
 		if(fRR_temp > max_fRR) max_fRR = fRR_temp;
 	}
 
@@ -1659,7 +1568,7 @@ double convert_xi_to_deltaR(
 	else
 	{
 		COUT << " Warning 19: returning fRRbar\n";
-		return fRR(Rbar, sim, 65);
+		return fRR(Rbar, sim, message+" convert_xi_to_deltaR");
 	}
 }
 
@@ -1886,6 +1795,20 @@ double build_homogeneous_terms(
 	Trace_hom = T00_hom + Tii_hom;
 
 	return T00_hom;
+}
+
+
+////////////////////////////////
+////////////////////////////////
+void level_message(
+	string message,
+	int level
+)
+{
+	COUT << message << "\t";
+	for(int j=0; j<level; ++j) COUT << " ";
+	COUT << level << endl;
+	return;
 }
 
 

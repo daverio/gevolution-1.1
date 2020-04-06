@@ -87,15 +87,15 @@ int prepare_initial_guess_trace_equation(
 
   // TODO
   // METHOD 1 -- deltaR = - eightpiG_deltaT; xi, laplace_xi consistent;
-  copy_field(eightpiG_deltaT, deltaR, -1.);
-  convert_deltaR_to_xi(deltaR, xi, Rbar, fRbar, sim, "prepare_initial_guess_trace_equation");
-  build_laplacian(xi, laplace_xi, dx);
+  // copy_field(eightpiG_deltaT, deltaR, -1.);
+  // convert_deltaR_to_xi(deltaR, xi, Rbar, fRbar, sim, "prepare_initial_guess_trace_equation");
+  // build_laplacian(xi, laplace_xi, dx);
   // END METHOD 1
 
   //// METHOD 2 -- all fields to zero
-  // erase_field(xi);
-  // erase_field(laplace_xi);
-  // erase_field(deltaR);
+  erase_field(xi);
+  erase_field(laplace_xi);
+  erase_field(deltaR);
   //// END METHOD 2
 
   return 0;
@@ -425,7 +425,7 @@ void update_xi_and_deltaR(
         }
         else
         {
-          cout << " fR = 0 in update_xi_single." << endl;
+          cout << " fR = 0 in update_xi_and_deltaR." << endl;
         }
       }
     }
@@ -526,7 +526,6 @@ void update_xi_and_deltaR(
         }
       }
 
-      // convert_xi_to_deltaR(deltaR, xi, Rbar, fRbar, sim);
       build_laplacian(xi, laplace_xi, dx);
 
       // Then Black cells
@@ -582,7 +581,6 @@ void update_xi_and_deltaR(
         }
       }
 
-      convert_xi_to_deltaR(deltaR, xi, Rbar, fRbar, sim);
       build_laplacian(xi, laplace_xi, dx);
 
       for(x.firstBlack(); x.testBlack(); x.nextBlack())
@@ -632,7 +630,6 @@ void update_xi_and_deltaR(
         }
       }
 
-      convert_xi_to_deltaR(deltaR, xi, Rbar, fRbar, sim);
       build_laplacian(xi, laplace_xi, dx);
 
       for(x.firstBlack(); x.testBlack(); x.nextBlack())
@@ -658,8 +655,8 @@ void update_xi_and_deltaR(
     }
   }
 
-  convert_xi_to_deltaR(deltaR, xi, Rbar, fRbar, sim, message+" update_xi_and_deltaR");
   build_laplacian(xi, laplace_xi, dx);
+  convert_xi_to_deltaR(deltaR, xi, Rbar, fRbar, sim, message+" update_xi_and_deltaR");
 
   return;
 }
@@ -951,17 +948,6 @@ double multigrid_solver(
     previous_error = error;
     error = gamma_cycle(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, residual, trunc, engine, dx, a2_over_3, two_Hubble_over_dtau, numpts3d, Rbar, fbar, fRbar, sim, 0, "multigrid_solver");
 
-    if(error > FR_WRONG)
-    {
-      //TODO REMOVE after debugging
-      cout << parallel.rank() << " 1 trunc_error = FR_WRONG in multigrid_solver" << endl;
-      //END REMOVE
-      return FR_WRONG_RETURN;
-    }
-
-    convert_xi_to_deltaR(deltaR[0], xi[0], Rbar, fRbar, sim);
-    error = compute_error(phi[0], xi[0], xi_old[0], laplace_xi[0], deltaR[0], rhs[0], dx[0], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[0], sim, 0, "multigrid_solver");
-
     if(error < sim.relaxation_error)
     {
       break;
@@ -1003,11 +989,11 @@ double FMG_solver(
     i,
     j,
     max_level = sim.multigrid_n_grids - 1; // Not exactly needed, but more redable this way
+
   double
    dx[sim.multigrid_n_grids],
    error = 0.,
-   previous_error,
-   check_fr_wrong;
+   previous_error;
 
   long numpts3d[sim.multigrid_n_grids];
 
@@ -1058,19 +1044,11 @@ double FMG_solver(
 
       if(sim.multigrid_restrict_mode == RESTRICT_XI)
       {
-        check_fr_wrong = convert_xi_to_deltaR(deltaR[max_level], xi[max_level], Rbar, fRbar, sim);
+        convert_xi_to_deltaR(deltaR[max_level], xi[max_level], Rbar, fRbar, sim);
       }
       else
       {
-        check_fr_wrong = convert_deltaR_to_xi(deltaR[max_level], xi[max_level], Rbar, fRbar, sim);
-      }
-
-      if(check_fr_wrong > FR_WRONG)
-      {
-        //TODO REMOVE after debugging
-        cout << parallel.rank() << " 10 check_fr_wrong = FR_WRONG in FMG_solver" << endl;
-        //END REMOVE
-        return FR_WRONG_RETURN;
+        convert_deltaR_to_xi(deltaR[max_level], xi[max_level], Rbar, fRbar, sim);
       }
 
       while(true)
@@ -1106,15 +1084,7 @@ double FMG_solver(
 
       for(j=0; j<sim.multigrid_n_cycles; ++j)
       {
-        check_fr_wrong = gamma_cycle(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, residual, trunc, engine, dx, a2_over_3, two_Hubble_over_dtau, numpts3d, Rbar, fbar, fRbar, sim, i);
-
-        if(check_fr_wrong > FR_WRONG)
-        {
-          //TODO REMOVE after debugging
-          cout << parallel.rank() << " 12 check_fr_wrong = FR_WRONG in FMG_solver" << endl;
-          //END REMOVE
-          return FR_WRONG_RETURN;
-        }
+        gamma_cycle(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, residual, trunc, engine, dx, a2_over_3, two_Hubble_over_dtau, numpts3d, Rbar, fbar, fRbar, sim, i, "FMG_solver");
 
         if(sim.multigrid_check_shape && i && j == sim.multigrid_n_cycles-1)
         {
@@ -1128,19 +1098,11 @@ double FMG_solver(
 
     if(sim.multigrid_restrict_mode == RESTRICT_XI)
     {
-      check_fr_wrong = convert_xi_to_deltaR(deltaR[0], xi[0], Rbar, fRbar, sim);
+      convert_xi_to_deltaR(deltaR[0], xi[0], Rbar, fRbar, sim);
     }
     else
     {
-      check_fr_wrong = convert_deltaR_to_xi(deltaR[0], xi[0], Rbar, fRbar, sim);
-    }
-
-    if(check_fr_wrong > FR_WRONG)
-    {
-      //TODO REMOVE after debugging
-      cout << parallel.rank() << " 13 check_fr_wrong = FR_WRONG in FMG_solver" << endl;
-      //END REMOVE
-      return FR_WRONG_RETURN;
+      convert_deltaR_to_xi(deltaR[0], xi[0], Rbar, fRbar, sim);
     }
 
     build_laplacian(xi[0], laplace_xi[0], dx[0]);
@@ -1187,8 +1149,7 @@ double gamma_cycle(
 {
   double
     error = 0.,
-    trunc_error = 0.,
-    check_fr_wrong;
+    trunc_error = 0.;
   int max_level = sim.multigrid_n_grids-1;
 
   if(engine.isPartLayer(level))
@@ -1232,17 +1193,11 @@ double gamma_cycle(
   {
     if(sim.multigrid_restrict_mode == RESTRICT_XI)
     {
-      check_fr_wrong = convert_xi_to_deltaR(deltaR[level+1], xi[level+1], Rbar, fRbar, sim);
+      convert_xi_to_deltaR(deltaR[level+1], xi[level+1], Rbar, fRbar, sim);
     }
     else
     {
-      check_fr_wrong = convert_deltaR_to_xi(deltaR[level+1], xi[level+1], Rbar, fRbar, sim, message+" gamma cycle 1");
-    }
-
-    if(check_fr_wrong > FR_WRONG)
-    {
-      cout << parallel.rank() << " 2 check_fr_wrong = FR_WRONG in gamma_cycle 2" << endl;
-      return FR_WRONG_RETURN;
+      convert_deltaR_to_xi(deltaR[level+1], xi[level+1], Rbar, fRbar, sim, message+" gamma cycle 1");
     }
 
     build_laplacian(xi[level+1], laplace_xi[level+1], dx[level+1]);
@@ -1263,15 +1218,7 @@ double gamma_cycle(
   {
     for(int j=0; j<sim.multigrid_shape; ++j)
     {
-      check_fr_wrong = gamma_cycle(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, residual, trunc, engine, dx, a2_over_3, two_Hubble_over_dtau, numpts3d, Rbar, fbar, fRbar, sim, level+1, message+" gamma_cycle level "+to_string(level));
-
-      if(check_fr_wrong > FR_WRONG)
-      {
-        //TODO REMOVE after debugging
-        cout << parallel.rank() << " 4 check_fr_wrong = FR_WRONG in gamma_cycle 4" << endl;
-        //END REMOVE
-        return FR_WRONG_RETURN;
-      }
+      gamma_cycle(phi, xi, xi_old, laplace_xi, deltaR, eightpiG_deltaT, rhs, residual, trunc, engine, dx, a2_over_3, two_Hubble_over_dtau, numpts3d, Rbar, fbar, fRbar, sim, level+1, message+" gamma_cycle level "+to_string(level));
     }
   }
 
@@ -1292,7 +1239,6 @@ double gamma_cycle(
     }
   }
 
-
   if(sim.multigrid_check_shape)
   {
     for(int k=0; k<level+1; ++k) COUT << "  ";
@@ -1303,57 +1249,40 @@ double gamma_cycle(
     if(!level) COUT << "0" << endl;
   }
 
-  // if(engine.isPartLayer(level+1)) check_field(trunc[level+1], "trunc["+to_string(level+1)+"]", numpts3d[level+1], sim, "BEFORE PROLONGATION", level+1);
-
   engine.prolong(residual, trunc, level+1);
-
-  // if(engine.isPartLayer(level)) check_field(trunc[level], "trunc["+to_string(level)+"]", numpts3d[level], sim, "AFTER PROLONGATION", level);
 
   if(engine.isPartLayer(level))
   {
     if(sim.multigrid_restrict_mode == RESTRICT_XI)
     {
-      add_fields(xi[level], trunc[level], xi[level]);
-      check_fr_wrong = convert_xi_to_deltaR(deltaR[level], xi[level], Rbar, fRbar, sim, message+" gamma_cycle level "+to_string(level));
-      if(check_fr_wrong > FR_WRONG)
-      {
-        //TODO REMOVE after debugging
-        cout << parallel.rank() << " 5 check_fr_wrong = FR_WRONG in gamma_cycle 5" << endl;
-        //END REMOVE
-        return FR_WRONG_RETURN;
-      }
+      add_fields(xi[level], 1., trunc[level], sim.multigrid_damping, xi[level]);
+      xi_allowed_fix(xi[level], Rbar, fRbar, sim);
+      convert_xi_to_deltaR(deltaR[level], xi[level], Rbar, fRbar, sim, message+" gamma_cycle level "+to_string(level));
     }
     else
     {
-      add_fields(deltaR[level], trunc[level], deltaR[level]);
-      check_fr_wrong = convert_deltaR_to_xi(deltaR[level], xi[level], Rbar, fRbar, sim, message+" gamma_cycle 2");
-      if(check_fr_wrong > FR_WRONG)
-      {
-        //TODO REMOVE after debugging
-        cout << parallel.rank() << " 6 check_fr_wrong = FR_WRONG in gamma_cycle 6" << endl;
-        //END REMOVE
-        return FR_WRONG_RETURN;
-      }
+      add_fields(deltaR[level], 1., trunc[level], sim.multigrid_damping, deltaR[level]);
+      deltaR_allowed_fix(deltaR[level], Rbar);
+      convert_deltaR_to_xi(deltaR[level], xi[level], Rbar, fRbar, sim, message+" gamma_cycle 2");
     }
 
     build_laplacian(xi[level], laplace_xi[level], dx[level]);
 
-    if(engine.isPartLayer(level))
+    error = single_layer_solver(phi[level], xi[level], xi_old[level], laplace_xi[level], deltaR[level], eightpiG_deltaT[level], rhs[level], dx[level], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[level], sim, level, message+" gamma_cycle level "+to_string(level), sim.post_smoothing);
+
+    if(level == 0 && error < sim.relaxation_error)
     {
-      error = single_layer_solver(phi[level], xi[level], xi_old[level], laplace_xi[level], deltaR[level], eightpiG_deltaT[level], rhs[level], dx[level], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, numpts3d[level], sim, level, message+" gamma_cycle level "+to_string(level), sim.post_smoothing);
+      return error;
+    }
 
-      if(level == 0 && error < sim.relaxation_error)
-      {
-        return error;
-      }
-
-      // Writes residual on residual[level]
+    // Writes residual on residual[level]
+    if(level)
+    {
       build_residual(phi[level], xi[level], xi_old[level], laplace_xi[level], deltaR[level], rhs[level], residual[level], a2_over_3, two_Hubble_over_dtau, Rbar, fbar, fRbar, sim);
     }
   }
 
-  trunc_error = euclidean_norm(trunc[level], engine, level, numpts3d[level]);
-  return trunc_error;
+  return error;
 }
 
 #endif

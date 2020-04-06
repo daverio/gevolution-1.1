@@ -400,18 +400,58 @@ Real fRRR(
 
 
 ////////////////////////
+// allowed values for deltaR
+////////////////////////
+template <class FieldType>
+bool deltaR_allowed(
+	Field<FieldType> & deltaR,
+	double Rbar
+)
+{
+	Site x(deltaR.lattice());
+
+	for(x.first(); x.test(); x.next())
+	{
+		if(deltaR(x) + Rbar < 0.) return false;
+	}
+
+	return true;
+}
+
+
+////////////////////////
+// allowed values for deltaR
+////////////////////////
+template <class FieldType>
+bool deltaR_allowed_fix(
+	Field<FieldType> & deltaR,
+	double Rbar
+)
+{
+	Site x(deltaR.lattice());
+
+	for(x.first(); x.test(); x.next())
+	{
+		while(deltaR(x) + Rbar < 0.)
+		{
+			deltaR(x) *= .9; // TODO: This value is arbitrary
+		}
+	}
+
+	return true;
+}
+////////////////////////
 // allowed values for xi
 ////////////////////////
 template <class FieldType>
 bool xi_allowed(
-	Field<FieldType> & deltaR,
 	Field<FieldType> & xi,
 	double Rbar,
 	double fRbar,
 	const metadata & sim
 )
 {
-	Site x(deltaR.lattice());
+	Site x(xi.lattice());
 
 	for(x.first(); x.test(); x.next())
 	{
@@ -421,6 +461,30 @@ bool xi_allowed(
 	return true;
 }
 
+
+////////////////////////
+// allowed values for xi
+////////////////////////
+template <class FieldType>
+bool xi_allowed_fix(
+	Field<FieldType> & xi,
+	double Rbar,
+	double fRbar,
+	const metadata & sim
+)
+{
+	Site x(xi.lattice());
+
+	for(x.first(); x.test(); x.next())
+	{
+		while(!xi_allowed(xi(x), Rbar, fRbar, sim))
+		{
+			xi(x) *= .9; // TODO: This value is arbitrary
+		}
+	}
+
+	return true;
+}
 
 ////////////////////////
 // allowed values for xi
@@ -488,25 +552,6 @@ bool xi_allowed(
 			return true;
 		}
 	}
-}
-
-////////////////////////
-// allowed values for deltaR
-////////////////////////
-template <class FieldType>
-bool deltaR_allowed(
-	Field<FieldType> & deltaR,
-	double Rbar
-)
-{
-	Site x(deltaR.lattice());
-
-	for(x.first(); x.test(); x.next())
-	{
-		if(deltaR(x) + Rbar <= 0.) return false;
-	}
-
-	return true;
 }
 
 ////////////////////////////////////////////////////////
@@ -735,8 +780,9 @@ double check_field_precision(
   Field<FieldType> & field,
   string field_name,
   long n3,
-	string message = "",
-  int prec = 6
+	const metadata & sim,
+	int prec = 6,
+	string message = ""
 )
 {
   Site x(field.lattice());
@@ -1219,6 +1265,7 @@ void add_fields(
 	{
 		result(x) = coeff1 * field1(x) + coeff2 * field2(x);
 	}
+
 	return;
 }
 
@@ -1235,6 +1282,7 @@ void subtract_fields(
 	{
 		result(x) = field1(x) - field2(x);
 	}
+
 	return;
 }
 

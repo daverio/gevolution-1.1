@@ -327,6 +327,7 @@ struct metadata
 	double relaxation_error;
 	double overrelaxation_factor;
 	double z_switch_fR_background;
+	double multigrid_damping;
 };
 
 

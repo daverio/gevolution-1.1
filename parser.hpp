@@ -1694,7 +1694,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 					if(!parseParameter(params, numparam, "multigrid shape", par_string))
 					{
 						sim.multigrid_shape = MULTIGRID_SHAPE_V;
-						COUT << " /!\\ Multigrid shape not specified: Using default: V" << endl;
+						COUT << " /!\\ Multigrid shape not specified. Using default: V" << endl;
 					}
 					else if(par_string[0] == 'V' || par_string[0] == 'v')
 					{
@@ -1710,6 +1710,17 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 					{
 						sim.multigrid_shape = MULTIGRID_SHAPE_V;
 						COUT << " /!\\ Multigrid shape not recognised. Using default: V" << endl;
+					}
+
+					if(!parseParameter(params, numparam, "multigrid damping", sim.multigrid_damping))
+					{
+						sim.multigrid_damping = 1.;
+						COUT << " /!\\ Multigrid damping not specified. Using default: 1." << endl;
+					}
+					else if(sim.multigrid_damping <= 0.)
+					{
+						sim.multigrid_damping = 1.;
+						COUT << " /!\\ Wrong multigrid damping specified. Using default: 1." << endl;
 					}
 				}
 				else
@@ -1735,7 +1746,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 			}
 			else
 			{
-				sim.red_black = 0; // TODO: This is most probably redundant. Just making sure that it's really zero :)
+				sim.red_black = 0; // TODO: This is most redundant. Just making sure that it's really zero :)
 				COUT << " Using simple sequential sweep of sites." << endl;
 			}
 
@@ -1805,15 +1816,15 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 					sim.multigrid_restrict_mode = RESTRICT_DELTAR;
 					COUT << " /!\\ Restrict mode not specified. Using default: deltaR." << endl;
 				}
-				else if(par_string[0] == 's' || par_string[0] == 'S')
+				else if(par_string[0] == 'x' || par_string[0] == 'X')
 				{
 					sim.multigrid_restrict_mode = RESTRICT_XI;
-					COUT << " Restriction variable: xi." << endl;
+					COUT << " Restriction variable: xi" << endl;
 				}
 				else if(par_string[0] == 'r' || par_string[0] == 'R' || par_string[0] == 'd' || par_string[0] == 'D')
 				{
 					sim.multigrid_restrict_mode = RESTRICT_DELTAR;
-					COUT << " Restriction variable: deltaR." << endl;
+					COUT << " Restriction variable: deltaR" << endl;
 				}
 				else
 				{

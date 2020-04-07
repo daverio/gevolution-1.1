@@ -494,7 +494,7 @@ int main(int argc, char **argv)
 	}
 	else if(ic.generator == ICGEN_READ_FROM_DISK)
 	{
-		readIC(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount, IDbacklog);
+		readIC(sim, ic, cosmo, fourpiG, a, Hubble, Rbar, dot_Rbar, tau, dtau, dtau_old, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &xi, &xi_old, &deltaR, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount, IDbacklog);
 	}
 #ifdef ICGEN_PREVOLUTION
 	else if(ic.generator == ICGEN_PREVOLUTION)
@@ -1296,10 +1296,23 @@ int main(int argc, char **argv)
 				if(sim.vector_flag == VECTOR_ELLIPTIC)
 				{
 					plan_Bi_check.execute(FFT_BACKWARD);
-					hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi_check, a, tau, dtau, cycle);
+
+					if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
+					{
+						hibernate_fR(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi_check, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, tau, dtau, dtau_old, cycle);
+					}
+					else
+					{
+						hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi_check, a, tau, dtau, cycle);
+					}
 				}
 				else
 #endif
+				if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
+				{
+					hibernate_fR(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, tau, dtau, dtau_old, cycle);
+				}
+				else
 				{
 					hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, a, tau, dtau, cycle);
 				}
@@ -1319,12 +1332,27 @@ int main(int argc, char **argv)
 			if(sim.vector_flag == VECTOR_ELLIPTIC)
 			{
 				plan_Bi_check.execute(FFT_BACKWARD);
-				hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi_check, a, tau, dtau, cycle, restartcount);
+
+				if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
+				{
+					hibernate_fR(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi_check, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, tau, dtau, dtau_old, cycle, restartcount);
+				}
+				else
+				{
+					hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi_check, a, tau, dtau, cycle, restartcount);
+				}
 			}
 			else
 #endif
 			{
-				hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, a, tau, dtau, cycle, restartcount);
+				if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
+				{
+					hibernate_fR(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, tau, dtau, dtau_old, cycle, restartcount);
+				}
+				else
+				{
+					hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, a, tau, dtau, cycle, restartcount);
+				}
 			}
 			restartcount++;
 		}

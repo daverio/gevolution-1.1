@@ -445,8 +445,6 @@ struct icsettings
 
 	// f(R) restart
 	double restart_dtau_old;
-	double restart_dtau_osci;
-	double restart_dtau_bg;
 	double restart_a;
 	double restart_Hubble;
 	double restart_Rbar;
@@ -490,6 +488,7 @@ std::ostream& operator<< (std::ostream& os, const cosmology& cosmo)
 	os << "\n";
 
 	os << "h: " << cosmo.h << "\n";
+
 	os << "m_ncdm: " << cosmo.m_ncdm[0];
 	for(int i=1; i<MAX_PCL_SPECIES-2; i++) os << " , " << cosmo.m_ncdm[i];
 	os << "\n";
@@ -501,6 +500,10 @@ std::ostream& operator<< (std::ostream& os, const cosmology& cosmo)
 	os << "deg_ncdm: " << cosmo.deg_ncdm[0];
 	for(int i=1; i<MAX_PCL_SPECIES-2; i++) os << " , " << cosmo.deg_ncdm[i];
 	os << "\n";
+
+	os << "w0_fld: "  << cosmo.w0_fld << endl;
+	os << "wa_fld: "  << cosmo.wa_fld << endl;
+	os << "cs2_fld: " << cosmo.cs2_fld << endl;
 
 	os << "num_ncdm: " << cosmo.num_ncdm << "\n";
 	os << "---------------------------------\n";

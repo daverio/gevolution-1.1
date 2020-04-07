@@ -730,8 +730,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	ic.restart_version = -1.;
 
 	ic.restart_dtau_old = -1.;
-	ic.restart_dtau_osci = -1.;
-	ic.restart_dtau_bg = -1.;
 	ic.restart_a = -1.;
 	ic.restart_Hubble = -1.;
 	ic.restart_Rbar = -1.;
@@ -887,6 +885,33 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		COUT << " cosmo.Omega_rad = " << cosmo.Omega_rad << endl;
 		COUT << " 1 - cosmo.Omega_m = " << 1 - cosmo.Omega_m << endl;
 		parallel.abortForce();
+	}
+
+	if(!parseParameter(params, numparam, "omega_fld", cosmo.Omega_fld))
+	{
+		cosmo.Omega_fld = cosmo.w0_fld = cosmo.wa_fld = cosmo.cs2_fld = 0.;
+	}
+	else if(cosmo.Omega_fld <= 0. || cosmo.Omega_fld > 1. - cosmo.Omega_rad - cosmo.Omega_m)
+	{
+		COUT << " /!\\ Wrond cosmo.Omega_fld specified. Setting it to zero" << endl;
+		cosmo.Omega_fld = cosmo.w0_fld = cosmo.wa_fld = cosmo.cs2_fld = 0.;
+	}
+	else
+	{
+		if(!parseParameter(params, numparam, "w0_fld", cosmo.w0_fld))
+		{
+			cosmo.w0_fld = 0.;
+		}
+
+		if(!parseParameter(params, numparam, "wa_fld", cosmo.wa_fld))
+		{
+			cosmo.wa_fld = 0.;
+		}
+
+		if(!parseParameter(params, numparam, "cs2_fld", cosmo.cs2_fld))
+		{
+			cosmo.cs2_fld = 0.;
+		}
 	}
 
 	cosmo.Omega_Lambda = 1. - cosmo.Omega_m - cosmo.Omega_rad;
@@ -1433,8 +1458,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 		{
 			parseParameter(params, numparam, "dtau_old", ic.restart_dtau_old);
-			parseParameter(params, numparam, "dtau_osci", ic.restart_dtau_osci);
-			parseParameter(params, numparam, "dtau_bg", ic.restart_dtau_bg);
 			parseParameter(params, numparam, "scale_factor", ic.restart_a);
 			parseParameter(params, numparam, "Hubble", ic.restart_Hubble);
 			parseParameter(params, numparam, "Rbar", ic.restart_Rbar);

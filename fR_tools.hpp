@@ -566,17 +566,17 @@ void fR_details(
 	if(sim->fR_model == FR_MODEL_HU_SAWICKI)
 	{
 		COUT << " Model: Hu-Sawicki\n f(R) = - m2 * c1 * pow(R/m2, n) / (1. + c2 * pow(R/m2, n))" << endl;
-		COUT << " with m2 = " << sim->fR_params[0] << " * 8piG * rho_{m0} / 3. = ";
+		COUT << " with: m2 = " << sim->fR_params[0] << " * 8piG * rho_{m0} / 3. = ";
 
     sim->fR_params[0] *= fourpiG * cosmo.Omega_m / 1.5;
     sim->fR_params[1] = 4. * fourpiG * (1. - cosmo.Omega_m - cosmo.Omega_rad) / sim->fR_params[1] / pow(12./cosmo.Omega_m - 9., sim->fR_params[2] + 1.) / sim->fR_params[0];
     sim->fR_params[3] = sim->fR_params[1] * 4. * fourpiG * (1. - cosmo.Omega_m - cosmo.Omega_rad) / sim->fR_params[0];
 
     COUT << sim->fR_params[0] << endl;
-		COUT << "      c1 = " << sim->fR_params[3] << endl;
-		COUT << "      c2 = " << sim->fR_params[1] << endl;
-		COUT << "       n = " << sim->fR_params[2] << endl;
-		COUT << "so |fR0| ~ -n*c1/c2^2/(12/Omega_m - 9)^(n+1) = " << sim->fR_params[2] * sim->fR_params[3] / sim->fR_params[1]/sim->fR_params[1] / pow(12. / cosmo.Omega_m - 9.,
+		COUT << "       c1 = " << sim->fR_params[3] << endl;
+		COUT << "       c2 = " << sim->fR_params[1] << endl;
+		COUT << "        n = " << sim->fR_params[2] << endl;
+		COUT << " so |fR0| ~ -n*c1/c2^2/(12/Omega_m - 9)^(n+1) = " << sim->fR_params[2] * sim->fR_params[3] / sim->fR_params[1]/sim->fR_params[1] / pow(12. / cosmo.Omega_m - 9.,
 			sim->fR_params[2] + 1.) << " (should be << 1)\n";
 	}
 	else if(sim->fR_model == FR_MODEL_RN)

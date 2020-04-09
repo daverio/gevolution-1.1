@@ -80,8 +80,8 @@
 
 #define MASK_XI							65536
 #define MASK_ZETA       		131072
-#define MASK_DELTAR					262144
-#define MASK_DELTAT					524288
+#define MASK_DELTAT					262144
+#define MASK_DELTAR					524288
 #define MASK_LAPLACE_XI			1048576
 #define MASK_PHI_EFFECTIVE	2097152
 #define MASK_PHI_DDOT				4194304
@@ -367,8 +367,8 @@ std::ostream& operator<< (std::ostream& os, const metadata& sim) // TODO Add lig
 	os << "lcdm_background: " << sim.lcdm_background << "\n";
 	os << "check_fields: " << sim.check_fields << "\n";
 	os << "Cf: " << sim.Cf << "\n";
-	os << "fR_params: " << sim.fR_params[0];
 
+	os << "fR_params: " << sim.fR_params[0];
 	for(int i=1; i<MAX_FR_PARAMS; i++) os << " , " << sim.fR_params[i];
 	os << "\n";
 

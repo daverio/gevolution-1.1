@@ -629,7 +629,7 @@ bool parseFieldSpecifiers(parameter * & params, const int numparam, const char *
 				else if( (strcmp(item, "xi") == 0 || strcmp(item, "Xi") == 0) ) pvalue |= MASK_XI;
 				else if( (strcmp(item, "zeta") == 0 || strcmp(item, "Zeta") == 0) ) pvalue |= MASK_ZETA;
 				else if( (strcmp(item, "deltaR") == 0 || strcmp(item, "DeltaR") == 0 || strcmp(item, "delta_R") == 0 || strcmp(item, "Delta_R") == 0) ) pvalue |= MASK_DELTAR;
-				else if( (strcmp(item, "deltaT") == 0 || strcmp(item, "DeltaT") == 0 || strcmp(item, "delta_T") == 0 || strcmp(item, "Delta_T") == 0) ) pvalue |= MASK_DELTAT;
+				else if( (strcmp(item, "deltaT") == 0 || strcmp(item, "eightpiG_deltaT") == 0) ) pvalue |= MASK_DELTAT;
 				else if(strcmp(item, "Chi") == 0 || strcmp(item, "chi") == 0) pvalue |= MASK_CHI;
 				else if(strcmp(item, "Pot") == 0 || strcmp(item, "pot") == 0 || strcmp(item, "Psi_N") == 0 || strcmp(item, "psi_N") == 0 || strcmp(item, "PsiN") == 0 || strcmp(item, "psiN") == 0) pvalue |= MASK_POT;
 				else if(strcmp(item, "B") == 0 || strcmp(item, "Bi") == 0) pvalue |= MASK_B;
@@ -655,7 +655,7 @@ bool parseFieldSpecifiers(parameter * & params, const int numparam, const char *
 			else if( (strcmp(start, "xi") == 0 || strcmp(start, "xi") == 0) ) pvalue |= MASK_XI;
 			else if( (strcmp(start, "zeta") == 0 || strcmp(start, "Zeta") == 0) ) pvalue |= MASK_ZETA;
 			else if( (strcmp(start, "deltaR") == 0 || strcmp(start, "DeltaR") == 0 || strcmp(start, "delta_R") == 0 || strcmp(start, "Delta_R") == 0) ) pvalue |= MASK_DELTAR;
-			else if( (strcmp(start, "deltaT") == 0 || strcmp(start, "DeltaT") == 0 || strcmp(start, "delta_T") == 0 || strcmp(start, "Delta_T") == 0) ) pvalue |= MASK_DELTAT;
+			else if( (strcmp(item, "deltaT") == 0 || strcmp(item, "eightpiG_deltaT") == 0) ) pvalue |= MASK_DELTAT;
 			else if(strcmp(start, "Chi") == 0 || strcmp(start, "chi") == 0) pvalue |= MASK_CHI;
 			else if(strcmp(start, "Pot") == 0 || strcmp(start, "pot") == 0 || strcmp(start, "Psi_N") == 0 || strcmp(start, "psi_N") == 0 || strcmp(start, "PsiN") == 0 || strcmp(start, "psiN") == 0) pvalue |= MASK_POT;
 			else if(strcmp(start, "B") == 0 || strcmp(start, "Bi") == 0) pvalue |= MASK_B;
@@ -1458,7 +1458,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 		{
 			parseParameter(params, numparam, "dtau_old", ic.restart_dtau_old);
-			parseParameter(params, numparam, "scale_factor", ic.restart_a);
+			parseParameter(params, numparam, "a", ic.restart_a);
 			parseParameter(params, numparam, "Hubble", ic.restart_Hubble);
 			parseParameter(params, numparam, "Rbar", ic.restart_Rbar);
 			parseParameter(params, numparam, "dot_Rbar", ic.restart_dot_Rbar);
@@ -1567,8 +1567,8 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		{
 			ic.numtile[i] = sim.numpts / 4;
 		}
-		COUT << "sim.numpts = " << sim.numpts << endl;
-		COUT << "ic.numtile[0] = " << ic.numtile[0] << endl;
+		COUT << " sim.numpts = " << sim.numpts << endl;
+		COUT << " ic.numtile[0] = " << ic.numtile[0] << endl;
 	}
 
 	if(parseParameter(params, numparam, "downgrade factor", sim.downgrade_factor))

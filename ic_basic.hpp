@@ -57,7 +57,19 @@ using namespace LATfield2;
 //
 //////////////////////////
 
-void displace_pcls_ic_basic(double coeff, double lat_resolution, part_simple * part, double * ref_dist, part_simple_info partInfo, Field<Real> ** fields, Site * sites, int nfield, double * params, double * outputs, int noutputs)
+void displace_pcls_ic_basic(
+	double coeff,
+	double lat_resolution,
+	part_simple * part,
+	double * ref_dist,
+	part_simple_info partInfo,
+	Field<Real> ** fields,
+	Site * sites,
+	int nfield,
+	double * params,
+	double * outputs,
+	int noutputs
+)
 {
 	int i;
 	Real gradxi[3] = {0, 0, 0};
@@ -115,7 +127,19 @@ void displace_pcls_ic_basic(double coeff, double lat_resolution, part_simple * p
 //
 //////////////////////////
 
-Real initialize_q_ic_basic(double coeff, double lat_resolution, part_simple * part, double * ref_dist, part_simple_info partInfo, Field<Real> ** fields, Site * sites, int nfield, double * params, double * outputs, int noutputs)
+Real initialize_q_ic_basic(
+	double coeff,
+	double lat_resolution,
+	part_simple * part,
+	double * ref_dist,
+	part_simple_info partInfo,
+	Field<Real> ** fields,
+	Site * sites,
+	int nfield,
+	double * params,
+	double * outputs,
+	int noutputs
+)
 {
 	int i;
 	Real gradPhi[3] = {0, 0, 0};
@@ -151,7 +175,6 @@ Real initialize_q_ic_basic(double coeff, double lat_resolution, part_simple * pa
 
 	return v2;
 }
-
 
 //////////////////////////
 // Pk_primordial

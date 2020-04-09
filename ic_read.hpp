@@ -102,6 +102,7 @@ void readIC(
 	part_simple_dataType pcls_ncdm_dataType;
 	Real boxSize[3] = {1.,1.,1.};
 	string filename;
+	string h5filename;
 	string buf;
 	int i, p, c;
 	char * ext;
@@ -123,6 +124,16 @@ void readIC(
 	set<long> IDlookup;
 
 	filename.reserve(PARAM_MAX_LENGTH);
+	h5filename.reserve(2*PARAM_MAX_LENGTH);
+	h5filename.assign(sim.restart_path);
+	h5filename += sim.basename_restart;
+	if(restartcount >= 0)
+	{
+		char buffer[5];
+		sprintf(buffer, "%03d", restartcount);
+		h5filename += buffer;
+	}
+
 	hdr.npart[1] = 0;
 
 	projection_init(phi);
@@ -295,6 +306,10 @@ void readIC(
 		maxvel[sim.baryon_flag+1+p] = pcls_ncdm[p].updateVel(update_q, 0., &phi, 1, &a);
 	}
 
+	if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
+	{
+		phi->loadHDF5(h5filename + "_phi.h5");
+	}
 	if(sim.relativistic_flag > 0 && ic.metricfile[0][0] != '\0')
 	{
 		filename.assign(ic.metricfile[0]);
@@ -302,6 +317,7 @@ void readIC(
 	}
 	else
 	{
+		COUT << sim.relativistic_flag << "\t" << ic.metricfile[0] << endl;
 		projection_init(source);
 		scalarProjectionCIC_project(pcls_cdm, source);
 		if(sim.baryon_flag)
@@ -320,21 +336,31 @@ void readIC(
 
 	phi->updateHalo();
 
-	if(ic.restart_tau > 0.)
-		tau = ic.restart_tau;
-	else
-		tau = particleHorizon(a, fourpiG, cosmo);
+	xi->loadHDF5(h5filename + "_xi.h5");
+	xi->updateHalo();
+	xi_old->loadHDF5(h5filename + "_xi_old.h5");
+	xi_old->updateHalo();
+	deltaR->loadHDF5(h5filename + "_deltaR.h5");
+	deltaR->updateHalo();
 
-	if(ic.restart_dtau > 0.)
-		dtau_old = ic.restart_dtau;
+	if(ic.restart_tau > 0.) tau = ic.restart_tau;
+	else tau = particleHorizon(a, fourpiG, cosmo);
 
-	if(sim.Cf / (double) sim.numpts < sim.steplimit / Hconf(a, fourpiG, cosmo))
-		dtau = sim.Cf / (double) sim.numpts;
-	else
-		dtau = sim.steplimit / Hconf(a, fourpiG, cosmo);
+	dtau = ic.restart_dtau;
+	dtau_old = ic.restart_dtau_old;
+	a = ic.restart_a;
+	Hubble = ic.restart_Hubble;
+	Rbar = ic.restart_Rbar;
+	dot_Rbar = ic.restart_dot_Rbar;
 
 	if(ic.restart_cycle >= 0)
 	{
+		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
+		{
+			filename.assign(ic.metricfile[2*sim.relativistic_flag]);
+			Bi->loadHDF5(filename);
+		}
+		else 
 #ifndef CHECK_B
 		if(sim.vector_flag == VECTOR_PARABOLIC)
 #endif
@@ -351,7 +377,7 @@ void readIC(
 			plan_Bi->execute(FFT_FORWARD);
 		}
 
-		if(sim.relativistic_flag > 0)
+		if(sim.relativistic_flag > 0 || sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 		{
 			filename.assign(ic.metricfile[1]);
 			chi->loadHDF5(filename);

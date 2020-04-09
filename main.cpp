@@ -107,8 +107,9 @@ int main(int argc, char **argv)
 	metadata sim;
 	cosmology cosmo;
 	icsettings ic;
-	double T00_hom;
-	double phi_hom;
+	gadget2_header hdr;
+	Real T00_hom;
+	Real phi_hom;
 
 	///////////////////// additional fRevolution variables  /////////////////////
 	double Hubble;
@@ -123,8 +124,8 @@ int main(int argc, char **argv)
 	int numsteps_bg_ncdm[MAX_PCL_SPECIES-2];
 	bool do_I_check;
 	double tmpa, tmpHubble, tmpRbar, tmpdot_Rbar;
-	double T00_hom_rescaled_a3;
-	double Tii_hom;
+	Real T00_hom_rescaled_a3;
+	Real Tii_hom;
 	double Trace_hom;
 	double max_fRR;
 	std::ofstream bgoutfile;
@@ -197,7 +198,7 @@ int main(int argc, char **argv)
 		parallel.abortForce();
 	}
 
-	COUT << " initializing..." << endl;
+	COUT << " initialising..." << endl;
 	start_time = MPI_Wtime();
 	numparam = loadParameterFile(settingsfile, params);
 	usedparams = parseMetadata(params, numparam, sim, cosmo, ic);
@@ -234,7 +235,7 @@ int main(int argc, char **argv)
 	if(sim.multigrid_or_not)
 	{
 		sim.multigrid_n_grids = mg_engine.nl();
-		COUT << " Initialized multigrid with " << sim.multigrid_n_grids << " layers." << endl;
+		COUT << " Initialized multigrid with " << sim.multigrid_n_grids << " layers" << endl;
 		COUT << " Dimensions of coarsest grid: " << sim.numpts/pow(2,sim.multigrid_n_grids-1) << " x " << sim.numpts/pow(2,sim.multigrid_n_grids-1) << " x " << sim.numpts/pow(2,sim.multigrid_n_grids-1) << endl;
 	}
 
@@ -363,7 +364,7 @@ int main(int argc, char **argv)
 	MultiField<Real> * mg_residual;
 	MultiField<Real> * mg_err;
 
-	// Initialise
+	// Initialize
 	mg_engine.initialize_Field(&phi, mg_phi);
 	mg_engine.initialize_Field(&xi, mg_xi);
 	mg_engine.initialize_Field(&xi_old, mg_xi_old);
@@ -418,20 +419,18 @@ int main(int argc, char **argv)
 	///////////// Setup background quantities and initial timesteps /////////////
 	if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 	{
-		COUT << " Setting background quantities for f(R)" << endl;
 		if(ic.generator != ICGEN_READ_FROM_DISK)
 		{
 			fR_details(cosmo, &sim, fourpiG);
+			Rbar = R_initial_fR(a, fourpiG, cosmo);
+			fbar = f(Rbar, sim, "initial");
+			fRbar = fR(Rbar, sim, "initial");
+			fRRbar = fRR(Rbar, sim, "initial");
+			dot_fRbar = 0.;
+			T00_hom = T00_hom_rescaled_a3 = 0.;
+			Hubble = H_initial_fR(a, Hconf(a, fourpiG, cosmo), Rbar, fbar, fRbar,	6. * fourpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * fRRbar / a / a / a);
+			dot_Rbar = dot_R_initial_fR(a, Hubble, fourpiG, cosmo, sim);
 		}
-
-		Rbar = R_initial_fR(a, fourpiG, cosmo);
-		fbar = f(Rbar, sim, "initial");
-		fRbar = fR(Rbar, sim, "initial");
-		fRRbar = fRR(Rbar, sim, "initial");
-		dot_fRbar = 0.;
-		T00_hom = T00_hom_rescaled_a3 = 0.;
-		Hubble = H_initial_fR(a, Hconf(a, fourpiG, cosmo), Rbar, fbar, fRbar,	6. * fourpiG * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * fRRbar / a / a / a);
-		dot_Rbar = dot_R_initial_fR(a, Hubble, fourpiG, cosmo, sim);
 	}
 	else
 	{
@@ -495,6 +494,9 @@ int main(int argc, char **argv)
 	else if(ic.generator == ICGEN_READ_FROM_DISK)
 	{
 		readIC(sim, ic, cosmo, fourpiG, a, Hubble, Rbar, dot_Rbar, tau, dtau, dtau_old, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &xi, &xi_old, &deltaR, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount, IDbacklog);
+
+		check_all_fields(phi, xi, laplace_xi, chi, deltaR, eightpiG_deltaT, zeta, phi_effective, phi_ddot, Bi, numpts3d, sim);
+		cin.get();
 	}
 #ifdef ICGEN_PREVOLUTION
 	else if(ic.generator == ICGEN_PREVOLUTION)
@@ -544,6 +546,25 @@ int main(int argc, char **argv)
 	a_old = a;
 	projection_init(&vi);
 #endif
+
+	for(i=0; i<6; ++i)
+	{
+		hdr.npart[i] = 0;
+		hdr.npartTotal[i] = 0;
+		hdr.mass[i] = 0.;
+	}
+	hdr.num_files = 1;
+	hdr.Omega0 = cosmo.Omega_m;
+	hdr.OmegaLambda = cosmo.Omega_Lambda;
+	hdr.HubbleParam = cosmo.h;
+	hdr.BoxSize = sim.boxsize / GADGET_LENGTH_CONVERSION;
+	hdr.flag_sfr = 0;
+	hdr.flag_cooling = 0;
+	hdr.flag_feedback = 0;
+	// for(i=0; i < 256 - 6*4 - 6*8 - 2*8 - 2*4 - 6*4 - 2*4 - 4*8; ++i)
+	// {
+	// 	hdr.fill[i] = '0';
+	// }
 
 #ifdef BENCHMARK
 	initialization_time = MPI_Wtime() - start_time;
@@ -706,6 +727,13 @@ int main(int argc, char **argv)
 		{
 			copy_field(eightpiG_deltaT, deltaR, -1.);
 		}
+
+		COUT << " T00_hom: " << setprecision(10) << T00_hom << endl;
+		COUT << " Tii_hom: " << Tii_hom << endl;
+		COUT << " Trace_hom: " << Trace_hom << endl;
+		COUT << " phi_hom: " << phi_hom << endl;
+		check_field(eightpiG_deltaT, "eightpiG_deltaT", numpts3d, sim, "here");
+		cin.get();
 
 		///////////////////////// EVOLVE deltaR, zeta, xi /////////////////////////
 		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
@@ -936,12 +964,10 @@ int main(int argc, char **argv)
 
 		// Builds phi_ddot - to be compared with e.g. deltaR for a test of the quasi-static approximation
 		build_phi_ddot(phi, chi, phi_dot, chi_dot, phi_ddot, deltaR, dx, a, Hubble, Rbar);
+
 		if(do_I_check)
 		{
 			check_all_fields(phi, xi, laplace_xi, chi, deltaR, eightpiG_deltaT, zeta, phi_effective, phi_ddot, Bi, numpts3d, sim);
-			add_fields(xi, fRbar, xi);
-			check_field(xi, "fR", numpts3d, sim);
-			add_fields(xi, -fRbar, xi);
 		}
 
 		// record background data
@@ -1279,6 +1305,15 @@ int main(int argc, char **argv)
 		// done particle update
 
 		tau += dtau;
+		dtau_old = dtau;
+		if(sim.Cf * dx < sim.steplimit / Hubble)
+		{
+			dtau = sim.Cf * dx;
+		}
+		else
+		{
+			dtau = sim.steplimit / Hubble;
+		}
 
 		if(sim.wallclocklimit > 0.)   // check for wallclock time limit
 		{
@@ -1299,7 +1334,7 @@ int main(int argc, char **argv)
 
 					if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 					{
-						hibernate_fR(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi_check, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, tau, dtau, dtau_old, cycle);
+						hibernate_fR(sim, ic, cosmo, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi_check, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, tau, dtau, dtau_old, cycle);
 					}
 					else
 					{
@@ -1310,7 +1345,7 @@ int main(int argc, char **argv)
 #endif
 				if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 				{
-					hibernate_fR(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, tau, dtau, dtau_old, cycle);
+					hibernate_fR(sim, ic, cosmo, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, tau, dtau, dtau_old, cycle);
 				}
 				else
 				{
@@ -1324,6 +1359,7 @@ int main(int argc, char **argv)
 		if(restartcount < sim.num_restart && 1. / a < sim.z_restart[restartcount] + 1.)
 		{
 			COUT << COLORTEXT_CYAN << " writing hibernation point" << COLORTEXT_RESET << " at z = " << ((1./a) - 1.) <<  " (cycle " << cycle << "), tau/boxsize = " << tau << endl;
+
 			if(sim.vector_flag == VECTOR_PARABOLIC && sim.relativistic_flag == 0)
 			{
 				plan_Bi.execute(FFT_BACKWARD);
@@ -1335,7 +1371,7 @@ int main(int argc, char **argv)
 
 				if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 				{
-					hibernate_fR(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi_check, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, tau, dtau, dtau_old, cycle, restartcount);
+					hibernate_fR(sim, ic, cosmo, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi_check, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, tau, dtau, dtau_old, cycle, restartcount);
 				}
 				else
 				{
@@ -1347,7 +1383,7 @@ int main(int argc, char **argv)
 			{
 				if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 				{
-					hibernate_fR(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, tau, dtau, dtau_old, cycle, restartcount);
+					hibernate_fR(sim, ic, cosmo, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, tau, dtau, dtau_old, cycle, restartcount);
 				}
 				else
 				{
@@ -1355,16 +1391,9 @@ int main(int argc, char **argv)
 				}
 			}
 			restartcount++;
-		}
 
-		dtau_old = dtau;
-		if(sim.Cf * dx < sim.steplimit / Hubble)
-		{
-			dtau = sim.Cf * dx;
-		}
-		else
-		{
-			dtau = sim.steplimit / Hubble;
+			check_all_fields(phi, xi, laplace_xi, chi, deltaR, eightpiG_deltaT, zeta, phi_effective, phi_ddot, Bi, numpts3d, sim);
+			cin.get();
 		}
 
 		cycle++;

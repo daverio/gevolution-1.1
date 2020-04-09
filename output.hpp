@@ -136,7 +136,7 @@ void writeSnapshots(
   if(sim.out_snapshot & MASK_PHI_DDOT) phi_ddot->saveHDF5_server_open(h5filename + filename + "_phi_ddot");
 	if(sim.out_snapshot & MASK_ZETA) zeta->saveHDF5_server_open(h5filename + filename + "_zeta");
 	if(sim.out_snapshot & MASK_DELTAR) deltaR->saveHDF5_server_open(h5filename + filename + "_deltaR");
-	if(sim.out_snapshot & MASK_DELTAT) deltaR->saveHDF5_server_open(h5filename + filename + "_eightpiG_deltaT");
+	if(sim.out_snapshot & MASK_DELTAT) eightpiG_deltaT->saveHDF5_server_open(h5filename + filename + "_eightpiG_deltaT");
 	if(sim.out_snapshot & MASK_CHI) chi->saveHDF5_server_open(h5filename + filename + "_chi");
 	if(sim.out_snapshot & MASK_HIJ) Sij->saveHDF5_server_open(h5filename + filename + "_hij");
 #ifdef CHECK_B
@@ -200,6 +200,7 @@ void writeSnapshots(
 		{
 			plan_Bi->execute(FFT_BACKWARD);
 		}
+		
 		for(x.first(); x.test(); x.next())
 		{
 			(*Bi)(x,0) /= a * a * sim.numpts;
@@ -2376,13 +2377,6 @@ void writeSpectra(
 	free(occupation);
 }
 
-
-
-
-
-
-
-
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 // Print background info.
@@ -2429,7 +2423,6 @@ bool print_background(
 }
 
 
-
 /////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 bool print_background(
@@ -2474,6 +2467,8 @@ bool print_background(
 }
 
 
+/////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////
 int output_background_data(
 	double tau,
 	double a,

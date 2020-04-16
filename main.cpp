@@ -50,6 +50,7 @@
 #include "gevolution.hpp"
 #include "ic_basic.hpp"
 #include "ic_read.hpp"
+#include "ic_read_fR.hpp"
 #ifdef ICGEN_PREVOLUTION
 #include "ic_prevolution.hpp"
 #endif
@@ -60,6 +61,7 @@
 #include "parser.hpp"
 #include "output.hpp"
 #include "hibernation.hpp"
+#include "hibernation_fR.hpp"
 #ifdef VELOCITY
 #include "velocity.hpp"
 #endif
@@ -257,10 +259,6 @@ int main(int argc, char **argv)
 	Field<Cplx> scalarFT;
 	Field<Cplx> SijFT;
 	Field<Cplx> BiFT;
-#ifdef CHECK_B
- 	Field<Real> Bi_check;
- 	Field<Cplx> BiFT_check;
-#endif
 
   // FFT
 	PlanFFT<Cplx> plan_phi;
@@ -268,9 +266,6 @@ int main(int argc, char **argv)
 	PlanFFT<Cplx> plan_source;
 	PlanFFT<Cplx> plan_Sij;
 	PlanFFT<Cplx> plan_Bi;
-#ifdef CHECK_B
-	PlanFFT<Cplx> plan_Bi_check;
-#endif
 
 	// Initialising
 	phi.initialize(lat,1);
@@ -286,11 +281,6 @@ int main(int argc, char **argv)
 	Bi.initialize(lat,3);
 	BiFT.initialize(latFT,3);
 	plan_Bi.initialize(&Bi, &BiFT);
-#ifdef CHECK_B
-	Bi_check.initialize(lat,3);
-	BiFT_check.initialize(latFT,3);
-	plan_Bi_check.initialize(&Bi_check, &BiFT_check);
-#endif
 
 	/////////////////////// additional fRevolution fields ///////////////////////
 	Field<Real> deltaR;
@@ -493,10 +483,14 @@ int main(int argc, char **argv)
 	}
 	else if(ic.generator == ICGEN_READ_FROM_DISK)
 	{
-		readIC(sim, ic, cosmo, fourpiG, a, Hubble, Rbar, dot_Rbar, tau, dtau, dtau_old, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &xi, &xi_old, &deltaR, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount, IDbacklog);
-
-		check_all_fields(phi, xi, laplace_xi, chi, deltaR, eightpiG_deltaT, zeta, phi_effective, phi_ddot, Bi, numpts3d, sim);
-		cin.get();
+		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
+		{
+			readIC_fR(sim, ic, cosmo, fourpiG, a, Hubble, Rbar, dot_Rbar, fbar, fRbar, fRRbar, tau, dtau, dtau_old, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &xi, &xi_old, &deltaR, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount);
+		}
+		else
+		{
+			readIC(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount);
+		}
 	}
 #ifdef ICGEN_PREVOLUTION
 	else if(ic.generator == ICGEN_PREVOLUTION)
@@ -531,17 +525,6 @@ int main(int argc, char **argv)
 			maxvel[i] /= sqrt(maxvel[i] * maxvel[i] + 1.0);
 	}
 
-#ifdef CHECK_B
-	if(sim.vector_flag == VECTOR_ELLIPTIC)
-	{
-		for(kFT.first(); kFT.test(); kFT.next())
-		{
-			BiFT_check(kFT, 0) = BiFT(kFT, 0);
-			BiFT_check(kFT, 1) = BiFT(kFT, 1);
-			BiFT_check(kFT, 2) = BiFT(kFT, 2);
-		}
-	}
-#endif
 #ifdef VELOCITY
 	a_old = a;
 	projection_init(&vi);
@@ -598,9 +581,10 @@ int main(int argc, char **argv)
 #ifdef BENCHMARK
 		cycle_start_time = MPI_Wtime();
 #endif
+
 		do_I_check = (bool) (cycle % sim.CYCLE_INFO_INTERVAL == 0 && sim.check_fields);
 
-		if(cycle % sim.CYCLE_INFO_INTERVAL == 0) // output some info
+		if(do_I_check) // output some info
 		{
 			COUT << endl << "================================ CYCLE " << cycle << " =====================";
 			for(i=0; i<10-log10(cycle+1); ++i)
@@ -728,12 +712,10 @@ int main(int argc, char **argv)
 			copy_field(eightpiG_deltaT, deltaR, -1.);
 		}
 
-		COUT << " T00_hom: " << setprecision(10) << T00_hom << endl;
-		COUT << " Tii_hom: " << Tii_hom << endl;
-		COUT << " Trace_hom: " << Trace_hom << endl;
-		COUT << " phi_hom: " << phi_hom << endl;
-		check_field(eightpiG_deltaT, "eightpiG_deltaT", numpts3d, sim, "here");
-		cin.get();
+		if(do_I_check)
+		{
+			check_all_fields(phi, xi, laplace_xi, chi, deltaR, eightpiG_deltaT, zeta, phi_effective, phi_ddot, Bi, numpts3d, sim);
+		}
 
 		///////////////////////// EVOLVE deltaR, zeta, xi /////////////////////////
 		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
@@ -932,10 +914,6 @@ int main(int argc, char **argv)
 			fft_count++;
 #endif
 			projectFTvector(BiFT, BiFT, fourpiG * dx * dx);
-
-#ifdef CHECK_B
-			evolveFTvector(SijFT, BiFT_check, a * a * dtau_old);
-#endif
 		}
 		else // evolve B using vector projection
 		{
@@ -1021,9 +999,6 @@ int main(int argc, char **argv)
 			COUT << COLORTEXT_CYAN << " writing snapshot" << COLORTEXT_RESET << " at z = " << ((1./a) - 1.) <<  " (cycle " << cycle << "), tau/boxsize = " << tau << endl;
 
 			writeSnapshots(sim, cosmo, fourpiG, a, dtau_old, done_hij, snapcount, h5filename, &pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &phi_ddot, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_chi, &plan_Bi, &plan_source, &plan_Sij
-#ifdef CHECK_B
-				, &Bi_check, &BiFT_check, &plan_Bi_check
-#endif
 #ifdef VELOCITY
 				, &vi
 #endif
@@ -1047,9 +1022,6 @@ int main(int argc, char **argv)
 				class_background, class_perturbs, class_spectra, ic,
 #endif
 				&pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &phi_ddot, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_phi_ddot, &plan_phi_effective, &plan_chi, &plan_Bi, &plan_source, &plan_Sij
-#ifdef CHECK_B
-				, &Bi_check, &BiFT_check, &plan_Bi_check
-#endif
 #ifdef VELOCITY
 				, &vi, &viFT, &plan_vi
 #endif
@@ -1074,9 +1046,6 @@ int main(int argc, char **argv)
 				class_background, class_perturbs, class_spectra, ic,
 #endif
 				&pcls_cdm, &pcls_b, pcls_ncdm, &phi, &deltaR, &eightpiG_deltaT, &xi, &laplace_xi, &zeta, &phi_ddot, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_deltaR, &plan_eightpiG_deltaT, &plan_xi, &plan_laplace_xi, &plan_zeta, &plan_phi_ddot, &plan_phi_effective, &plan_chi, &plan_Bi, &plan_source, &plan_Sij
-#ifdef CHECK_B
-				, &Bi_check, &BiFT_check, &plan_Bi_check
-#endif
 #ifdef VELOCITY
 				, &vi, &viFT, &plan_vi
 #endif
@@ -1321,31 +1290,16 @@ int main(int argc, char **argv)
 			parallel.max(tmp);
 			if(tmp > sim.wallclocklimit)   // hibernate
 			{
-				COUT << COLORTEXT_YELLOW << " reaching hibernation wallclock limit, hibernating..." << COLORTEXT_RESET << endl;
+				COUT << COLORTEXT_YELLOW << " reaching hibernation wallclock limit, 2ting..." << COLORTEXT_RESET << endl;
 				COUT << COLORTEXT_CYAN << " writing hibernation point" << COLORTEXT_RESET << " at z = " << ((1./a) - 1.) <<  " (cycle " << cycle << "), tau/boxsize = " << tau << endl;
 				if(sim.vector_flag == VECTOR_PARABOLIC && sim.relativistic_flag == 0)
 				{
 					plan_Bi.execute(FFT_BACKWARD);
 				}
-#ifdef CHECK_B
-				if(sim.vector_flag == VECTOR_ELLIPTIC)
-				{
-					plan_Bi_check.execute(FFT_BACKWARD);
 
-					if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
-					{
-						hibernate_fR(sim, ic, cosmo, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi_check, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, tau, dtau, dtau_old, cycle);
-					}
-					else
-					{
-						hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi_check, a, tau, dtau, cycle);
-					}
-				}
-				else
-#endif
 				if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 				{
-					hibernate_fR(sim, ic, cosmo, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, tau, dtau, dtau_old, cycle);
+					hibernate_fR(sim, ic, cosmo, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, fbar, fRbar, fRRbar, tau, dtau, dtau_old, cycle);
 				}
 				else
 				{
@@ -1364,36 +1318,17 @@ int main(int argc, char **argv)
 			{
 				plan_Bi.execute(FFT_BACKWARD);
 			}
-#ifdef CHECK_B
-			if(sim.vector_flag == VECTOR_ELLIPTIC)
-			{
-				plan_Bi_check.execute(FFT_BACKWARD);
 
-				if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
-				{
-					hibernate_fR(sim, ic, cosmo, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi_check, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, tau, dtau, dtau_old, cycle, restartcount);
-				}
-				else
-				{
-					hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi_check, a, tau, dtau, cycle, restartcount);
-				}
+			if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
+			{
+				hibernate_fR(sim, ic, cosmo, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, fbar, fRbar, fRRbar, tau, dtau, dtau_old, cycle, restartcount);
 			}
 			else
-#endif
 			{
-				if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
-				{
-					hibernate_fR(sim, ic, cosmo, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, tau, dtau, dtau_old, cycle, restartcount);
-				}
-				else
-				{
-					hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, a, tau, dtau, cycle, restartcount);
-				}
+				hibernate(sim, ic, cosmo, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, a, tau, dtau, cycle, restartcount);
 			}
-			restartcount++;
 
-			check_all_fields(phi, xi, laplace_xi, chi, deltaR, eightpiG_deltaT, zeta, phi_effective, phi_ddot, Bi, numpts3d, sim);
-			cin.get();
+			restartcount++;
 		}
 
 		cycle++;

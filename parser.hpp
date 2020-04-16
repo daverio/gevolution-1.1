@@ -1128,13 +1128,15 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	{
 		sim.output_path[0] = '\0';
 	}
+
 	if(!parseParameter(params, numparam, "hibernation path", sim.restart_path))
 	{
 		strcpy(sim.restart_path, sim.output_path);
 	}
+
 	if(!parseParameter(params, numparam, "hibernation file base", sim.basename_restart))
 	{
-		strcpy(sim.basename_restart, "restart");
+		strcpy(sim.basename_restart, "hib");
 	}
 
 	if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
@@ -1322,29 +1324,6 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	{
 		ic.numtile[i] = 0;
 	}
-
-	// TODO Commented this part out to make tiling factor automatic -- see later
-	// if(!parseParameter(params, numparam, "tiling factor", ic.numtile, i) && ic.generator != ICGEN_READ_FROM_DISK)
-	// {
-	// 	COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": tiling factor not specified, using default value for all species (1)" << endl;
-	// 	ic.numtile[0] = 1;
-	// 	i = 1;
-	// }
-	//
-	// for(; i<MAX_PCL_SPECIES; i++)
-	// {
-	// 	ic.numtile[i] = ic.numtile[i-1];
-	// }
-	//
-	// for(i=0; i<MAX_PCL_SPECIES; i++)
-	// {
-	// 	if(ic.numtile[i] <= 0 && ic.generator != ICGEN_READ_FROM_DISK)
-	// 	{
-	// 		COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": tiling number for particle template not set properly; using default value (1)" << endl;
-	// 		ic.numtile[i] = 1;
-	// 	}
-	// }
-	// END of commented part
 
 	if(ic.pkfile[0] != '\0')
 	{
@@ -2201,8 +2180,8 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 		}
 		else
 		{
-			sim.hibernation_save_mode = HIB_SAVE_GADGET2;
-			COUT << " Wrong particle save mode specified for hibernation. Defaults to HDF5." << endl;
+			sim.hibernation_save_mode = HIB_SAVE_HDF5;
+			COUT << " Wrong particle saving mode specified for hibernation. Defaults to HDF5." << endl;
 		}
 	}
 

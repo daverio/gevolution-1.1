@@ -94,11 +94,6 @@ void writeSnapshots(
 	PlanFFT<Cplx> * plan_Bi,
 	PlanFFT<Cplx> * plan_source,
 	PlanFFT<Cplx> * plan_Sij
-#ifdef CHECK_B
-	, Field<Real> * Bi_check,
-		Field<Cplx> * BiFT_check,
-		PlanFFT<Cplx> * plan_Bi_check,
-#endif
 #ifdef VELOCITY
 	, Field<Real> * vi
 #endif
@@ -139,9 +134,6 @@ void writeSnapshots(
 	if(sim.out_snapshot & MASK_DELTAT) eightpiG_deltaT->saveHDF5_server_open(h5filename + filename + "_eightpiG_deltaT");
 	if(sim.out_snapshot & MASK_CHI) chi->saveHDF5_server_open(h5filename + filename + "_chi");
 	if(sim.out_snapshot & MASK_HIJ) Sij->saveHDF5_server_open(h5filename + filename + "_hij");
-#ifdef CHECK_B
-	if(sim.out_snapshot & MASK_B) Bi_check->saveHDF5_server_open(h5filename + filename + "_B_check");
-#endif
 #endif
 
 	if(sim.out_snapshot & MASK_RBARE || sim.out_snapshot & MASK_POT)
@@ -200,7 +192,7 @@ void writeSnapshots(
 		{
 			plan_Bi->execute(FFT_BACKWARD);
 		}
-		
+
 		for(x.first(); x.test(); x.next())
 		{
 			(*Bi)(x,0) /= a * a * sim.numpts;
@@ -421,36 +413,6 @@ void writeSnapshots(
 			Bi->updateHalo();
 		}
 	}
-
-#ifdef CHECK_B
-	if(sim.out_snapshot & MASK_B)
-	{
-		if(sim.vector_flag == VECTOR_PARABOLIC)
-		{
-			projection_init(Bi_check);
-			projection_T0i_project(pcls_cdm, Bi_check, phi);
-			if(sim.baryon_flag) projection_T0i_project(pcls_b, Bi_check, phi);
-			for(i=0; i<cosmo.num_ncdm; i++) projection_T0i_project(pcls_ncdm+i, Bi_check, phi);
-			projection_T0i_comm(Bi_check);
-			plan_Bi_check->execute(FFT_FORWARD);
-			projectFTvector(*BiFT_check, *BiFT_check, fourpiG / (double) sim.numpts / (double) sim.numpts);
-		}
-		plan_Bi_check->execute(FFT_BACKWARD);
-
-		for(x.first(); x.test(); x.next())
-		{
-			(*Bi_check)(x,0) /= a * a * sim.numpts;
-			(*Bi_check)(x,1) /= a * a * sim.numpts;
-			(*Bi_check)(x,2) /= a * a * sim.numpts;
-		}
-#ifdef EXTERNAL_IO
-		Bi_check->saveHDF5_server_write(NUMBER_OF_IO_FILES);
-#else
-		if(sim.downgrade_factor > 1) Bi_check->saveHDF5_coarseGrain3D(h5filename + filename + "_B_check.h5", sim.downgrade_factor);
-		else Bi_check->saveHDF5(h5filename + filename + "_B_check.h5");
-#endif
-	}
-#endif
 
 	if(sim.out_snapshot & MASK_GADGET)
 	{
@@ -1920,9 +1882,6 @@ void writeSpectra(
 	PlanFFT<Cplx> * plan_Bi,
 	PlanFFT<Cplx> * plan_source,
 	PlanFFT<Cplx> * plan_Sij
-#ifdef CHECK_B
-	, Field<Real> * Bi_check, Field<Cplx> * BiFT_check, PlanFFT<Cplx> * plan_Bi_check
-#endif
 #ifdef VELOCITY
 	, Field<Real> * vi, Field<Cplx> * viFT, PlanFFT<Cplx> * plan_vi
 #endif
@@ -2345,29 +2304,6 @@ void writeSpectra(
 		extractPowerSpectrum(*BiFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, false, KTYPE_LINEAR);
 		sprintf(filename, "%s%s_%s%03d_B.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
 		writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, a * a * a * a * sim.numpts * sim.numpts * 2. * M_PI * M_PI, filename, "power spectrum of B", a, sim.z_pk[pkcount]);
-
-#ifdef CHECK_B
-		if(sim.vector_flag == VECTOR_PARABOLIC)
-		{
-			projection_init(Bi_check);
-			projection_T0i_project(pcls_cdm, Bi_check, phi);
-			if(sim.baryon_flag)
-			{
-				projection_T0i_project(pcls_b, Bi_check, phi);
-			}
-			for(i=0; i<cosmo.num_ncdm; i++)
-			{
-				projection_T0i_project(pcls_ncdm+i, Bi_check, phi);
-			}
-
-			projection_T0i_comm(Bi_check);
-			plan_Bi_check->execute(FFT_FORWARD);
-			projectFTvector(*BiFT_check, *BiFT_check, fourpiG / (double) sim.numpts / (double) sim.numpts);
-		}
-		extractPowerSpectrum(*BiFT_check, kbin, power, kscatter, pscatter, occupation, sim.numbins, false, KTYPE_LINEAR);
-		sprintf(filename, "%s%s_%s%03d_B_check.dat", sim.output_path, sim.basename_generic, sim.basename_pk, pkcount);
-		writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, a * a * a * a * sim.numpts * sim.numpts * 2. * M_PI * M_PI, filename, "power spectrum of B", a, sim.z_pk[pkcount]);
-#endif
 	}
 
 	free(kbin);

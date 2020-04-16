@@ -1024,7 +1024,7 @@ void check_particles(
 {
 	int i, num[8] = {0, 262143, 1, 26, 30000, 180024, 220023, 262142};
 
-	for(i=0; i<2; i++)
+	for(i=0; i<8; i++)
 	{
 		pcls_cdm->coutPart(num[i]);
 	}

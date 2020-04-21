@@ -17,6 +17,7 @@ void writeRestartSettings_fR(
 	metadata & sim,
 	icsettings & ic,
 	cosmology & cosmo,
+	string bgfilename,
 	const double a,
 	const double Hubble,
 	const double Rbar,
@@ -35,6 +36,9 @@ void writeRestartSettings_fR(
 
 	ofstream outfile_ini;
 	ofstream outfile_bin;
+	ofstream outfile_bg;
+	ifstream bgfile;
+
 	int i;
 
 	string filename;
@@ -53,6 +57,29 @@ void writeRestartSettings_fR(
 		filename += "000";
 	}
 
+	////////// Background //////////
+	bgfile.open(bgfilename);
+
+	if(bgfile.is_open())
+	{
+		outfile_bg.open(filename + "_background.dat");
+
+		if(outfile_bg.is_open())
+		{
+			outfile_bg << bgfile.rdbuf();
+			outfile_bg.close();
+		}
+		else
+		{
+			cout << "Error writing hibernation background file." << endl;
+		}
+	}
+	else
+	{
+		cout << "Error reading background file before hibernation." << endl;
+	}
+
+	////////// Settings (binary) //////////
 	outfile_bin.open(filename + ".ini.bin", ios::out | ios::trunc | ios::binary);
 
 	if(!outfile_bin.is_open())
@@ -76,6 +103,7 @@ void writeRestartSettings_fR(
 		outfile_bin.close();
 	}
 
+	////////// Settings (text) //////////
 	outfile_ini.open(filename + ".ini", ios::out | ios::trunc);
 
 	if(!outfile_ini.is_open())
@@ -100,6 +128,7 @@ void writeRestartSettings_fR(
 		outfile_ini << "fRevolution version = " << FREVOLUTION_VERSION << endl;
 		outfile_ini << endl << "#====== IC generation ======#" << endl;
 		outfile_ini << "IC generator        = restart" << endl;
+		outfile_ini << "restart count       = " << restartcount << endl;
 
 		if(sim.hibernation_save_mode == HIB_SAVE_HDF5)
 		{
@@ -1010,6 +1039,7 @@ void hibernate_fR(
 	metadata & sim,
 	icsettings & ic,
 	cosmology & cosmo,
+	string bgfilename,
 	gadget2_header & hdr,
 	Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm,
 	Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b,
@@ -1053,7 +1083,7 @@ void hibernate_fR(
 		filename += "000";
 	}
 
-	writeRestartSettings_fR(sim, ic, cosmo, a, Hubble, Rbar, dot_Rbar, fbar, fRbar, fRRbar, tau, dtau, dtau_old, cycle, restartcount);
+	writeRestartSettings_fR(sim, ic, cosmo, bgfilename, a, Hubble, Rbar, dot_Rbar, fbar, fRbar, fRRbar, tau, dtau, dtau_old, cycle, restartcount);
 
 	for(x.first(); x.test(); x.next())
 	{

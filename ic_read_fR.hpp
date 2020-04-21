@@ -19,6 +19,8 @@ void readIC_fR(
 	metadata & sim,
 	icsettings & ic,
 	cosmology & cosmo,
+	std::ofstream &bgfile,
+	string bgfilename,
 	const double fourpiG,
 	double & a,
 	double & Hubble,
@@ -69,7 +71,6 @@ void readIC_fR(
 	int i, p;
 	char * ext;
 	char line[PARAM_MAX_LINESIZE];
-	FILE * bgfile;
 	struct fileDsc fd;
 	gadget2_header hdr;
 	long * numpcl;
@@ -77,33 +78,32 @@ void readIC_fR(
 	Real * dummy2;
 	Site x(Bi->lattice());
 	rKSite kFT(scalarFT->lattice());
-
-	filename.reserve(PARAM_MAX_LENGTH);
-	temp_filename.reserve(PARAM_MAX_LENGTH);
-	hdr.npart[1] = 0;
-
-	filename.assign((string) sim.restart_path + sim.basename_restart);
-	if(restartcount > 0)
-	{
-		filename += "_";
-		for(i=(int)log10(restartcount); i<2; ++i)
-		{
-			filename += "0";
-		}
-		filename += to_string(restartcount);
-	}
-	else if(!restartcount)
-	{
-		filename += "_000";
-	}
-
-	temp_filename.assign(filename);
-
-	projection_init(phi);
 	metadata mdtemp;
 	cosmology cosmotemp;
 	double dtemp;
 	ifstream file_bin;
+	ifstream resume_bgfile;
+
+	filename.reserve(PARAM_MAX_LENGTH);
+	temp_filename.reserve(PARAM_MAX_LENGTH);
+
+	hdr.npart[1] = 0;
+
+	filename.assign((string) sim.restart_path + sim.basename_restart + "_");
+	if(ic.restart_count > 0)
+	{
+		for(i=(int)log10(ic.restart_count); i<2; ++i)
+		{
+			filename += "0";
+		}
+		filename += to_string(ic.restart_count);
+	}
+	else if(ic.restart_count == 0)
+	{
+		filename += "000";
+	}
+
+	restartcount = ic.restart_count + 1;
 
 	file_bin.open((string) filename + ".ini.bin", ios::in | ios::binary);
 
@@ -138,8 +138,31 @@ void readIC_fR(
 	}
 	else
 	{
-		cout << "readIC: cannot open binray settings file: " << endl;
+		cout << "readIC: cannot open binary settings file: " << filename + "ini.bin" << endl;
 	}
+	temp_filename.assign(filename);
+
+
+	if(parallel.isRoot())
+	{
+		resume_bgfile.open((string) filename + "_background.dat");
+		if(resume_bgfile.is_open())
+		{
+			bgfile.open(bgfilename);
+			if(bgfile.is_open())
+			{
+				bgfile << resume_bgfile.rdbuf();
+				bgfile.close();
+			}
+			resume_bgfile.close();
+		}
+		else
+		{
+			COUT << " Could not open previous background file. Writing new background file." << endl;
+		}
+	}
+
+	projection_init(phi);
 
 	strcpy(pcls_cdm_info.type_name, "part_simple");
 	pcls_cdm_info.mass = 0.;
@@ -346,83 +369,6 @@ void readIC_fR(
 				deltaR->loadHDF5(filename + "_deltaR.h5");
 				deltaR->updateHalo();
 
-				if(parallel.isRoot())
-				{
-					sprintf(line, "%s%s_background.dat", sim.output_path, sim.basename_generic);
-					bgfile = fopen(line, "r");
-					if(bgfile == NULL)
-					{
-						COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": unable to locate file for background output! A new file will be created" << endl;
-						bgfile = fopen(line, "w");
-						if(bgfile == NULL)
-						{
-							COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": unable to create file for background output!" << endl;
-							parallel.abortForce();
-						}
-						else
-						{
-							fprintf(bgfile, "# background statistics\n# cycle   tau/boxsize    a              conformal H    R              phi(k=0)       T00(k=0)\n");
-							fclose(bgfile);
-						}
-					}
-					else
-					{
-						buf.reserve(PARAM_MAX_LINESIZE);
-						buf.clear();
-
-						if(fgets(line, PARAM_MAX_LINESIZE, bgfile) == 0)
-						{
-							COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": unable to read file for background output! A new file will be created" << endl;
-						}
-						else if(line[0] != '#')
-						{
-							COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": file for background output has unexpected format! Contents will be overwritten!" << endl;
-						}
-						else
-						{
-							if(fgets(line, PARAM_MAX_LINESIZE, bgfile) == 0)
-							{
-								COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": unable to read file for background output! A new file will be created" << endl;
-							}
-							else if(line[0] != '#')
-							{
-								COUT << COLORTEXT_YELLOW << " /!\\ warning" << COLORTEXT_RESET << ": file for background output has unexpected format! Contents will be overwritten!" << endl;
-							}
-						}
-
-						while(fgets(line, PARAM_MAX_LINESIZE, bgfile) != 0)
-						{
-							if(sscanf(line, " %d", &i) != 1) break;
-
-							if(i > ic.restart_cycle)
-							{
-								break;
-							}
-							else
-							{
-								buf += line;
-							}
-						}
-
-						fclose(bgfile);
-
-						sprintf(line, "%s%s_background.dat", sim.output_path, sim.basename_generic);
-						bgfile = fopen(line, "w");
-
-						if(bgfile == NULL)
-						{
-							COUT << COLORTEXT_RED << " error" << COLORTEXT_RESET << ": unable to create file for background output!" << endl;
-							parallel.abortForce();
-						}
-						else
-						{
-							fprintf(bgfile, "# background statistics\n# cycle   tau/boxsize    a              conformal H    R              phi(k=0)       T00(k=0)\n");
-							fwrite((const void *) buf.data(), sizeof(char), buf.length(), bgfile);
-							fclose(bgfile);
-							buf.clear();
-						}
-					}
-				}
 			}
 			else
 			{
@@ -466,11 +412,6 @@ void readIC_fR(
 			while(pkcount < sim.num_pk && 1. / a < sim.z_pk[pkcount] + 1.)
 			{
 				pkcount++;
-			}
-
-			while(restartcount < sim.num_restart && 1. / a < sim.z_restart[restartcount] + 1.)
-			{
-				restartcount++;
 			}
 		}
 

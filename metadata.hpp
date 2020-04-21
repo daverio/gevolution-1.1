@@ -424,6 +424,7 @@ struct icsettings
 	int flags;
 	int generator;
 	int restart_cycle;
+	int restart_count;
 	char pclfile[MAX_PCL_SPECIES][PARAM_MAX_LENGTH];
 	char pkfile[PARAM_MAX_LENGTH];
 	char tkfile[PARAM_MAX_LENGTH];

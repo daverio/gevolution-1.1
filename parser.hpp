@@ -728,6 +728,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	ic.restart_tau = 0.;
 	ic.restart_dtau = 0.;
 	ic.restart_version = -1.;
+	ic.restart_count = -1;
 
 	ic.restart_dtau_old = -1.;
 	ic.restart_a = -1.;
@@ -1419,6 +1420,7 @@ int parseMetadata(parameter * & params, const int numparam, metadata & sim, cosm
 	if(ic.generator == ICGEN_READ_FROM_DISK)
 	{
 		parseParameter(params, numparam, "restart redshift", ic.z_ic);
+		parseParameter(params, numparam, "restart count", ic.restart_count);
 		if(!parseParameter(params, numparam, "cycle", ic.restart_cycle))
 		{
 			if(sim.radiation_flag)

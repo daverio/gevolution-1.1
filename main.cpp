@@ -100,9 +100,7 @@ int main(int argc, char **argv)
 	double dtau, dtau_old, dx, tau, a, fourpiG, tmp, start_time;
 	double maxvel[MAX_PCL_SPECIES];
 	FILE * outfile;
-	char filename[2*PARAM_MAX_LENGTH+24];
-	string bgfilename;
-	string h5filename;
+	string filename, h5filename, bgfilename;
 	char * settingsfile = NULL;
 	char * precisionfile = NULL;
 	parameter * params = NULL;
@@ -205,8 +203,16 @@ int main(int argc, char **argv)
 	numparam = loadParameterFile(settingsfile, params);
 	usedparams = parseMetadata(params, numparam, sim, cosmo, ic);
 	COUT << " parsing of settings file completed. " << numparam << " parameters found, " << usedparams << " were used." << endl;
-	sprintf(filename, "%s%s_settings_used.ini", sim.output_path, sim.basename_generic);
-	saveParameterFile(filename, params, numparam);
+
+	filename.reserve(2*PARAM_MAX_LENGTH);
+	bgfilename.reserve(2*PARAM_MAX_LENGTH + 24);
+	h5filename.reserve(2*PARAM_MAX_LENGTH + 24);
+
+	filename.assign((string) sim.output_path + sim.basename_generic + "_settings_used.ini");
+	bgfilename.assign((string) sim.output_path + sim.basename_generic + "_background.dat");
+	h5filename.assign((string) sim.output_path + sim.basename_generic + "_" + sim.basename_snapshot);
+
+	saveParameterFile(filename.c_str(), params, numparam);
 	free(params);
 
 #ifdef HAVE_CLASS
@@ -439,17 +445,6 @@ int main(int argc, char **argv)
 		dtau = sim.steplimit / Hubble;
 	}
 
-	h5filename.reserve(2*PARAM_MAX_LENGTH);
-	h5filename.assign(sim.output_path);
-	h5filename += sim.basename_generic;
-	h5filename += "_";
-	h5filename += sim.basename_snapshot;
-
-	bgfilename.reserve(2*PARAM_MAX_LENGTH + 24);
-	bgfilename.assign(sim.output_path);
-	bgfilename += sim.basename_generic;
-	bgfilename += "_background.dat";
-
 	///////////////////// Start writing the background file /////////////////////
 	if(parallel.rank() == 0)
 	{
@@ -473,6 +468,7 @@ int main(int argc, char **argv)
 		bgoutfile << setw(wid) << "phi(k=0)";
 		bgoutfile << setw(wid) << "T00(k=0)";;
 		bgoutfile << endl;
+
 		bgoutfile.close();
 	}
 
@@ -485,7 +481,11 @@ int main(int argc, char **argv)
 	{
 		if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 		{
-			readIC_fR(sim, ic, cosmo, fourpiG, a, Hubble, Rbar, dot_Rbar, fbar, fRbar, fRRbar, tau, dtau, dtau_old, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &xi, &xi_old, &deltaR, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount);
+			readIC_fR(sim, ic, cosmo, bgoutfile, bgfilename, fourpiG, a, Hubble, Rbar, dot_Rbar, fbar, fRbar, fRRbar, tau, dtau, dtau_old, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &xi, &xi_old, &deltaR, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount);
+
+			check_all_fields(phi, xi, laplace_xi, chi, deltaR, eightpiG_deltaT, zeta, phi_effective, phi_ddot, Bi, numpts3d, sim);
+			cin.get();
+
 		}
 		else
 		{
@@ -1299,7 +1299,7 @@ int main(int argc, char **argv)
 
 				if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 				{
-					hibernate_fR(sim, ic, cosmo, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, fbar, fRbar, fRRbar, tau, dtau, dtau_old, cycle);
+					hibernate_fR(sim, ic, cosmo, bgfilename, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, fbar, fRbar, fRRbar, tau, dtau, dtau_old, cycle);
 				}
 				else
 				{
@@ -1321,7 +1321,7 @@ int main(int argc, char **argv)
 
 			if(sim.modified_gravity_flag == MODIFIED_GRAVITY_FLAG_FR)
 			{
-				hibernate_fR(sim, ic, cosmo, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, fbar, fRbar, fRRbar, tau, dtau, dtau_old, cycle, restartcount);
+				hibernate_fR(sim, ic, cosmo, bgfilename, hdr, &pcls_cdm, &pcls_b, pcls_ncdm, phi, chi, Bi, xi, xi_old, deltaR, a, Hubble, Rbar, dot_Rbar, fbar, fRbar, fRRbar, tau, dtau, dtau_old, cycle, restartcount);
 			}
 			else
 			{
